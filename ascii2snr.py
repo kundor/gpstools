@@ -20,7 +20,7 @@ i = 0
 for line in file:
     line = line.strip()
     i = i + 1
-    #print i 
+    #print i
     if 'HK' in line or len(line) < 7:
         continue
     rmc = line.split(',')
@@ -28,11 +28,11 @@ for line in file:
         gps_time_utc = rmc[0]
         if len(gps_time_utc) < 9: # bad line
             continue
-        gps_time =  (float(gps_time_utc[0:2])*3600
-                     + float(gps_time_utc[2:4])*60 
-                     + float(gps_time_utc[4:10]))
-    except ValueError, e:
-        print e
+        gps_time = (float(gps_time_utc[0:2])*3600
+                    + float(gps_time_utc[2:4])*60
+                    + float(gps_time_utc[4:10]))
+    except ValueError as e:
+        print(e)
         continue
     #Get Date
     gps_date = rmc[1]
@@ -41,7 +41,7 @@ for line in file:
             gps_day = int(gps_date[0:2])
             gps_month = int(gps_date[2:4])
             gps_year = 2000 + int(gps_date[4:6])
-            doy = (datetime.date(gps_year,gps_month,gps_day).timetuple().tm_yday)
+            doy = (datetime.date(gps_year, gps_month, gps_day).timetuple().tm_yday)
             doy_s = "%03d" % doy
             #Check if DOY exists
             if int(doy_s) in doy_v:
@@ -49,12 +49,12 @@ for line in file:
             else:
                 doy_v.append(int(doy_s))
                 snr_fname = stationName + doy_s + '0.'+ str(gps_year)[2:4] + '.snr89'
-                print snr_fname
-                file_h = open(snr_fname,mode='w')
+                print(snr_fname)
+                file_h = open(snr_fname, mode='w')
                 file_h_v.append(file_h)
-            for j in range(2,len(rmc)-1,2):
-                prn_s = rmc[j];
-                snr = rmc[j+1];
+            for j in range(2, len(rmc)-1, 2):
+                prn_s = rmc[j]
+                snr = rmc[j+1]
                 if not prn_s.isdigit():
                     continue
                 try:
@@ -64,8 +64,8 @@ for line in file:
                 if 0 < int(prn_s) < 33:
                     file_h.write(prn_s + ' 0 0 ' + \
                             str(gps_time) + ' 0 0 ' + str(snr) + '\n')
-        except ValueError, e:
-            print "Value Error:", e, "on line", i
+        except ValueError as e:
+            print("Value Error:", e, "on line", i)
 
 file.close()
 for file_h in file_h_v:
