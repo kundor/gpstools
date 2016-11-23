@@ -41,11 +41,16 @@ gap = np.timedelta64(5, 'm')
 """A gap larger than this is commented on."""
 
 
-rec = np.dtype(('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('snr', 'u2'))
+rec = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('snr', 'u2')])
 
 # I don't know if SNRs below 10 are reported with leading zeros or not
-goodline = re.compile(rb'([01][0-9]|2[0-3])([0-5][0-9]){2}\.[0-9]00,([0-2][0-9]|3[01])(0[0-9]|1[012])[0-9]{2}'
-                      '(,(0[1-9]|[12][0-9]|3[012]),(0|[1-9][0-9]\.[0-9])){,4}[\r\n]+')
+goodline = re.compile(rb'([01][0-9]|2[0-3])' # hour
+                      b'([0-5][0-9]){2}\.[0-9]00,' # minute second
+                      b'([0-2][0-9]|3[01])' # day
+                      b'(0[0-9]|1[012])' # month
+                      b'[0-9]{2}' # year
+                      b'(,(0[1-9]|[12][0-9]|3[012]),' # prn
+                      b'(0|[1-9][0-9]\.[0-9])){,4}[\r\n]+') # snr
 
 hkline = re.compile(rb'HK:: BATT:[0-9]\.[0-9]{2}V TTR:[0-9]{5}s U2:/?UART2[_/][0-9]+\.TXT U3:/UART?')
 
@@ -58,16 +63,24 @@ def nptime(lin):
 
 def bigjump(file, curtime):
     pos = file.tell()
-    try:
-        line = next(file)
-    except StopIteration:
-        return True # don't use this file, go back to start
+    line = next(file)
     file.seek(pos)
-    if nptime(line) - curtime > thresh:
+    return nptime(line) - curtime > thresh
+
+def endfile(file):
+    """Return true if no data remains."""
+    pos = file.tell()
+    try:
+        next(file)
+    except StopIteration:
         return True
+    file.seek(pos)
+    return False
 
 def concat(files, out):
     i = 0
+    numopen = len(files)
+    curtime = None
     while True:
         for line in files[i]:
             if line.isspace():
@@ -84,7 +97,7 @@ def concat(files, out):
                 print('Bad line ', line.decode())
                 continue
             thetime = nptime(line)
-            if thetime - curtime > gap:
+            if curtime is not None and thetime - curtime > gap:
                 print('Gap of ', thetime - curtime, ' in file ', files[i].name)
             out.write(line)
             curtime = thetime
@@ -96,12 +109,25 @@ def concat(files, out):
         if not hkline.fullmatch(hk):
             print('The 50 characters following a blank line do not match expected HK format:\n', hk.decode())
             raise OSError('Gave up parsing the files')
-        i = (i + 1) % len(files)
-        if i and bigjump(files[i], curtime):
+        if endfile(files[i]):
+            if i < numopen - 1:
+                print('File exhausted with some left afterward?!')
+                raise OSError('Gave up')
+            elif i > numopen - 1:
+                print('What on earth')
+                raise OSError('Geez')
+            files[i].close()
+            numopen -= 1
             i = 0
+        else:
+            i = (i + 1) % numopen
+            if i and bigjump(files[i], curtime):
+                i = 0
+
 
 #files = glob.glob(os.path.join(udir, '*.TXT'))
 os.chdir(udir)
 files = [open(str(n) + '.TXT', 'rb') for n in range(1, 92)]
 # Using binary mode so that seek and iteration can mix.
 out = open('uart_cat.txt', 'wb')
+concat(files, out)
