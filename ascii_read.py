@@ -52,7 +52,7 @@ goodline = re.compile(rb'([01][0-9]|2[0-3])' # hour
                       b'(,(0[1-9]|[12][0-9]|3[012]),' # prn
                       b'(0|[1-9][0-9]\.[0-9])){,4}[\r\n]+') # snr
 
-hkline = re.compile(rb'HK:: BATT:[0-9]\.[0-9]{2}V TTR:[0-9]{5}s U2:/?UART2[_/][0-9]+\.TXT U3:/UART?')
+hkline = re.compile(rb'HK:: BATT:[0-9]\.[0-9]{2}V TTR:[-0-9][0-9]{4}s U2:/?UART2[_/][0-9]+\.TXT U3:/UART?')
 
 def nptime(lin):
     """Convert first two fields into a numpy datetime64[us]
