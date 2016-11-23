@@ -82,6 +82,7 @@ def concat(files, out):
     numopen = len(files)
     curtime = None
     while True:
+        sawline = False
         for line in files[i]:
             if line.isspace():
                 break
@@ -101,6 +102,7 @@ def concat(files, out):
                 print('Gap of ', thetime - curtime, ' in file ', files[i].name)
             out.write(line)
             curtime = thetime
+            sawline = True
         hk = files[i].read(50)
         if not hk:
             if i:
@@ -109,6 +111,8 @@ def concat(files, out):
         if not hkline.fullmatch(hk):
             print('The 50 characters following a blank line do not match expected HK format:\n', hk.decode())
             raise OSError('Gave up parsing the files')
+        if not sawline:
+            continue # go through the next block
         if endfile(files[i]):
             if i < numopen - 1:
                 print('File exhausted with some left afterward?!')
