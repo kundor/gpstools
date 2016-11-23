@@ -45,7 +45,7 @@ rec = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('s
 
 # I don't know if SNRs below 10 are reported with leading zeros or not
 goodline = re.compile(rb'([01][0-9]|2[0-3])' # hour
-                      b'([0-5][0-9]){2}\.[0-9]00,' # minute second
+                      b'([0-5][0-9]){2}\.[0-9]{3},' # minute second
                       b'([0-2][0-9]|3[01])' # day
                       b'(0[0-9]|1[012])' # month
                       b'[0-9]{2}' # year
@@ -112,10 +112,10 @@ def concat(files, out):
                 raise OSError('Gave up parsing these files')
             if len(line) < 20:
                 continue
-            if int(line[15:17]) >= 70:
-                continue
             if not goodline.fullmatch(line):
                 print('Bad line ', line.decode())
+                continue
+            if int(line[15:17]) >= 70:
                 continue
             thetime = nptime(line)
             if curtime is not None and thetime - curtime > gap:
