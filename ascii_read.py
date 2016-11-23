@@ -77,10 +77,30 @@ def endfile(file):
     file.seek(pos)
     return False
 
+def readhk(file):
+    hk = file.read(50)
+    if not hk:
+        print("I'm confused, what is going on")
+        return
+    if not hkline.fullmatch(hk):
+        print('The 50 characters following a blank line do not match expected HK format:\n', hk.decode())
+        raise OSError('Gave up parsing the files')
+
 def concat(files, out):
     i = 0
     numopen = len(files)
     curtime = None
+    for f in files:
+        # wind past initial 1980 dates
+        pos = f.tell()
+        for line in f:
+            if len(line) > 20:
+                break
+            pos = f.tell()
+        f.seek(pos)
+        if b'HK' in line:
+            readhk(f)
+
     while True:
         sawline = False
         for line in files[i]:
@@ -99,18 +119,11 @@ def concat(files, out):
                 continue
             thetime = nptime(line)
             if curtime is not None and thetime - curtime > gap:
-                print('Gap of ', thetime - curtime, ' in file ', files[i].name)
+                print('Gap of ', (thetime - curtime).astype('m8[m]'), ' in file ', files[i].name)
             out.write(line)
             curtime = thetime
             sawline = True
-        hk = files[i].read(50)
-        if not hk:
-            if i:
-                print("I'm confused, what is going on")
-            break
-        if not hkline.fullmatch(hk):
-            print('The 50 characters following a blank line do not match expected HK format:\n', hk.decode())
-            raise OSError('Gave up parsing the files')
+        readhk(files[i])
         if not sawline:
             continue # go through the next block
         if endfile(files[i]):
