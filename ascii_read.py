@@ -135,6 +135,8 @@ def concat(files, out):
 #                raise OSError('Geez')
             print('Closing file', files[i].name)
             files[i].close()
+            if i == 0:
+                break
 #            numopen -= 1
 #            i = 0
         i = (i + 1) % numopen
@@ -146,6 +148,11 @@ def concat(files, out):
         if jump > thresh:
             print('Jump of', jump.astype('m8[m]'), 'seen in file', files[i].name, '. Returning to first...')
             i = 0
+    if all(f.closed for f in files):
+        out.close()
+        print('All files closed')
+    else:
+        print('Not all files closed?!?')
 
 
 #files = glob.glob(os.path.join(udir, '*.TXT'))
