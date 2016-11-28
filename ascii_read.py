@@ -108,18 +108,18 @@ def concat(files, out):
                 break
             elif b'HK' in line:
                 print('HK found in line not following a blank line--What?')
-                print('File ', files[i].name)
+                print('File', files[i].name)
                 raise OSError('Gave up parsing these files')
             if len(line) < 20:
                 continue
             if not goodline.fullmatch(line):
-                print('Bad line ', line.decode())
+                print('Bad line', line.decode().strip())
                 continue
             if int(line[15:17]) >= 70:
                 continue
             thetime = nptime(line)
             if curtime is not None and thetime - curtime > gap:
-                print('Gap of ', (thetime - curtime).astype('m8[m]'), ' in file ', files[i].name)
+                print('Gap of', (thetime - curtime).astype('m8[m]'), 'in file', files[i].name)
             out.write(line)
             curtime = thetime
             sawline = True
@@ -133,20 +133,19 @@ def concat(files, out):
 #            elif i > numopen - 1:
 #                print('What on earth')
 #                raise OSError('Geez')
-            print('Closing file ', files[i].name)
+            print('Closing file', files[i].name)
             files[i].close()
 #            numopen -= 1
 #            i = 0
-        else:
-            i = (i + 1) % numopen
-            if files[i].closed:
-                i = 0
-            if i == 0:
-                continue
-            jump = bigjump(files[i], curtime)
-            if jump > thresh:
-                print('Jump of ', jump, ' seen in file ', files[i].name, '. Returning to 1...')
-                i = 0
+        i = (i + 1) % numopen
+        if files[i].closed:
+            i = 0
+        if i == 0:
+            continue
+        jump = bigjump(files[i], curtime)
+        if jump > thresh:
+            print('Jump of', jump.astype('m8[m]'), 'seen in file', files[i].name, '. Returning to first...')
+            i = 0
 
 
 #files = glob.glob(os.path.join(udir, '*.TXT'))
