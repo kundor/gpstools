@@ -65,7 +65,7 @@ def bigjump(file, curtime):
     pos = file.tell()
     line = next(file)
     file.seek(pos)
-    return nptime(line) - curtime > thresh
+    return nptime(line) - curtime
 
 def endfile(file):
     """Return true if no data remains."""
@@ -127,18 +127,25 @@ def concat(files, out):
         if not sawline:
             continue # go through the next block
         if endfile(files[i]):
-            if i < numopen - 1:
-                print('File exhausted with some left afterward?!')
-                raise OSError('Gave up')
-            elif i > numopen - 1:
-                print('What on earth')
-                raise OSError('Geez')
+#            if i < numopen - 1:
+#                print('File exhausted with some left afterward?!')
+#                raise OSError('Gave up')
+#            elif i > numopen - 1:
+#                print('What on earth')
+#                raise OSError('Geez')
+            print('Closing file ', files[i].name)
             files[i].close()
-            numopen -= 1
-            i = 0
+#            numopen -= 1
+#            i = 0
         else:
             i = (i + 1) % numopen
-            if i and bigjump(files[i], curtime):
+            if files[i].closed:
+                i = 0
+            if i == 0:
+                continue
+            jump = bigjump(files[i], curtime)
+            if jump > thresh:
+                print('Jump of ', jump, ' seen in file ', files[i].name, '. Returning to 1...')
                 i = 0
 
 
