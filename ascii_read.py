@@ -161,3 +161,5 @@ files = [open(str(n) + '.TXT', 'rb') for n in range(1, 92)]
 # Using binary mode so that seek and iteration can mix.
 out = open('uart_cat.txt', 'wb')
 concat(files, out)
+
+SNR = np.empty(115920000, dtype=rec) # an estimate of the number of records...
