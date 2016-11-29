@@ -20,7 +20,7 @@ GPS epoch, 060180).
 Every once in a while there is a blank line, followed by a line like
 HK:: BATT:4.13V TTR:13694s U2:UART2_0.TXT U3:/UART
 (50 characters) which continues with a normal data line.
-At this time, switch to reading the next file.
+At this time, switch to reading the next file, cyclically.
 
 Created on Mon Nov 21 10:14:06 2016
 
@@ -28,19 +28,32 @@ Created on Mon Nov 21 10:14:06 2016
 """
 
 import numpy as np
+from numpy import sin, cos
 #import glob
 import os
 import re
+from coords import xyz2llh
+from gpstime import leapseconds
+from gpsazel import poslist, satcoeffs
+from satpos import mvec
 
+#%% Stuff to configure
 udir = '/inge/scratch/UART/UART3'
+
+outfile = 'uart_cat.txt'
+
+LOC = (-1283649.0796, -4726431.0920, 4074789.6026)  # vpr3 site at Marshall
 
 thresh = np.timedelta64(1, 'h')
 """A gap larger than this means to go back to the first file."""
 
-gap = np.timedelta64(5, 'm')
+gapthresh = np.timedelta64(5, 'm')
 """A gap larger than this is commented on."""
 
+approxnumrec = 115920000
+"""The number of snr records to preallocate"""
 
+#%% Constants
 rec = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('snr', 'u2')])
 
 # I don't know if SNRs below 10 are reported with leading zeros or not
@@ -54,6 +67,43 @@ goodline = re.compile(rb'([01][0-9]|2[0-3])' # hour
 
 hkline = re.compile(rb'HK:: BATT:[0-9]\.[0-9]{2}V TTR:[-0-9][0-9]{4}s U2:/?UART2[_/][0-9]+\.TXT U3:/UART?')
 
+#%% coordinate data for az/el computations
+lat, lon, ht = xyz2llh(LOC)
+trans = np.array([[-sin(lon), -sin(lat)*cos(lon), cos(lat)*cos(lon)],
+                  [ cos(lon), -sin(lat)*sin(lon), cos(lat)*sin(lon)],
+                  [ 0,         cos(lat),          sin(lat)]])
+
+#%% Time stuff
+GPSepoch = np.datetime64('1980-01-06', 'us')
+
+def leapsecs(ndt):
+    """GPS leap seconds at a numpy datetime64 in UTC time, as timedelta64.
+
+    Doesn't work for dates before 1972.
+    """
+    ls = leapseconds[max(l for l in leapseconds if l <= ndt)] - 19
+    return np.timedelta64(int(ls), 's')
+
+def gpsweekgps(ndt):
+    """GPS week number of a numpy datetime64 in GPS time."""
+    return int((ndt - GPSepoch) / np.timedelta64(1, 'W'))
+
+def gpsweekutc(ndt):
+    """Compute GPS week number of a numpy datetime64 in UTC time."""
+    return gpsweekgps(ndt + leapsecs(ndt))
+
+def gpstotsecgps(ndt):
+    """GPS seconds since epoch for a numpy datetime64 in GPS time."""
+    return (ndt - GPSepoch) / np.timedelta64(1, 's')
+
+def gpssowgps(ndt):
+    """GPS second of week of a numpy datetime64 in GPS time."""
+    return gpstotsecgps(ndt) % 60*60*24*7
+
+def gpssowutc(ndt):
+    """GPS second of week of a numpy datetime64 in UTC time."""
+    return gpssowgps(ndt + leapsecs(ndt))
+
 def nptime(lin):
     """Convert first two fields into a numpy datetime64[us]
 
@@ -61,11 +111,22 @@ def nptime(lin):
     """
     return np.datetime64(b'20%b-%b-%bT%b:%b:%b' % (lin[15:17], lin[13:15], lin[11:13], lin[:2], lin[2:4], lin[4:10]))
 
-def bigjump(file, curtime):
+#%%#-----------------------------------------------------------------------#%%#
+
+def nexttime(file):
+    """Returns the time in the next line of file."""
     pos = file.tell()
     line = next(file)
     file.seek(pos)
-    return nptime(line) - curtime
+    return nptime(line)
+
+def bigjump(file, curtime):
+    """Return true if the time difference between the next line of file and curtime is big."""
+    jump = nexttime(file) - curtime
+    if jump > thresh:
+        print('Jump of', jump.astype('m8[m]'), 'seen in file', file.name)
+        return True
+    return False
 
 def endfile(file):
     """Return true if no data remains."""
@@ -78,88 +139,160 @@ def endfile(file):
     return False
 
 def readhk(file):
+    """Read housekeeping (HK) line. Check for proper format, then discard."""
     hk = file.read(50)
     if not hk:
-        print("I'm confused, what is going on")
+        print("Housekeeping line expected; instead found end of file?", file.name)
         return
     if not hkline.fullmatch(hk):
         print('The 50 characters following a blank line do not match expected HK format:\n', hk.decode())
         raise OSError('Gave up parsing the files')
 
-def concat(files, out):
-    i = 0
-    numopen = len(files)
-    curtime = None
-    for f in files:
-        # wind past initial 1980 dates
-        pos = f.tell()
-        for line in f:
-            if len(line) > 20:
-                break
-            pos = f.tell()
-        f.seek(pos)
-        if b'HK' in line:
-            readhk(f)
+def windpastshortlines(file):
+    pos = file.tell()
+    for line in file:
+        if len(line) > 20:
+            break
+        pos = file.tell()
+    file.seek(pos)
+    if b'HK' in line:
+        readhk(file)
 
-    while True:
-        sawline = False
-        for line in files[i]:
-            if line.isspace():
-                break
-            elif b'HK' in line:
-                print('HK found in line not following a blank line--What?')
-                print('File', files[i].name)
-                raise OSError('Gave up parsing these files')
-            if len(line) < 20:
-                continue
-            if not goodline.fullmatch(line):
-                print('Bad line', line.decode().strip())
-                continue
-            if int(line[15:17]) >= 70:
-                continue
-            thetime = nptime(line)
-            if curtime is not None and thetime - curtime > gap:
-                print('Gap of', (thetime - curtime).astype('m8[m]'), 'in file', files[i].name)
-            out.write(line)
-            curtime = thetime
-            sawline = True
-        readhk(files[i])
-        if not sawline:
-            continue # go through the next block
-        if endfile(files[i]):
-#            if i < numopen - 1:
-#                print('File exhausted with some left afterward?!')
-#                raise OSError('Gave up')
-#            elif i > numopen - 1:
-#                print('What on earth')
-#                raise OSError('Geez')
-            print('Closing file', files[i].name)
-            files[i].close()
-            if i == 0:
-                break
-#            numopen -= 1
-#            i = 0
-        i = (i + 1) % numopen
-        if files[i].closed:
-            i = 0
-        if i == 0:
-            continue
-        jump = bigjump(files[i], curtime)
-        if jump > thresh:
-            print('Jump of', jump.astype('m8[m]'), 'seen in file', files[i].name, '. Returning to first...')
-            i = 0
+def checkline(line, name):
+    if b'HK' in line:
+        print('HK found in line not following a blank line in', name, '-- What?')
+        raise OSError('Gave up parsing these files')
+    elif len(line) < 20:
+        return False
+    elif not goodline.fullmatch(line):
+        print('Bad line in', name, line.decode().strip())
+        return False
+    elif int(line[15:17]) >= 70:
+        return False
+    return True
+
+def closewhenempty(file):
+    if endfile(file):
+        print('Closing file', file.name)
+        file.close()
+        return True
+    return False
+
+def getnewtime(line, curtime, name):
+    thetime = nptime(line)
+    if curtime is not None:
+        thegap = thetime - curtime
+        if thegap > gapthresh:
+            print('Gap of', thegap.astype('m8[m]'), 'in file', name)
+    return thetime
+
+def nextfilenum(i, files, curtime):
+    """Increment i, cyclically.
+
+    Reset to 0 when the next file doesn't have data for the current time.
+    """
+    i = (i + 1) % len(files)
+    if files[i].closed:
+        return 0
+    if i and bigjump(files[i], curtime):
+        return 0
+    return i
+
+def checkallclosed(files):
     if all(f.closed for f in files):
-        out.close()
         print('All files closed')
     else:
         print('Not all files closed?!?')
 
+def prepfiles(filenames):
+    files = [open(f, 'rb') for f in filenames]
+     # Use binary mode so that seek and iteration can mix.
+    for f in files:
+        windpastshortlines(f)
+    return files
+
+#%%
+def concat(filenames):
+    """A generator yielding all the good data lines, in chronological order, from the given files."""
+    files = prepfiles(filenames)
+    i = 0
+    curtime = None
+    while True:
+        for line in files[i]:
+            if line.isspace():
+                break
+            if checkline(line, files[i].name):
+                curtime = getnewtime(line, curtime, files[i].name)
+                yield line
+        readhk(files[i])
+        if closewhenempty(files[i]) and i == 0:
+            break
+        i = nextfilenum(i, files, curtime)
+    checkallclosed(files)
+
+#%%#-----------------------------------------------------------------------#%%#
+def azel(sxloc):
+    east, north, up = (sxloc - LOC) @ trans
+    az = np.arctan2(east, north) * 180 / np.pi
+    if az < 0:
+        az += 360
+    el = np.arctan2(up, np.sqrt(east*east + north*north)) * 180 / np.pi
+    return az, el
+
+def addrecords(SNR, line, curi, leaps, cofns):
+    """Add snr records from uart-format line to array SNR, starting at index curi."""
+    time = nptime(line) + leaps
+    totsec = gpstotsecgps(time)
+    words = line.strip().split(b',')
+    for prn, snr in zip(words[2::2], words[3::2]):
+        prn = int(prn)
+        snr = round(float(snr)*10)
+        sxloc = mvec(totsec) @ cofns[prn](totsec)
+        az, el = azel(sxloc)
+        try:
+            SNR[curi] = (prn, time, el, az, snr)
+        except IndexError:
+            newlen = int(len(SNR)*1.2)
+            print('Resizing SNR to', newlen)
+            SNR.resize((newlen,))
+            SNR[curi] = (prn, time, el, az, snr)
+        curi += 1
+    return curi
+
+#%%#-----------------------------------------------------------------------#%%#
 
 #files = glob.glob(os.path.join(udir, '*.TXT'))
 os.chdir(udir)
-files = [open(str(n) + '.TXT', 'rb') for n in range(1, 92)]
-# Using binary mode so that seek and iteration can mix.
-out = open('uart_cat.txt', 'wb')
-concat(files, out)
+files = [str(n) + '.TXT' for n in range(1, 92)]
 
-SNR = np.empty(115920000, dtype=rec) # an estimate of the number of records...
+#%% To just concatenate
+def concatenate_files(files, outfile=outfile):
+    with open(outfile, 'wb') as out:
+        for line in concat(files):
+            out.write(line)
+
+#%% To make a numpy array from an iterable
+def makearray(lineiter):
+    SNR = np.empty(approxnumrec, dtype=rec) # an estimate of the number of records...
+    line = next(lineiter)
+    time0 = nptime(line)
+    leaps = leapsecs(time0)
+    pl = poslist(gpsweekgps(time0 + leaps), gpssowgps(time0 + leaps))
+    cofns = satcoeffs(pl)
+    curi = addrecords(SNR, line, 0, leaps, cofns)
+    for line in lineiter:
+        curi = addrecords(SNR, line, curi, leaps, cofns)
+    SNR.resize((curi,))
+    return SNR
+
+#%%
+pl = poslist()
+
+def process_files(files):
+    """Make a numpy array of the records in a list of UART filenames."""
+    return makearray(concat(files))
+
+def process_catfile(filename=outfile):
+    """Make a numpy array of the records in a concatenated, cleaned file."""
+    with open(filename, 'rb') as fin:
+        return makearray(fin)
