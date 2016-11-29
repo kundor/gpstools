@@ -286,8 +286,6 @@ def makearray(lineiter):
     return SNR
 
 #%%
-pl = poslist()
-
 def process_files(files):
     """Make a numpy array of the records in a list of UART filenames."""
     return makearray(concat(files))
