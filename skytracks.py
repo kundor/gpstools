@@ -31,10 +31,9 @@ pl.shape = (-1, 32, 3) # reshape to 96x32x3 (-1 means 'fit the data')
 pl *= 1000
 
 lat, lon, ht = xyz2llh(LOC)
-trans = np.array([[-sin(lon),           cos(lon),          0       ],
-                  [-sin(lat)*cos(lon), -sin(lat)*sin(lon), cos(lat)],
-                  [ cos(lat)*cos(lon),  cos(lat)*sin(lon), sin(lat)]])
-trans = trans.T
+trans = np.array([[-sin(lon), -sin(lat)*cos(lon), cos(lat)*cos(lon)],
+                  [ cos(lon), -sin(lat)*sin(lon), cos(lat)*sin(lon)],
+                  [ 0,         cos(lat),          sin(lat)]])
 
 plt.figure()
 ax = plt.subplot(1, 1, 1, projection='polar')
@@ -42,7 +41,7 @@ ax = plt.subplot(1, 1, 1, projection='polar')
 for prn in range(32): # prn is one less than the actual PRN :\
     ENU = (pl[:, prn, :] - LOC) @ trans
     az = np.arctan2(ENU[:, 0], ENU[:, 1]) * 180 / np.pi
-    az[az < 0] += 360 
+    az[az < 0] += 360
     el = np.arctan2(ENU[:, 2], np.linalg.norm(ENU[:, :2], axis=1)) * 180 / np.pi
     ind = np.argwhere(el > 5).ravel()
     starts = [-1] + np.argwhere(np.diff(ind) > 1).ravel().tolist() + [len(ind) - 1]
