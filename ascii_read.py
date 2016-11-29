@@ -98,7 +98,7 @@ def gpstotsecgps(ndt):
 
 def gpssowgps(ndt):
     """GPS second of week of a numpy datetime64 in GPS time."""
-    return gpstotsecgps(ndt) % 60*60*24*7
+    return gpstotsecgps(ndt) % (60*60*24*7)
 
 def gpssowutc(ndt):
     """GPS second of week of a numpy datetime64 in UTC time."""
