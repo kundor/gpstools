@@ -23,19 +23,28 @@ def gensnr89(filenames):
                     continue
                 yield float(mch.group(4))
 
-def updatespans(snr, spanstarts, spannum):
-    for i, beg in enumerate(spanstarts):
-        if beg <= snr < beg + 12.8:
-            spannum[i] += 1
-
-def reportspans(spanstarts, spannum, pnum):
-    for ct, beg in zip(spannum, spanstarts):
+def reportspans(spanstarts, bins):
+    pnum = sum(bins) / 100
+    for beg in spanstarts:
+        begind = round(beg*10)
+        ct = sum(bins[begind:begind+128])
         print('{:.2f}% in [{}, {:.1f})'.format(ct/pnum, beg, beg + 12.8))
+
+def bestspan(bins):
+    maxct = 0
+    maxi = 0
+    for i in range(0, len(bins) - 128):
+        ct = sum(bins[i:i+128])
+        if ct > maxct:
+            maxct = ct
+            maxi = i
+    pnum = sum(bins) / 100
+    print('Best span [{}, {}) with {:.2f}%'.format(maxi/10, (maxi + 128)/10, maxct / pnum))
 
 def paren(num):
     return '(' + str(num) + ')'
 
-def calcsnrstat(snriter, spanstarts):
+def calcsnrstat(snriter):
     snrmin = 100.
     snrminp = 100.
     snrmax = 0.
@@ -43,7 +52,7 @@ def calcsnrstat(snriter, spanstarts):
     snrmeanp = 0.
     num = 0
     nump = 0
-    spannum = [0] * len(spanstarts)
+    bins = [0.] * 600
     for snr in snriter:
         snrmean = num/(num+1) * snrmean + snr/(num + 1)
         num += 1
@@ -56,48 +65,39 @@ def calcsnrstat(snriter, spanstarts):
             nump += 1
             if snr < snrminp:
                 snrminp = snr
-        updatespans(snr, spanstarts, spannum)
+        bins[round(snr*10)] += 1
     print('Min:', snrmin, paren(snrminp))
     print('Max:', snrmax)
     print('Mean:', snrmean, paren(snrmeanp))
     print('Num:', num, paren(nump))
-    reportspans(spanstarts, spannum, num/100)
-    return snrmean, num
+    return snrmean, num, snrmeanp, nump, bins
 
-def calcsnrstd(snriter, spanstarts, snrmean, snrmeanp, num, nump):
-    spannum = [0] * len(spanstarts)
+def calcsnrstd(snriter, snrmean, snrmeanp, num, nump):
     sqrsum = 0.
     sqrsump = 0.
     for snr in snriter:
         sqrsum += (snr - snrmean)**2
         if snr > 0:
             sqrsump += (snr - snrmeanp)**2
-        updatespans(snr, spanstarts, spannum)
     snrstd = sqrt(sqrsum / num)
     snrstdp = sqrt(sqrsump / nump)
     print('Std:', snrstd, paren(snrstdp))
-    reportspans(spanstarts, spannum, num/100)
-    return snrstd
-
-def calcsnrspans(snriter, spanstarts):
-    num = 0
-    spannum = [0] * len(spanstarts)
-    for snr in snriter:
-        num += 1
-        updatespans(snr, spanstarts, spannum)
-    reportspans(spanstarts, spannum, num/100)
+    return snrstd, snrstdp
 
 """
-spanstarts = [36, 38, 40]
-
 with open('/inge/scratch/UART/UART3/uart_cat.txt', 'rb') as fid:
-    snrmean, num = calcsnrstat(gensnrs(fid), spanstarts)
+    snrmean, num, snrmeanp, nump, bins = calcsnrstat(gensnrs(fid))
 
+reportspans([36, 38, 40], bins)
 spanstarts = [36.4, 37, 37.6, 37.8, 38.2, 38.6, 39]
+reportspans(spanstarts, bins)
 
 with open('/inge/scratch/UART/UART3/uart_cat.txt', 'rb') as fid:
-    calcsnrstd(gensnrs(fid), spanstarts, snrmean, num)
+    calcsnrstd(gensnrs(fid), snrmean, snrmeanp, num, nump)
 
 from ascii_read import filter
-snrmean, num = calcsnrstat(gensnrs(filter('uart3.txt')), spanstarts)
+snrmean, num, snrmeanp, nump, bins = calcsnrstat(gensnrs(filter('uart3.txt')))
+
+filenames = ['vpr3%d0.16.snr89' % d for d in range(188, 240)]
+snrmean, num, snrmeanp, nump, bins = calcsnrstat(gensnr89(filenames))
 """
