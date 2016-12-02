@@ -8,19 +8,20 @@ def gensnrs(lineiter):
         for snr in words[3::2]:
             yield float(snr)
 
-def gensnr89(filename):
+def gensnr89(filenames):
     int89line = re.compile(r'(0[1-9]|[12][0-9]|3[012]) '
                            r'([0-8][0-9]|90) '
                            r'([012][0-9][0-9]|3[0-5][0-9]) '
                            r'[0-9]{1,5}\.[0-9] '
                            r'0 0 ([0-9]{2}\.[0-9])\n')
-    with open(filename) as fid:
-        for line in fid:
-            mch = int89line.fullmatch(line)
-            if not mch:
-                print('Bad line', line.strip())
-                continue
-            yield float(mch.group(4))
+    for f in filenames:
+        with open(f) as fid:
+            for line in fid:
+                mch = int89line.fullmatch(line)
+                if not mch:
+                    print('Bad line', line.strip())
+                    continue
+                yield float(mch.group(4))
 
 def updatespans(snr, spanstarts, spannum):
     for i, beg in enumerate(spanstarts):
