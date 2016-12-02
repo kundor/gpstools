@@ -30,7 +30,6 @@ Created on Mon Nov 21 10:14:06 2016
 import numpy as np
 from numpy import sin, cos
 #import glob
-import os
 import re
 from coords import xyz2llh
 from gpstime import leapseconds
@@ -58,12 +57,12 @@ rec = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('s
 
 # I don't know if SNRs below 10 are reported with leading zeros or not
 goodline = re.compile(rb'([01][0-9]|2[0-3])' # hour
-                      b'([0-5][0-9]){2}\.[0-9]{3},' # minute second
-                      b'([0-2][0-9]|3[01])' # day
-                      b'(0[0-9]|1[012])' # month
-                      b'[0-9]{2}' # year
-                      b'(,(0[1-9]|[12][0-9]|3[012]),' # prn
-                      b'(0|[1-9][0-9]\.[0-9])){,4}[\r\n]+') # snr
+                      rb'([0-5][0-9]){2}\.[0-9]{3},' # minute second
+                      rb'([0-2][0-9]|3[01])' # day
+                      rb'(0[0-9]|1[012])' # month
+                      rb'[0-9]{2}' # year
+                      rb'(,(0[1-9]|[12][0-9]|3[012]),' # prn
+                      rb'(0|[1-9][0-9]\.[0-9])){,4}[\r\n]+') # snr
 
 hkline = re.compile(rb'HK:: BATT:[0-9]\.[0-9]{2}V TTR:[-0-9][0-9]{4}s U2:/?UART2[_/][0-9]+\.TXT U3:/?UART?3?')
 
