@@ -31,10 +31,11 @@ def gensnr89(filenames):
 
 def reportspans(spanstarts, bins):
     pnum = sum(bins) / 100
+    pnump = sum(bins[1:]) / 100
     for beg in spanstarts:
         begind = round(beg*10)
         ct = sum(bins[begind:begind+128])
-        print('{:.2f}% in [{}, {:.1f})'.format(ct/pnum, beg, beg + 12.8))
+        print('{:.2f}% ({:.2f}%) in [{}, {:.1f})'.format(ct/pnum, ct/pnump, beg, beg + 12.8))
 
 def bestspan(bins):
     maxct = 0
@@ -45,7 +46,8 @@ def bestspan(bins):
             maxct = ct
             maxi = i
     pnum = sum(bins) / 100
-    print('Best span [{}, {}) with {:.2f}%'.format(maxi/10, (maxi + 128)/10, maxct / pnum))
+    pnump = sum(bins[1:]) / 100
+    print('Best span [{}, {}) with {:.2f}% ({:.2f}%)'.format(maxi/10, (maxi + 128)/10, maxct / pnum, maxct / pnump))
 
 def paren(num):
     return '(' + str(num) + ')'
@@ -76,7 +78,7 @@ def calcsnrstat(snriter):
     print('Max:', snrmax)
     print('Mean:', snrmean, paren(snrmeanp))
     print('Num:', num, paren(nump))
-    return snrmean, num, snrmeanp, nump, bins
+    return snrmean, snrmeanp, bins
 
 def calcsnrstd(snriter, snrmean, snrmeanp, num, nump):
     sqrsum = 0.
@@ -92,18 +94,18 @@ def calcsnrstd(snriter, snrmean, snrmeanp, num, nump):
 
 """
 with open('/inge/scratch/UART/UART3/uart_cat.txt', 'rb') as fid:
-    snrmean, num, snrmeanp, nump, bins = calcsnrstat(gensnrs(fid))
+    snrmean, snrmeanp, bins = calcsnrstat(gensnrs(fid))
 
 reportspans([36, 38, 40], bins)
 spanstarts = [36.4, 37, 37.6, 37.8, 38.2, 38.6, 39]
 reportspans(spanstarts, bins)
 
 with open('/inge/scratch/UART/UART3/uart_cat.txt', 'rb') as fid:
-    calcsnrstd(gensnrs(fid), snrmean, snrmeanp, num, nump)
+    calcsnrstd(gensnrs(fid), snrmean, snrmeanp, sum(bins), sum(bins[1:]))
 
 from ascii_read import filter
-snrmean, num, snrmeanp, nump, bins = calcsnrstat(gensnrs(filter('uart3.txt')))
+snrmean, snrmeanp, bins = calcsnrstat(gensnrs(filter('uart3.txt')))
 
 filenames = ['vpr3%d0.16.snr89' % d for d in range(188, 240)]
-snrmean, num, snrmeanp, nump, bins = calcsnrstat(gensnr89(filenames))
+snrmean, snrmeanp, bins = calcsnrstat(gensnr89(filenames))
 """
