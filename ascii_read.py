@@ -34,8 +34,8 @@ import os
 import re
 from coords import xyz2llh
 from gpstime import leapseconds
-from gpsazel import poslist, satcoeffs
-from satpos import mvec
+from gpsazel import satcoeffs
+from fetchnav import getsp3file
 
 #%% Stuff to configure
 udir = '/inge/scratch/UART/UART3'
@@ -109,7 +109,7 @@ def nptime(lin):
 
     Assumes two-digit year is in 21st century. Microsecond resolution.
     """
-    return np.datetime64(b'20%b-%b-%bT%b:%b:%b' % (lin[15:17], lin[13:15], lin[11:13], lin[:2], lin[2:4], lin[4:10]))
+    return np.datetime64(b'20%b-%b-%bT%b:%b:%b' % (lin[15:17], lin[13:15], lin[11:13], lin[:2], lin[2:4], lin[4:10]), 'us')
 
 #%%#-----------------------------------------------------------------------#%%#
 
@@ -230,7 +230,53 @@ def concat(filenames):
         i = nextfilenum(i, files, curtime)
     checkallclosed(files)
 
-#%%#-----------------------------------------------------------------------#%%#
+def filter(filename):
+    """A generator yielding all the good data lines from the given file."""
+    with open(filename, 'rb') as file:
+        for line in file:
+            if line.isspace():
+                readhk(file)
+            elif checkline(line, filename):
+                yield line
+
+#%% Satellite positions
+def sp3headtime(line):
+    fields = ((3, 7), (8, 10), (11, 13), (14, 16), (17, 19), (20, 29))
+    return np.datetime64('{}-{}-{}T{}:{}:{}'.format(*(line[b:e].strip().zfill(e - b) for b, e in fields)), 'us')
+
+def readsp3(sp3file):
+    pl = np.loadtxt(sp3file, skiprows=22, usecols=(1, 2, 3), comments=['*', 'E', 'V'])
+# This assumes all 32 PRNs are present, in order, for each epoch
+# Also assuming interval is 900 seconds (15 minutes)
+    pl.shape = (-1, 32, 3) # reshape to 96x32x3 (-1 means 'fit the data')
+    pl *= 1000
+    with open(sp3file) as fid:
+        line = fid.readline()
+        time0 = sp3headtime(line)
+        line = fid.readline().split()
+        assert line[3] == '900.00000000'
+        line = fid.readline().split()
+        assert line[1] == '32'
+    return pl, time0
+
+def poslist(time):
+    """Return an array of sp3 satellite positions for the day(s) around the given time."""
+    min15 = np.timedelta64(15, 'm')
+    week = gpsweekgps(time)
+    sow = gpssowgps(time)
+    pl, epoch = readsp3(getsp3file((week, sow)))
+    if time - epoch < np.timedelta64(2, 'h'):
+        pl0, epoch0 = readsp3(getsp3file((week, sow - 60*60*12)))
+# note: negative seconds of week will work fine
+        if epoch != epoch0 + len(pl0)*min15:
+            print("Difference between sp3 files is not 900 seconds.")
+# TODO: when dealing with ultrarapid files, we may have problems with this
+        pl = np.concatenate((pl0, pl))
+        epoch = epoch0
+    return pl, epoch
+
+
+#%%
 def azel(sxloc):
     east, north, up = (sxloc - LOC) @ trans
     az = np.arctan2(east, north) * 180 / np.pi
@@ -277,7 +323,7 @@ def makearray(lineiter):
     line = next(lineiter)
     time0 = nptime(line)
     leaps = leapsecs(time0)
-    pl = poslist(gpsweekgps(time0 + leaps), gpssowgps(time0 + leaps))
+    pl, epoch = poslist(time0 + leaps)
     cofns = satcoeffs(pl)
     curi = addrecords(SNR, line, 0, leaps, cofns)
     for line in lineiter:
