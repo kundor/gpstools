@@ -308,9 +308,10 @@ def addrecords(SNR, line, curi, leaps, cofns):
 #%%#-----------------------------------------------------------------------#%%#
 
 #files = glob.glob(os.path.join(udir, '*.TXT'))
+"""
 os.chdir(udir)
 files = [str(n) + '.TXT' for n in range(1, 92)]
-
+"""
 #%% To just concatenate
 def concatenate_files(files, outfile=outfile):
     with open(outfile, 'wb') as out:
