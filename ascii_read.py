@@ -146,7 +146,7 @@ def readhk(file):
         return
     if not hkline.fullmatch(hk):
         print('The 50 characters following a blank line do not match expected HK format:\n', hk.decode())
-        raise OSError('Gave up parsing the files')
+        #raise OSError('Gave up parsing the files')
 
 def windpastshortlines(file):
     pos = file.tell()
