@@ -3,17 +3,23 @@ from math import sqrt
 import re
 
 def gensnrs(lineiter):
+    """Get the SNR values from each line in VAPR ASCII format.
+
+    Lines should all be valid, so lineiter should either be a prefiltered
+    file object, or run through filter(filename).
+    """
     for line in lineiter:
         words = line.split(b',')
         for snr in words[3::2]:
             yield float(snr)
 
 def gensnr89(filenames):
+    """Get the SNR values from a list of files in snr89 format."""
     int89line = re.compile(r'(0[1-9]|[12][0-9]|3[012]) '
                            r'([0-8][0-9]|90) '
                            r'([012][0-9][0-9]|3[0-5][0-9]) '
                            r'[0-9]{1,5}\.[0-9] '
-                           r'0 0 ([0-9]{2}\.[0-9])\n')
+                           r'0 0 ([0-9]{1,2}\.[0-9])\n')
     for f in filenames:
         with open(f) as fid:
             for line in fid:
