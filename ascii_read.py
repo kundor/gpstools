@@ -161,7 +161,8 @@ def windpastshortlines(file):
 def checkline(line, name):
     if b'HK' in line:
         print('HK found in line not following a blank line in', name, '-- What?')
-        raise OSError('Gave up parsing these files')
+        #raise OSError('Gave up parsing these files')
+        return False
     elif len(line) < 20:
         return False
     elif not goodline.fullmatch(line):
