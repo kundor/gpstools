@@ -88,7 +88,7 @@ def calcsnrstat(snriter):
     print('Max:', snrmax)
     print('Mean: {:.2f} ({:.2f})'.format(snrmean, snrmeanp))
     print('Num:', num, paren(nump))
-    print('Std: {:.2f} ({:2f})'.format(snrstd, snrstdp))
+    print('Std: {:.2f} ({:.2f})'.format(snrstd, snrstdp))
     return bins
 
 """
