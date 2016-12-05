@@ -60,52 +60,48 @@ def calcsnrstat(snriter):
     snrmeanp = 0.
     num = 0
     nump = 0
+    M2 = 0.
+    M2p = 0.
     bins = [0.] * 600
     for snr in snriter:
-        snrmean = num/(num+1) * snrmean + snr/(num + 1)
         num += 1
+        delta = snr - snrmean
+        snrmean += delta / num
+        delta2 = snr - snrmean
+        M2 += delta * delta2
         if snr > snrmax:
             snrmax = snr
         if snr < snrmin:
             snrmin = snr
         if snr > 0:
-            snrmeanp = nump/(nump+1) * snrmeanp + snr/(nump + 1)
             nump += 1
+            delta = snr - snrmeanp
+            snrmeanp += delta / nump
+            delta2 = snr - snrmeanp
+            M2p += delta * delta2
             if snr < snrminp:
                 snrminp = snr
         bins[round(snr*10)] += 1
+    snrstd = M2 / (num - 1)
+    snrstdp = M2p / (nump - 1)
     print('Min:', snrmin, paren(snrminp))
     print('Max:', snrmax)
     print('Mean:', snrmean, paren(snrmeanp))
     print('Num:', num, paren(nump))
-    return snrmean, snrmeanp, bins
-
-def calcsnrstd(snriter, snrmean, snrmeanp, num, nump):
-    sqrsum = 0.
-    sqrsump = 0.
-    for snr in snriter:
-        sqrsum += (snr - snrmean)**2
-        if snr > 0:
-            sqrsump += (snr - snrmeanp)**2
-    snrstd = sqrt(sqrsum / num)
-    snrstdp = sqrt(sqrsump / nump)
     print('Std:', snrstd, paren(snrstdp))
-    return snrstd, snrstdp
+    return bins
 
 """
 with open('/inge/scratch/UART/UART3/uart_cat.txt', 'rb') as fid:
-    snrmean, snrmeanp, bins = calcsnrstat(gensnrs(fid))
+    bins = calcsnrstat(gensnrs(fid))
 
 reportspans([36, 38, 40], bins)
 spanstarts = [36.4, 37, 37.6, 37.8, 38.2, 38.6, 39]
 reportspans(spanstarts, bins)
 
-with open('/inge/scratch/UART/UART3/uart_cat.txt', 'rb') as fid:
-    calcsnrstd(gensnrs(fid), snrmean, snrmeanp, sum(bins), sum(bins[1:]))
-
 from ascii_read import filter
-snrmean, snrmeanp, bins = calcsnrstat(gensnrs(filter('uart3.txt')))
+bins = calcsnrstat(gensnrs(filter('uart3.txt')))
 
 filenames = ['vpr3%d0.16.snr89' % d for d in range(188, 240)]
-snrmean, snrmeanp, bins = calcsnrstat(gensnr89(filenames))
+bins = calcsnrstat(gensnr89(filenames))
 """
