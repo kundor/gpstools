@@ -82,13 +82,13 @@ def calcsnrstat(snriter):
             if snr < snrminp:
                 snrminp = snr
         bins[round(snr*10)] += 1
-    snrstd = M2 / (num - 1)
-    snrstdp = M2p / (nump - 1)
+    snrstd = sqrt(M2 / (num - 1))
+    snrstdp = sqrt(M2p / (nump - 1))
     print('Min:', snrmin, paren(snrminp))
     print('Max:', snrmax)
-    print('Mean:', snrmean, paren(snrmeanp))
+    print('Mean: {:.2f} ({:.2f})'.format(snrmean, snrmeanp))
     print('Num:', num, paren(nump))
-    print('Std:', snrstd, paren(snrstdp))
+    print('Std: {:.2f} ({:2f})'.format(snrstd, snrstdp))
     return bins
 
 """
