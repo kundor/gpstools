@@ -19,7 +19,8 @@ class WGS84:
         """Distance from the surface of the ellipsoid at latitude lat to the
         z-axis, along the ellipsoid normal.
         """
-        return cls.a / sqrt(1 - cls.e2 * sin(lat)**2)
+        sl = sin(lat)
+        return cls.a / sqrt(1 - cls.e2 * sl * sl)
 # equivalent: a^2 / sqrt(a^2 cos^2(lat) + b^2 sin^2(lat))
 
 def xyz2lat(x, y, z, tol=1e-10):
@@ -53,9 +54,10 @@ def llh2xyz(lat, lon=None, ht=None):
     """
     if lon is None and ht is None:
         lat, lon, ht = lat
-    x = (WGS84.ellnormal(lat) + ht) * cos(lat) * cos(lon)
-    y = (WGS84.ellnormal(lat) + ht) * cos(lat) * sin(lon)
-    z = ((1 - WGS84.e2) * WGS84.ellnormal(lat) + ht) * sin(lat)
+    enlat = WGS84.ellnormal(lat)
+    x = (enlat + ht) * cos(lat) * cos(lon)
+    y = (enlat + ht) * cos(lat) * sin(lon)
+    z = ((1 - WGS84.e2) * enlat + ht) * sin(lat)
     return x, y, z
 
 def _enutrans(lat, lon, vec):
