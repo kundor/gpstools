@@ -8,6 +8,7 @@ and azimuth and elevation from a base point (in radians).
 
 from math import atan2, cos, sin, sqrt, pi
 import scipy
+import numpy as np
 
 class WGS84:
     """Parameters defining the WGS84 ellipsoid."""
@@ -45,6 +46,27 @@ def lengthlon(lat):
     """Length (m) of one degree of longitude at given latitude (degrees)."""
     lat *= pi / 180
     return pi * WGS84.ellnormal(lat) * cos(lat) / 180
+
+def earthnormal_xyz(x, y=None, z=None):
+    """Unit normal vector to the WGS84 ellipsoid at the given ECEF coordinates."""
+    if y is None and z is None:
+        x, y, z = x
+    wa = (WGS84.a / 2500)**2
+    wb = (WGS84.a * (1 - WGS84.f) / 2500)**2
+    nrml = np.array((x / wa, y / wa, z / wb))
+    return nrml / sqrt(nrml @ nrml)
+
+def earthnormal_llh(lat, lon=None, ht=None):
+    """Unit normal vector to the WGS84 ellipsoid at the given coordinates
+
+    Input is geodetic latitude and longitude in radians, and height above
+    the ellipsoid in meters.
+    """
+    if lon is None and ht is None:
+        lat, lon, ht = lat
+    xyz1 = np.array(llh2xyz(lat, lon, ht))
+    xyz2 = np.array(llh2xyz(lat, lon, ht + 1))
+    return xyz2 - xyz1
 
 def xyz2lat(x, y, z, tol=1e-10):
     p2 = x*x + y*y
