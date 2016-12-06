@@ -68,6 +68,34 @@ def earthnormal_llh(lat, lon=None, ht=None):
     xyz2 = np.array(llh2xyz(lat, lon, ht + 1))
     return xyz2 - xyz1
 
+def deg2rad(lat, lon=None, ht=None):
+    """Convert latitude and longitude from degrees to radians.
+
+    Height is returned unchanged, if given.
+    """
+    if lon is not None and ht is None:
+        return lat * pi / 180, lon * pi / 180
+    if lon is None and ht is None:
+        if len(lat) == 2:
+            return lat[0] * pi / 180, lat[1] * pi / 180
+        if len(lat) == 3:
+            return lat[0] * pi / 180, lat[1] * pi / 180, lat[2]
+    return lat * pi / 180, lon * pi / 180, ht
+
+def rad2deg(lat, lon=None, ht=None):
+    """Convert latitude and longitude from radians to degrees.
+
+    Height is returned unchanged, if given.
+    """
+    if lon is not None and ht is None:
+        return lat * 180 / pi, lon * 180 / pi
+    if lon is None and ht is None:
+        if len(lat) == 2:
+            return lat[0] * 180 / pi, lat[1] * 180 / pi
+        if len(lat) == 3:
+            return lat[0] * 180 / pi, lat[1] * 180 / pi, lat[2]
+    return lat * 180 / pi, lon * 180 / pi, ht
+
 def xyz2lat(x, y, z, tol=1e-10):
     p2 = x*x + y*y
     oe2z2 = (1 - WGS84.e2) * z*z
