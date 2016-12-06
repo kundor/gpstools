@@ -7,6 +7,7 @@ and azimuth and elevation from a base point (in radians).
 """
 
 from math import atan2, cos, sin, sqrt, pi
+import scipy
 
 class WGS84:
     """Parameters defining the WGS84 ellipsoid."""
@@ -22,6 +23,28 @@ class WGS84:
         sl = sin(lat)
         return cls.a / sqrt(1 - cls.e2 * sl * sl)
 # equivalent: a^2 / sqrt(a^2 cos^2(lat) + b^2 sin^2(lat))
+
+def lengthlat(lat1, lat2=None):
+    """Distance in meters between two given latitudes in degrees.
+
+    If only one argument is given, return length of one degree of latitude
+    centered at lat1.
+    """
+    if lat2 is None:
+        lat2 = lat1 + 0.5
+        lat1 -= 0.5
+    lat1 *= pi / 180
+    lat2 *= pi / 180
+    def integrand(x):
+        sx = sin(x)
+        return pow(1 - WGS84.e2 * sx * sx, -3/2)
+    reserr = scipy.integrate.quad(integrand, lat1, lat2)
+    return WGS84.a * (1 - WGS84.e2) * reserr[0]
+
+def lengthlon(lat):
+    """Length (m) of one degree of longitude at given latitude (degrees)."""
+    lat *= pi / 180
+    return pi * WGS84.ellnormal(lat) * cos(lat) / 180
 
 def xyz2lat(x, y, z, tol=1e-10):
     p2 = x*x + y*y
