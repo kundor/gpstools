@@ -94,7 +94,7 @@ def _lci(end0, dif, cyco, uax, length, radius):
     t0 = -(end0 @ uax) / (dif @ uax) # where line meets bottom of cylinder
     t1 = (length - end0 @ uax) / (dif @ uax) # where line meets top of cylinder
     if not _clip(slns, t0, t1):
-        return []
+        return np.zeros((0,3)) # empty array
     return end0 + np.outer(slns, dif)
 
 def linecylinderintersect(end0, end1, base, axis, radius):
