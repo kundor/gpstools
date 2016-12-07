@@ -85,6 +85,18 @@ def _clip(vals, t0, t1):
     if vals[0] < t1 < vals[1]:
         vals[1] = t1
 
+def _lci(end0, dif, cyco, uax, length, radius):
+    # Parameterize the line by L(t) = end0 + t*dif
+    A = np.sum(cyco * dif**2)
+    B = 2*np.sum(cyco * dif * end0)
+    C = np.sum(cyco * end0**2) - radius**2
+    slns = quadformula(A, B, C)
+    t0 = -(end0 @ uax) / (dif @ uax) # where line meets bottom of cylinder
+    t1 = (length - end0 @ uax) / (dif @ uax) # where line meets top of cylinder
+    if not _clip(slns, t0, t1):
+        return []
+    return end0 + np.outer(slns, dif)
+
 def linecylinderintersect(end0, end1, base, axis, radius):
     """Find intersections of a line segment with a finite cylinder.
 
@@ -98,26 +110,15 @@ def linecylinderintersect(end0, end1, base, axis, radius):
     i.e. the dot product of axis and end1 - end0 is positive; this should be the
     case if end1 is a satellite above the horizon.
     """
-    dif = end1 - end0
-    end0 = end0 - base
-    # Parameterize the line by L(t) = end0 + t*dif
     cyco = cylindercoeffs(axis)
-    A = np.sum(cyco * dif**2)
-    B = 2*np.sum(cyco * dif * end0)
-    C = np.sum(cyco * end0**2) - radius**2
-    slns = quadformula(A, B, C)
     length = np.linalg.norm(axis)
     uax = axis / length
-    t0 = -(end0 @ uax) / (dif @ uax) # where line meets bottom of cylinder
-    t1 = (length - end0 @ uax) / (dif @ uax) # where line meets top of cylinder
-    if not _clip(slns, t0, t1):
-        return []
-    return end0 + base + np.outer(slns, dif)
+    return base + _lci(end0 - base, end1 - end0, cyco, uax, length, radius)
 #    blens = np.dot(ipts, uax) # make sure 0 < blen < length
 
 def isectp(rxloc, sxloc, ventloc, radius, height):
     """Does the line from rxloc to sxloc intersect the cylinder above ventloc with given radius and height?"""
-    if linecylinderintersect(rxloc, sxloc, ventloc, earthnormal_xyz(ventloc)*height, radius):
+    if linecylinderintersect(rxloc, sxloc, ventloc, earthnormal_xyz(ventloc)*height, radius).size:
         return True
     return False
 
