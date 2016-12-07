@@ -2,6 +2,7 @@ from math import floor, ceil, pi
 import numpy as np
 import matplotlib as mp
 from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 def posneg(arr):
     """Check that input consists of some positive entries followed by negative entries,
@@ -36,10 +37,10 @@ def dorises(snrdata, prn):
             int(sod[re]//3600), int(sod[re] % 3600)//60,
             min(az[rb:re+1]), max(az[rb:re+1])))
     plt.tight_layout()
-    
+
 def dorises2(snrdata, prn, doy0):
     """Plot snr vs. elevation for all periods of rising elevation.
-    
+
     Plot each ascension in a different figure, and save to a file instead of
     displaying. Input is a list of Records (metadata is not expected, unlike dorises).
     The time field (fourth entry of each record) is expected to be seconds of week.
@@ -114,7 +115,7 @@ def rises(el, sod, prn=None):
         if peak == 0: # only falling elevations I guess
             print('Only falling elevations? PRN {}, {} to {} ({}--{})'.format(
                 prn, beg+1, end, sowdhrmin(sod[beg+1]), sowhrmin(sod[end])))
-            continue        
+            continue
         if peak is not None:
             peak += beg + 1
         else:
@@ -125,8 +126,8 @@ def rises(el, sod, prn=None):
             continue
         riz.append([beg+1, peak, end])
     return riz
-    
-    
+
+
 def add_arrow(line, start_ind=None, direction='right', size=15, color=None):
     """Add an arrow to a line.
 
@@ -158,7 +159,7 @@ def add_arrow(line, start_ind=None, direction='right', size=15, color=None):
 
 def polarazel(azis, eles, ax=None):
     """Plot azimuth and elevations (in degrees) as a curve on a polar plot.
-    
+
     Input should be numpy arrays."""
     if ax is None:
         plt.figure()
@@ -234,4 +235,18 @@ def plotazelbin(dat, title, scale=2):
     axc = plt.axes([box.x0 + box.width * 1.05, box.y0, 0.01, box.height])
     plt.colorbar(cax=axc)
 
+def plotcylinder(base, uaxis, length, radius, ax=None, alpha=0.2):
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+    n1 = np.array([-uaxis[1], uaxis[0], 0])
+    n1 /= np.linalg.norm(n1)
+    n2 = np.cross(uaxis, n1)
+    t = np.linspace(0, length, 100)
+    theta = np.linspace(0, 2 * np.pi, 100)
+    t, theta = np.meshgrid(t, theta)
+    mouter = np.multiply.outer
+    base = np.array(base).reshape(3,1,1)
+    XYZ = base + mouter(uaxis, t) + radius * mouter(n1, np.sin(theta)) + radius * mouter(n2, np.cos(theta))
+    ax.plot_surface(*XYZ, alpha=alpha)
 
