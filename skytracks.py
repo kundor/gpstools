@@ -4,18 +4,22 @@ from numpy import sin, cos
 from math import sqrt
 from plot import polarazel
 from coords import xyz2llh, earthnormal_xyz, lengthlat, lengthlon, WGS84
+from satpos import myinterp, mvec, coeffs
 
 ETNA0 = (4878146, 1309017, 3886374) # ECEF in meters
 REDBT = (-2802350, -1444879, 5527495)
 
-def skytracks(sp3file, LOC):
+def quickloadsp3(sp3file):
     pl = np.loadtxt(sp3file, skiprows=22, usecols=(1, 2, 3), comments=['*', 'E', 'V'])
     # This assumes all 32 PRNs are present, in order, for each epoch
     # Also assuming interval is 900 seconds (15 minutes)
 
     pl.shape = (-1, 32, 3) # reshape to 96x32x3 (-1 means 'fit the data')
     pl *= 1000
+    return pl
 
+def skytracks(sp3file, LOC):
+    pl = quickloadsp3(sp3file)
     lat, lon, ht = xyz2llh(LOC)
     trans = np.array([[-sin(lon), -sin(lat)*cos(lon), cos(lat)*cos(lon)],
                       [ cos(lon), -sin(lat)*sin(lon), cos(lat)*sin(lon)],
@@ -37,7 +41,7 @@ def skytracks(sp3file, LOC):
                 continue
             polarazel(az[ind[beg:end]], el[ind[beg:end]], ax)
 
-skytracks('/scratch/sp3/igs19162.sp3', REDBT)
+# skytracks('/scratch/sp3/igs19162.sp3', REDBT)
 
 def cylindercoeffs(axis):
     """Coefficients for an infinite cylinder around axis.
@@ -156,6 +160,17 @@ slat.shape = (len(slat), 1)
 X = (enlat + eht) * np.outer(np.cos(rlat), np.cos(rlon))
 Y = (enlat + eht) * np.outer(np.cos(rlat), np.sin(rlon))
 Z = ((1 - WGS84.e2) * enlat + eht) * slat
+gloc = np.stack((X, Y, Z), axis=-1)
 
 vent1_axis = earthnormal_xyz(vent1_xyz)
 vent2_axis = earthnormal_xyz(vent2_xyz)
+
+pl = quickloadsp3('igs19233.sp3')
+start = ((((1923 * 7) + 3) * 24 + 1) * 60 + 15) * 60
+cofns = [myinterp(start,
+                  900,
+                  [coeffs(range(start + 900*idx, start + 900*(idx+11), 900),
+                          pl[idx:idx+11, prn, :]) for idx in range(len(pl) - 10)])
+         for prn in range(32)]
+stop = start + 900*(len(pl) - 11)
+sxpos = np.array([[mvec(t) @ cofns[prn](t) for t in range(start, stop, 900)] for prn in range(32)])
