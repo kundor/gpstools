@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy import sin, cos
+from math import sqrt
 from plot import polarazel
 from coords import xyz2llh, earthnormal_xyz, lengthlat, lengthlon, WGS84
 
@@ -38,29 +39,87 @@ def skytracks(sp3file, LOC):
 
 skytracks('/scratch/sp3/igs19162.sp3', REDBT)
 
-def linecylinderintersect(end0, end1, axis, radius):
-    """Intersections of a line segment from end0 to end1 with a cylinder centered on axis.
+def cylindercoeffs(axis):
+    """Coefficients for an infinite cylinder around axis.
 
-    Axis should be a unit vector.
+    Return A, B, C such that a point x, y, z is on the cylinder with radius r iff
+    A x^2 + B y^2 + C z^2 == r^2.
     """
+    rho = np.linalg.norm(axis)
     theta = np.arctan(axis[1]/axis[0])
-    phi = np.arcsin(axis[2])
+    phi = np.arcsin(axis[2]/rho)
     sithe2 = np.sin(theta)**2
     cothe2 = np.cos(theta)**2
-    siphi2 = axis[2]**2
+    siphi2 = np.sin(phi)**2
     cophi2 = np.cos(phi)**2
-    D = sithe2 + cothe2 * siphi2
-    E = cothe2 + sithe2 * cophi2
-    # Equation of the cylinder is D x^2 + E y^2 + cophi2 z^2 = radius^2
+    A = sithe2 + cothe2 * siphi2
+    B = cothe2 + sithe2 * cophi2
+    return np.array((A, B, cophi2))
+
+def quadformula(a, b, c):
+    """Solve a x^2 + b x + c == 0 (real roots)."""
+    if a == b == c == 0:
+        raise ValueError("Infinite solutions")
+    elif a == b == 0:
+         return []
+    elif a == 0:
+        return [-c/b]
+    d = b*b - 4*a*c
+    if d < 0:
+        return []
+    if d > 0:
+        return [(-b - sqrt(d))/2/a, (-b + sqrt(d))/2/a]
+    return [-b/2/a]
+
+def _clip(vals, t0, t1):
+    """Ensure max(0, t0) <= vals[0] < vals[1] <= min(1, t1)"""
+    if len(vals) != 2:
+        return False
+    assert vals[1] > vals[0]
+    t0 = max(0, t0)
+    t1 = min(1, t1)
+    if vals[1] <= t0 or vals[0] >= t1:
+        return False
+    if vals[0] < t0 < vals[1]:
+        vals[0] = t0
+    if vals[0] < t1 < vals[1]:
+        vals[1] = t1
+
+def linecylinderintersect(end0, end1, base, axis, radius):
+    """Find intersections of a line segment with a finite cylinder.
+
+    Return points where the line segment from end0 to end1 passes through the
+    cylinder around the given axis, taken as a vector starting from base. The
+    height of the cylinder is the length of axis. The radius of the cylinder
+    is given. If no intersections exist, return nothing. If one or both endpoints
+    is within the cylinder, return the endpoint(s).
+
+    Assume that the line from end0 to end1 and axis go in the same direction,
+    i.e. the dot product of axis and end1 - end0 is positive; this should be the
+    case if end1 is a satellite above the horizon.
+    """
     dif = end1 - end0
-    A = np.outer((D, E, cophi2), dif*dif)
-    B = 2*
+    end0 = end0 - base
+    # Parameterize the line by L(t) = end0 + t*dif
+    cyco = cylindercoeffs(axis)
+    A = np.sum(cyco * dif**2)
+    B = 2*np.sum(cyco * dif * end0)
+    C = np.sum(cyco * end0**2) - radius**2
+    slns = quadformula(A, B, C)
+    length = np.linalg.norm(axis)
+    uax = axis / length
+    t0 = -(end0 @ uax) / (dif @ uax) # where line meets bottom of cylinder
+    t1 = (length - end0 @ uax) / (dif @ uax) # where line meets top of cylinder
+    if not _clip(slns, t0, t1):
+        return []
+    return end0 + base + np.outer(slns, dif)
+#    blens = np.dot(ipts, uax) # make sure 0 < blen < length
 
-
-    # Parameterize the line by L(t) = end0 + t (end1 - end0)
-    # this intersects the cylinder where D t^2 + E t
-
-
+def isectp(rxloc, sxloc, ventloc, radius, height):
+    """Does the line from rxloc to sxloc intersect the cylinder above ventloc with given radius and height?"""
+    if linecylinderintersect(rxloc, sxloc, ventloc, earthnormal_xyz(ventloc)*height, radius):
+        return True
+    return False
 
 # Loading SRTM data
 hgts1 = np.fromfile('N37E014.hgt', dtype='>i2').reshape((3601, 3601))
@@ -99,48 +158,3 @@ Z = ((1 - WGS84.e2) * enlat + eht) * slat
 
 vent1_axis = earthnormal_xyz(vent1_xyz)
 vent2_axis = earthnormal_xyz(vent2_xyz)
-def cylindercoeffs(axis):
-    """Return A, B, C such that a point x, y, z is on the infinite cylinder around axis with radius r iff A x^2 + B y^2 + C z^2 == r^2."""
-	rho = np.linalg.norm(axis)
-	theta = np.arctan(axis[1]/axis[0])
-	phi = np.arcsin(axis[2]/rho)
-	sithe2 = np.sin(theta)**2
-	cothe2 = np.cos(theta)**2
-	siphi2 = np.sin(phi)**2
-	cophi2 = np.cos(phi)**2
-	A = sithe2 + cothe2 * siphi2
-    B = cothe2 + sithe2 * cophi2
-	return np.array((A, B, cophi2))
-
-def quadformula(a, b, c):
-    """Solve a x^2 + b x + c == 0 (real roots)."""
-	if a == b == c == 0:
-		raise ValueError("Infinite solutions")
-	elif a == b == 0:
-	    return []
-	elif a == 0:
-	    return [-c/b]
-    d = b*b - 4*a*c
-	if d < 0:
-		return []
-    if d > 0:
-		return [(-b + sqrt(d))/2/a, (-b - sqrt(d))/2/a]
-    return [-b/2/a]
-
-def linecylinderintersect(end0, end1, base, axis, radius):
-    """Find intersections of a line segment with a finite cylinder.
-	
-	Return points where the line segment from end0 to end1
-	passes through the cylinder around the given axis, taken
-	as a vector starting from base. The height of the cylinder
-	is the length of axis. The radius of the cylinder is
-	given. If no intersections exist, return nothing.
-	"""
-	dif = end1 - end0
-	end0 -= base
-    # Parameterize the line by L(t) = end0 + t*dif
-	cyco = cylindercoeffs(axis)
-	A = np.sum(cyco*dif**2)
-	B = 2*np.sum(cyco*dif*end0)
-	C = np.sum(cyco*end0**2)
-	slns = quadformula(A, B, C)
