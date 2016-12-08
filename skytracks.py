@@ -169,10 +169,13 @@ cofns = [myinterp(start,
 stop = start + 900*(len(pl) - 11)
 sxpos = np.array([[mvec(t) @ cofns[prn](t) for t in range(start, stop, 60)] for prn in range(32)])
 
-heat = np.zeros_like(eht)
-
 cyl_inf = cylinfo(vent1_xyz, 6000, 2000)
 
-for ri in np.ndindex(heat.shape):
-    for si in np.ndindex(sxpos.shape[:2]):
-        heat[ri] += misectp(gloc[ri], sxpos[si], cyl_inf)
+def heatmap(gloc, sxpos, cyl_inf):
+    heat = np.zeros(gloc.shape[:2], dtype=np.int32)
+    for ri in np.ndindex(heat.shape):
+        for si in np.ndindex(sxpos.shape[:2]):
+            heat[ri] += misectp(gloc[ri], sxpos[si], cyl_inf)
+        if not ri[1] % 60:
+            print(ri, end=' ')
+    return heat
