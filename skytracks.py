@@ -51,12 +51,15 @@ def quadformula(a, b, c):
          return []
     elif a == 0:
         return [-c/b]
-    d = b*b - 4*a*c
+    a *= 2
+    d = b*b - 2*a*c
     if d < 0:
         return []
+    bb = -b / a
     if d > 0:
-        return [(-b - sqrt(d))/2/a, (-b + sqrt(d))/2/a]
-    return [-b/2/a]
+        dd = sqrt(d) / a
+        return [bb - dd, bb + dd]
+    return [bb]
 
 def _clip(vals, t0, t1):
     """Ensure max(0, t0) <= vals[0] < vals[1] <= min(1, t1)"""
@@ -73,21 +76,29 @@ def _clip(vals, t0, t1):
         vals[1] = t1
     return True
 
-def _lci(end0, dif, uax, length, radius):
+def _lci(eproj, eperp, C, dif, uax, length, radius):
     # Parameterize the line by L(t) = end0 + t*dif
-    eproj = end0 @ uax
     dproj = dif @ uax
-    eperp = end0 - eproj*uax
     dperp = dif - dproj*uax
     A = dperp @ dperp
     B = 2 * eperp @ dperp
-    C = eperp @ eperp - radius**2
     slns = quadformula(A, B, C)
     t0 = -eproj / dproj # where line meets bottom of cylinder
     t1 = (length - eproj) / dproj # where line meets top of cylinder
     if not _clip(slns, t0, t1):
         return np.zeros((0,3)) # empty array
-    return end0 + np.outer(slns, dif)
+    return np.outer(slns, dif)
+
+def _lcip(eproj, eperp, C, dif, uax, length, radius):
+    # Parameterize the line by L(t) = end0 + t*dif
+    dproj = dif @ uax
+    dperp = dif - dproj*uax
+    A = dperp @ dperp
+    B = 2 * eperp @ dperp
+    slns = quadformula(A, B, C)
+    t0 = max(0, -eproj / dproj) # where line meets bottom of cylinder
+    t1 = min(1, (length - eproj) / dproj) # where line meets top of cylinder
+    return len(slns) == 2 and slns[0] < t1 and slns[1] > t0
 
 def linecylinderintersect(end0, end1, base, axis, radius):
     """Find intersections of a line segment with a finite cylinder.
@@ -104,7 +115,8 @@ def linecylinderintersect(end0, end1, base, axis, radius):
     """
     length = np.linalg.norm(axis)
     uax = axis / length
-    return base + _lci(end0 - base, end1 - end0, uax, length, radius)
+    rxloc, eproj, eperp, C = rxinfo(end0, (base, uax, length, radius))
+    return end0 + _lci(eproj, eperp, C, end1 - end0, uax, length, radius)
 #    blens = np.dot(ipts, uax) # make sure 0 < blen < length
 
 def isectp(rxloc, sxloc, ventloc, radius, height):
@@ -117,11 +129,18 @@ def cylinfo(base, length, radius):
     axis = earthnormal_xyz(base)
     return (base, axis, length, radius)
 
-def misectp(rxloc, sxloc, cyl_inf):
+def rxinfo(rxloc, cyl_inf):
     base, uax, length, radius = cyl_inf
-    if _lci(rxloc - base, sxloc - rxloc, uax, length, radius).size:
-        return True
-    return False
+    end0 = rxloc - base
+    eproj = end0 @ uax
+    eperp = end0 - eproj*uax
+    C = eperp @ eperp - radius**2
+    return (rxloc, eproj, eperp, C)
+
+def misectp(rx_inf, sxloc, cyl_inf):
+    rxloc, eproj, eperp, C = rx_inf
+    base, uax, length, radius = cyl_inf
+    return _lcip(eproj, eperp, C, sxloc - rxloc, uax, length, radius)
 
 # Loading SRTM data
 hgts1 = np.fromfile('N37E014.hgt', dtype='>i2').reshape((3601, 3601))
@@ -161,7 +180,7 @@ Y = (enlat + eht) * np.outer(np.cos(rlat), np.sin(rlon))
 Z = ((1 - WGS84.e2) * enlat + eht) * slat
 gloc = np.stack((X, Y, Z), axis=-1)
 
-pl = quickloadsp3('igs19233.sp3')
+pl = quickloadsp3('../igs19233.sp3')
 start = ((((1923 * 7) + 3) * 24 + 1) * 60 + 15) * 60
 cofns = [myinterp(start,
                   900,
@@ -169,24 +188,25 @@ cofns = [myinterp(start,
                           pl[idx:idx+11, prn, :]) for idx in range(len(pl) - 10)])
          for prn in range(32)]
 stop = start + 900*(len(pl) - 11)
-sxpos = np.array([[mvec(t) @ cofns[prn](t) for t in range(start, stop, 60)] for prn in range(32)])
+sxpos = np.array([[mvec(t) @ cofns[prn](t) for t in range(start, stop, 300)] for prn in range(32)])
 
 cyl_inf = cylinfo(vent1_xyz, 6000, 2000)
 
 def heatmap(gloc, sxpos, cyl_inf, elthresh=None):
     if elthresh is None:
-        elthresh = [5, 10, 20]
+        elthresh = [5, 10, 20] # degrees above horizon (roughly)
     elthresh = np.array([cos((90 - el)*np.pi/180) for el in elthresh])
-    up = cyl_inf[1]
+    base, uax, length, radius = cyl_inf
     heat = np.zeros(gloc.shape[:2] + (len(elthresh),), dtype=np.int32)
-    for ri in np.ndindex(heat.shape):
+    for ri in np.ndindex(heat.shape[:2]):
+        rxloc, eproj, eperp, C = rxinfo(gloc[ri], cyl_inf)
         for si in np.ndindex(sxpos.shape[:2]):
             sxloc = sxpos[si]
-            rxsx = sxloc - gloc[ri]
-            rxsx /= np.linalg.norm(rxsx)
-            angdo = (rxsx @ up) > elthresh
+            rxsx = sxloc - rxloc
+            udif = rxsx / np.linalg.norm(rxsx)
+            angdo = (udif @ uax) > elthresh
             if angdo.any():
-                heat[ri][angdo] += misectp(gloc[ri], sxloc, cyl_inf)
-        if not ri[1] % 60:
-            print(ri, end=' ')
+                heat[ri][angdo] += _lcip(eproj, eperp, C, rxsx, uax, length, radius)
+        if not ri[1]:
+            print(ri, end=' ', flush=True)
     return heat
