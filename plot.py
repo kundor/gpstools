@@ -157,13 +157,17 @@ def add_arrow(line, start_ind=None, direction='right', size=15, color=None):
         arrowprops={'arrowstyle': '->', 'color': color},
         size=size)
 
+def _getaxis(ax, projection):
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1, projection=projection)
+    return ax
+
 def polarazel(azis, eles, ax=None):
     """Plot azimuth and elevations (in degrees) as a curve on a polar plot.
 
     Input should be numpy arrays."""
-    if ax is None:
-        plt.figure()
-        ax = plt.subplot(1,1,1, projection='polar')
+    ax = _getaxis(ax, 'polar')
     line = ax.plot((90 - azis)/180 * pi, 90 - eles)
     xloc, _ = plt.xticks()
     xlab = (90 - xloc * 180 / pi) % 360
@@ -235,20 +239,56 @@ def plotazelbin(dat, title, scale=2):
     axc = plt.axes([box.x0 + box.width * 1.05, box.y0, 0.01, box.height])
     plt.colorbar(cax=axc)
 
-def plotcylinder(base, uaxis, length, radius, ax=None, alpha=0.2):
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-    n1 = np.array([-uaxis[1], uaxis[0], 0])
-    n1 /= np.linalg.norm(n1)
-    n2 = np.cross(uaxis, n1)
+def perpvecs(uvec):
+    """Return two unit vectors, perpendicular to the given unit vector and eachother."""
+    if uvec[0] == 0:
+        n1 = np.array([1, 0, 0])
+    else:
+        n1 = np.array([-uvec[1], uvec[0], 0])
+        n1 /= np.linalg.norm(n1)
+    n2 = np.cross(uvec, n1)
+    return n1, n2
+
+def plotradial(base, uaxis, length, radfn, ax=None, alpha=0.2):
+    """Plot a radial surface.
+
+    The surface is at the radius determined by the function radfn
+    around the line segment of the given length, starting from base, in the
+    direction of the unit vector uaxis.
+    radfn is given arrays of t and theta values.
+    Plot onto the Axes3D object ax if given.
+    """
+    ax = _getaxis(ax, '3d')
+    n1, n2 = perpvecs(uaxis)
     t = np.linspace(0, length, 100)
     theta = np.linspace(0, 2 * np.pi, 100)
     t, theta = np.meshgrid(t, theta)
     mouter = np.multiply.outer
     base = np.array(base).reshape(3,1,1)
-    XYZ = base + mouter(uaxis, t) + radius * mouter(n1, np.sin(theta)) + radius * mouter(n2, np.cos(theta))
+    XYZ = base + mouter(uaxis, t) + radfn(t, theta) * mouter(n1, np.sin(theta)) + radfn(t, theta) * mouter(n2, np.cos(theta))
     ax.plot_surface(*XYZ, alpha=alpha)
+
+def plotcylinder(base, uaxis, length, radius, ax=None, alpha=0.2):
+    """Plot (the surface of) an open finite cylinder.
+
+    The cylinder is at the given radius around the line segment of the given
+    length, starting from base, in the direction of the unit vector uaxis.
+    Plot onto the Axes3D object ax if given.
+    """
+    def radfn(t, theta):
+        return radius
+    plotradial(base, uaxis, length, radfn, ax, alpha)
+
+def plotcone(base, uaxis, length, radius, ax=None, alpha=0.2):
+    """Plot (the surface of) a finite section of a cone.
+
+    The cone has its apex at base, and opens in the direction of the unit vector
+    uaxis, for the given length. It opens to the given radius after 1 unit.
+    Plot onto the Axes3D object ax if given.
+    """
+    def radfn(t, theta):
+        return radius * t
+    plotradial(base, uaxis, length, radfn, ax, alpha)
 
 def equalize3d(ax):
     """Set aspect ratio so all three axes have the same scale."""
