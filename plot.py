@@ -261,3 +261,4 @@ def equalize3d(ax):
             RR[i,0] -= ext/2
             RR[i,1] += ext/2
     ax.auto_scale_xyz(*RR)
+    ax.set_aspect('equal')
