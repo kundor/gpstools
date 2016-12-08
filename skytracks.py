@@ -147,6 +147,8 @@ ax = plt.subplot(1, 1, 1)
 ax.contour(LONS[lonrange], LATS[latrange], hgts[latrange, lonrange], colors='k')
 ax.set_aspect(lengthlat(peak_llh[0]) / lengthlon(peak_llh[0]))
 
+ax.scatter(vent1_llh[1], vent1_llh[0], marker='^', s=100, c='r')
+
 eht = hgts[latrange, lonrange]
 rlat = LATS[latrange] * np.pi / 180
 rlon = LONS[lonrange] * np.pi / 180
@@ -171,11 +173,20 @@ sxpos = np.array([[mvec(t) @ cofns[prn](t) for t in range(start, stop, 60)] for 
 
 cyl_inf = cylinfo(vent1_xyz, 6000, 2000)
 
-def heatmap(gloc, sxpos, cyl_inf):
-    heat = np.zeros(gloc.shape[:2], dtype=np.int32)
+def heatmap(gloc, sxpos, cyl_inf, elthresh=None):
+    if elthresh is None:
+        elthresh = [5, 10, 20]
+    elthresh = np.array([cos((90 - el)*np.pi/180) for el in elthresh])
+    up = cyl_inf[1]
+    heat = np.zeros(gloc.shape[:2] + (len(elthresh),), dtype=np.int32)
     for ri in np.ndindex(heat.shape):
         for si in np.ndindex(sxpos.shape[:2]):
-            heat[ri] += misectp(gloc[ri], sxpos[si], cyl_inf)
+            sxloc = sxpos[si]
+            rxsx = sxloc - gloc[ri]
+            rxsx /= np.linalg.norm(rxsx)
+            angdo = (rxsx @ up) > elthresh
+            if angdo.any():
+                heat[ri][angdo] += misectp(gloc[ri], sxloc, cyl_inf)
         if not ri[1] % 60:
             print(ri, end=' ')
     return heat
