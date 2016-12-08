@@ -43,23 +43,6 @@ def skytracks(sp3file, LOC):
 
 # skytracks('/scratch/sp3/igs19162.sp3', REDBT)
 
-def cylindercoeffs(axis):
-    """Coefficients for an infinite cylinder around axis.
-
-    Return A, B, C such that a point x, y, z is on the cylinder with radius r iff
-    A x^2 + B y^2 + C z^2 == r^2.
-    """
-    rho = np.linalg.norm(axis)
-    theta = np.arctan(axis[1]/axis[0])
-    phi = np.arcsin(axis[2]/rho)
-    sithe2 = np.sin(theta)**2
-    cothe2 = np.cos(theta)**2
-    siphi2 = np.sin(phi)**2
-    cophi2 = np.cos(phi)**2
-    A = sithe2 + cothe2 * siphi2
-    B = cothe2 + sithe2 * cophi2
-    return np.array((A, B, cophi2))
-
 def quadformula(a, b, c):
     """Solve a x^2 + b x + c == 0 (real roots)."""
     if a == b == c == 0:
@@ -90,14 +73,18 @@ def _clip(vals, t0, t1):
         vals[1] = t1
     return True
 
-def _lci(end0, dif, cyco, uax, length, radius):
+def _lci(end0, dif, uax, length, radius):
     # Parameterize the line by L(t) = end0 + t*dif
-    A = np.sum(cyco * dif**2)
-    B = 2*np.sum(cyco * dif * end0)
-    C = np.sum(cyco * end0**2) - radius**2
+    eproj = end0 @ uax
+    dproj = dif @ uax
+    eperp = end0 - eproj*uax
+    dperp = dif - dproj*uax
+    A = dperp @ dperp
+    B = 2 * eperp @ dperp
+    C = eperp @ eperp - radius**2
     slns = quadformula(A, B, C)
-    t0 = -(end0 @ uax) / (dif @ uax) # where line meets bottom of cylinder
-    t1 = (length - end0 @ uax) / (dif @ uax) # where line meets top of cylinder
+    t0 = -eproj / dproj # where line meets bottom of cylinder
+    t1 = (length - eproj) / dproj # where line meets top of cylinder
     if not _clip(slns, t0, t1):
         return np.zeros((0,3)) # empty array
     return end0 + np.outer(slns, dif)
@@ -115,10 +102,9 @@ def linecylinderintersect(end0, end1, base, axis, radius):
     i.e. the dot product of axis and end1 - end0 is positive; this should be the
     case if end1 is a satellite above the horizon.
     """
-    cyco = cylindercoeffs(axis)
     length = np.linalg.norm(axis)
     uax = axis / length
-    return base + _lci(end0 - base, end1 - end0, cyco, uax, length, radius)
+    return base + _lci(end0 - base, end1 - end0, uax, length, radius)
 #    blens = np.dot(ipts, uax) # make sure 0 < blen < length
 
 def isectp(rxloc, sxloc, ventloc, radius, height):
@@ -129,15 +115,13 @@ def isectp(rxloc, sxloc, ventloc, radius, height):
 
 def cylinfo(base, length, radius):
     axis = earthnormal_xyz(base)
-    cyco = cylindercoeffs(axis)
-    return (base, cyco, axis, length, radius)
+    return (base, axis, length, radius)
 
 def misectp(rxloc, sxloc, cyl_inf):
-    base, cyco, uax, length, radius = cyl_inf
-    if _lci(rxloc - base, sxloc - rxloc, cyco, uax, length, radius).size:
+    base, uax, length, radius = cyl_inf
+    if _lci(rxloc - base, sxloc - rxloc, uax, length, radius).size:
         return True
     return False
-
 
 # Loading SRTM data
 hgts1 = np.fromfile('N37E014.hgt', dtype='>i2').reshape((3601, 3601))
