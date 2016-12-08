@@ -47,6 +47,16 @@ def decompress(filename, move=False):
             print("Command '", ' '.join(cmd), "' succeeded, but did not produce the output file?!")
     raise RuntimeError('Could not get an external program to decompress the file ' + filename)
 
+class ProfileThis:
+    def __init__(self):
+        import cProfile
+        self.pr = cProfile.Profile()
+    def __enter__(self):
+        self.pr.enable()
+        return self.pr
+    def __exit__(self, *args):
+        self.pr.disable()
+
 class fileread(object):
     """A line-counting file wrapper.
 
