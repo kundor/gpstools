@@ -250,3 +250,14 @@ def plotcylinder(base, uaxis, length, radius, ax=None, alpha=0.2):
     XYZ = base + mouter(uaxis, t) + radius * mouter(n1, np.sin(theta)) + radius * mouter(n2, np.cos(theta))
     ax.plot_surface(*XYZ, alpha=alpha)
 
+def equalize3d(ax):
+    """Set aspect ratio so all three axes have the same scale."""
+    RR = np.stack((ax.get_xlim(), ax.get_ylim(), ax.get_zlim()))
+    difr = np.diff(RR)
+    maxr = np.max(difr)
+    for i in range(3):
+        if difr[i] < maxr:
+            ext = maxr - difr[i]
+            RR[i,0] -= ext/2
+            RR[i,1] += ext/2
+    ax.auto_scale_xyz(*RR)
