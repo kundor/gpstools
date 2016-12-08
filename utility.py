@@ -48,6 +48,14 @@ def decompress(filename, move=False):
     raise RuntimeError('Could not get an external program to decompress the file ' + filename)
 
 class ProfileThis:
+    """A context manager to profile the contained code.
+
+    Use:
+    with ProfileThis() as pr:
+        <code>
+    p = pstats.Stats(pr)
+    p.strip_dirs().sort_stats('cumulative').print_stats(20)
+    """
     def __init__(self):
         import cProfile
         self.pr = cProfile.Profile()
