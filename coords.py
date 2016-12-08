@@ -7,7 +7,7 @@ and azimuth and elevation from a base point (in radians).
 """
 
 from math import atan2, cos, sin, sqrt, pi
-import scipy
+import scipy.integrate
 import numpy as np
 
 class WGS84:
