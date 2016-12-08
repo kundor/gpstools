@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy import sin, cos
 from math import sqrt
-from plot import polarazel
+from plot import polarazel, plotcylinder
 from coords import xyz2llh, earthnormal_xyz, lengthlat, lengthlon, WGS84
 from satpos import myinterp, mvec, coeffs
 
@@ -88,6 +88,7 @@ def _clip(vals, t0, t1):
         vals[0] = t0
     if vals[0] < t1 < vals[1]:
         vals[1] = t1
+    return True
 
 def _lci(end0, dif, cyco, uax, length, radius):
     # Parameterize the line by L(t) = end0 + t*dif
@@ -126,6 +127,18 @@ def isectp(rxloc, sxloc, ventloc, radius, height):
         return True
     return False
 
+def cylinfo(base, length, radius):
+    axis = earthnormal_xyz(base)
+    cyco = cylindercoeffs(axis)
+    return (base, cyco, axis, length, radius)
+
+def misectp(rxloc, sxloc, cyl_inf):
+    base, cyco, uax, length, radius = cyl_inf
+    if _lci(rxloc - base, sxloc - rxloc, cyco, uax, length, radius).size:
+        return True
+    return False
+
+
 # Loading SRTM data
 hgts1 = np.fromfile('N37E014.hgt', dtype='>i2').reshape((3601, 3601))
 hgts2 = np.fromfile('N37E015.hgt', dtype='>i2').reshape((3601, 3601))
@@ -162,9 +175,6 @@ Y = (enlat + eht) * np.outer(np.cos(rlat), np.sin(rlon))
 Z = ((1 - WGS84.e2) * enlat + eht) * slat
 gloc = np.stack((X, Y, Z), axis=-1)
 
-vent1_axis = earthnormal_xyz(vent1_xyz)
-vent2_axis = earthnormal_xyz(vent2_xyz)
-
 pl = quickloadsp3('igs19233.sp3')
 start = ((((1923 * 7) + 3) * 24 + 1) * 60 + 15) * 60
 cofns = [myinterp(start,
@@ -174,3 +184,11 @@ cofns = [myinterp(start,
          for prn in range(32)]
 stop = start + 900*(len(pl) - 11)
 sxpos = np.array([[mvec(t) @ cofns[prn](t) for t in range(start, stop, 900)] for prn in range(32)])
+
+heat = np.zeros_like(eht)
+
+cyl_inf = cylinfo(vent1_xyz, 6000, 2000)
+
+for ri in np.ndindex(heat.shape):
+    for si in np.ndindex(sxxpos.shape[:2]):
+        heat[ri] += misectp(gloc[ri], sxpos[si], cyl_inf)
