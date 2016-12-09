@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from matplotlib import colors
 import numpy as np
 from numpy import sin, cos
 from math import sqrt
@@ -142,6 +143,47 @@ def misectp(rx_inf, sxloc, cyl_inf):
     base, uax, length, radius = cyl_inf
     return _lcip(eproj, eperp, C, sxloc - rxloc, uax, length, radius)
 
+def subrows(A, B):
+    """Subtract each row in B from each row in A.
+
+    If A is n*k and B is m*k, result is n*m*k.
+    """
+    n, k = A.shape
+    m = B.shape[0]
+    C = np.repeat(A, m, axis=0)
+    C -= np.tile(B, (n, 1))
+    C.shape = (n, m, k)
+    return C
+
+def heatmap(gloc, sxpos, cyl_inf, elthresh=None):
+    np.seterr(invalid='ignore')
+    if elthresh is None:
+        elthresh = [5, 10, 20] # degrees above horizon (roughly)
+    elthresh = np.array([cos((90 - el)*np.pi/180) for el in elthresh])
+    base, uax, length, radius = cyl_inf
+    heat = np.zeros(gloc.shape[:2] + (len(elthresh),), dtype=np.int32)
+    sxpos = sxpos.reshape(-1, 3)
+    end0 = gloc - base
+    eproj = end0 @ uax
+    eperp = end0 - np.multiply.outer(eproj, uax)
+    C = np.sum(eperp**2, 2) - radius**2
+    for i in range(len(gloc)):
+        difs = subrows(sxpos, gloc[i,:,:])
+        dproj = difs @ uax
+        angdo = np.greater.outer(dproj / np.linalg.norm(difs, axis=2), elthresh)
+        dperp = difs - np.multiply.outer(dproj, uax)
+        A = 2 * np.sum(dperp**2, 2)
+        B = 2 * np.sum(eperp[i,:,:] * dperp, -1)
+        D = B**2 - 2*A*C[i]
+        DD = np.sqrt(D) / A
+        BB = -B / A
+        SLNS = np.stack((BB - DD, BB + DD), -1)
+        T0 = np.maximum(-eproj[i] / dproj, 0)
+        T1 = (length - eproj[i]) / dproj
+        GD = np.logical_and(SLNS[:,:,0] < T1, SLNS[:,:,1] > T0)
+        heat[i,:,:] = np.sum(GD[:,:,np.newaxis] * angdo, 0)
+    return heat
+
 # Loading SRTM data
 hgts1 = np.fromfile('N37E014.hgt', dtype='>i2').reshape((3601, 3601))
 hgts2 = np.fromfile('N37E015.hgt', dtype='>i2').reshape((3601, 3601))
@@ -192,21 +234,5 @@ sxpos = np.array([[mvec(t) @ cofns[prn](t) for t in range(start, stop, 300)] for
 
 cyl_inf = cylinfo(vent1_xyz, 6000, 2000)
 
-def heatmap(gloc, sxpos, cyl_inf, elthresh=None):
-    if elthresh is None:
-        elthresh = [5, 10, 20] # degrees above horizon (roughly)
-    elthresh = np.array([cos((90 - el)*np.pi/180) for el in elthresh])
-    base, uax, length, radius = cyl_inf
-    heat = np.zeros(gloc.shape[:2] + (len(elthresh),), dtype=np.int32)
-    for ri in np.ndindex(heat.shape[:2]):
-        rxloc, eproj, eperp, C = rxinfo(gloc[ri], cyl_inf)
-        for si in np.ndindex(sxpos.shape[:2]):
-            sxloc = sxpos[si]
-            rxsx = sxloc - rxloc
-            udif = rxsx / np.linalg.norm(rxsx)
-            angdo = (udif @ uax) > elthresh
-            if angdo.any():
-                heat[ri][angdo] += _lcip(eproj, eperp, C, rxsx, uax, length, radius)
-        if not ri[1]:
-            print(ri, end=' ', flush=True)
-    return heat
+heat = heatmap(gloc, sxpos, cyl_inf)
+ax.pcolormesh(LONS[lonrange], LATS[latrange], heat[:,:,0], norm=colors.LogNorm(vmin=61, vmax=2577))
