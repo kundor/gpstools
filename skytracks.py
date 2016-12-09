@@ -1,9 +1,8 @@
 import matplotlib.pyplot as plt
-from matplotlib import colors
 import numpy as np
 from numpy import sin, cos
 from math import sqrt
-from plot import polarazel, plotcylinder
+from plot import polarazel
 from coords import xyz2llh, earthnormal_xyz, lengthlat, lengthlon, WGS84
 from satpos import myinterp, mvec, coeffs
 
@@ -90,17 +89,6 @@ def _lci(eproj, eperp, C, dif, uax, length, radius):
         return np.zeros((0,3)) # empty array
     return np.outer(slns, dif)
 
-def _lcip(eproj, eperp, C, dif, uax, length, radius):
-    # Parameterize the line by L(t) = end0 + t*dif
-    dproj = dif @ uax
-    dperp = dif - dproj*uax
-    A = dperp @ dperp
-    B = 2 * eperp @ dperp
-    slns = quadformula(A, B, C)
-    t0 = max(0, -eproj / dproj) # where line meets bottom of cylinder
-    t1 = min(1, (length - eproj) / dproj) # where line meets top of cylinder
-    return len(slns) == 2 and slns[0] < t1 and slns[1] > t0
-
 def linecylinderintersect(end0, end1, base, axis, radius):
     """Find intersections of a line segment with a finite cylinder.
 
@@ -120,12 +108,6 @@ def linecylinderintersect(end0, end1, base, axis, radius):
     return end0 + _lci(eproj, eperp, C, end1 - end0, uax, length, radius)
 #    blens = np.dot(ipts, uax) # make sure 0 < blen < length
 
-def isectp(rxloc, sxloc, ventloc, radius, height):
-    """Does the line from rxloc to sxloc intersect the cylinder above ventloc with given radius and height?"""
-    if linecylinderintersect(rxloc, sxloc, ventloc, earthnormal_xyz(ventloc)*height, radius).size:
-        return True
-    return False
-
 def cylinfo(base, length, radius):
     axis = earthnormal_xyz(base)
     return (base, axis, length, radius)
@@ -137,11 +119,6 @@ def rxinfo(rxloc, cyl_inf):
     eperp = end0 - eproj*uax
     C = eperp @ eperp - radius**2
     return (rxloc, eproj, eperp, C)
-
-def misectp(rx_inf, sxloc, cyl_inf):
-    rxloc, eproj, eperp, C = rx_inf
-    base, uax, length, radius = cyl_inf
-    return _lcip(eproj, eperp, C, sxloc - rxloc, uax, length, radius)
 
 def subrows(A, B):
     """Subtract each row in B from each row in A.
@@ -234,5 +211,6 @@ sxpos = np.array([[mvec(t) @ cofns[prn](t) for t in range(start, stop, 300)] for
 
 cyl_inf = cylinfo(vent1_xyz, 6000, 2000)
 
-heat = heatmap(gloc, sxpos, cyl_inf)
-ax.pcolormesh(LONS[lonrange], LATS[latrange], heat[:,:,0], norm=colors.LogNorm(vmin=61, vmax=2577))
+# from matplotlib import colors
+# heat = heatmap(gloc, sxpos, cyl_inf)
+# ax.pcolormesh(LONS[lonrange], LATS[latrange], heat[:,:,0], norm=colors.LogNorm(vmin=61, vmax=2577))
