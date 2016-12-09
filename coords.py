@@ -15,6 +15,7 @@ class WGS84:
     a = 6378137.
     f = 1./298.257223563
     e2 = 2*f - f*f
+    b = a * (1 - f)
 
     @classmethod
     def ellnormal(cls, lat):
@@ -46,6 +47,13 @@ def lengthlon(lat):
     """Length (m) of one degree of longitude at given latitude (degrees)."""
     lat *= pi / 180
     return pi * WGS84.ellnormal(lat) * cos(lat) / 180
+
+def earthradius(lat):
+    """Distance from the earth's center to the WGS84 ellipsoid at the given latitude (radians)."""
+    cl2 = cos(lat)**2
+    sl2 = sin(lat)**2
+    return sqrt((WGS84.a**4 * cl2 + WGS84.b**4 * sl2)
+                / (WGS84.a**2 * cl2 + WGS84.b**2 * sl2))
 
 def earthnormal_xyz(x, y=None, z=None):
     """Unit normal vector to the WGS84 ellipsoid at the given ECEF coordinates."""
