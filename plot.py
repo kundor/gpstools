@@ -290,15 +290,17 @@ def plotcone(base, uaxis, length, radius, ax=None, alpha=0.2):
         return radius * t
     plotradial(base, uaxis, length, radfn, ax, alpha)
 
-def equalize3d(ax):
+def equalize3d(ax, maxi=True):
     """Set aspect ratio so all three axes have the same scale."""
     RR = np.stack((ax.get_xlim(), ax.get_ylim(), ax.get_zlim()))
     difr = np.diff(RR)
-    maxr = np.max(difr)
+    if maxi:
+        maxr = np.max(difr)
+    else:
+        maxr = np.min(difr)
     for i in range(3):
-        if difr[i] < maxr:
-            ext = maxr - difr[i]
-            RR[i,0] -= ext/2
-            RR[i,1] += ext/2
+        ext = maxr - difr[i]
+        RR[i,0] -= ext/2
+        RR[i,1] += ext/2
     ax.auto_scale_xyz(*RR)
     ax.set_aspect('equal')
