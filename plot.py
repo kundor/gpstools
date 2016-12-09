@@ -2,7 +2,7 @@ from math import floor, ceil, pi
 import numpy as np
 import matplotlib as mp
 from matplotlib import pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d import Axes3D #analysis:ignore
 
 def posneg(arr):
     """Check that input consists of some positive entries followed by negative entries,
@@ -157,9 +157,9 @@ def add_arrow(line, start_ind=None, direction='right', size=15, color=None):
         arrowprops={'arrowstyle': '->', 'color': color},
         size=size)
 
-def _getaxis(ax, projection):
+def _getaxis(ax, projection, figsize=None):
     if ax is None:
-        fig = plt.figure()
+        fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(1, 1, 1, projection=projection)
     return ax
 
@@ -249,7 +249,7 @@ def perpvecs(uvec):
     n2 = np.cross(uvec, n1)
     return n1, n2
 
-def plotradial(base, uaxis, length, radfn, ax=None, alpha=0.2):
+def plotradial(base, uaxis, length, radfn, ax=None, **kwargs):
     """Plot a radial surface.
 
     The surface is at the radius determined by the function radfn
@@ -266,9 +266,9 @@ def plotradial(base, uaxis, length, radfn, ax=None, alpha=0.2):
     mouter = np.multiply.outer
     base = np.array(base).reshape(3,1,1)
     XYZ = base + mouter(uaxis, t) + radfn(t, theta) * mouter(n1, np.sin(theta)) + radfn(t, theta) * mouter(n2, np.cos(theta))
-    ax.plot_surface(*XYZ, alpha=alpha)
+    ax.plot_surface(*XYZ, **kwargs)
 
-def plotcylinder(base, uaxis, length, radius, ax=None, alpha=0.2):
+def plotcylinder(base, uaxis, length, radius, ax=None, alpha=0.2, **kwargs):
     """Plot (the surface of) an open finite cylinder.
 
     The cylinder is at the given radius around the line segment of the given
@@ -277,9 +277,9 @@ def plotcylinder(base, uaxis, length, radius, ax=None, alpha=0.2):
     """
     def radfn(t, theta):
         return radius
-    plotradial(base, uaxis, length, radfn, ax, alpha)
+    plotradial(base, uaxis, length, radfn, ax, alpha=alpha, **kwargs)
 
-def plotcone(base, uaxis, length, radius, ax=None, alpha=0.2):
+def plotcone(base, uaxis, length, radius, ax=None, alpha=0.2, **kwargs):
     """Plot (the surface of) a finite section of a cone.
 
     The cone has its apex at base, and opens in the direction of the unit vector
@@ -288,7 +288,35 @@ def plotcone(base, uaxis, length, radius, ax=None, alpha=0.2):
     """
     def radfn(t, theta):
         return radius * t
-    plotradial(base, uaxis, length, radfn, ax, alpha)
+    plotradial(base, uaxis, length, radfn, ax, alpha=alpha, **kwargs)
+
+def draw_plume(gloc, cyl_inf, ax=None, stride=10):
+    """Given an array of ECEF ground locations, and cylinder info (as from
+    skytracks.cylinfo()), draw the ground surface and the cylinder.
+
+    Stride defaults to 10, a coarse map; stride of 3 gives a finer map,
+    at expense of responsiveness.
+    """
+    from coords import earthradius, xyz2lat, lengthlat, lengthlon
+    ax = _getaxis(ax, '3d', (12, 12))
+    base, uax, length, radius = cyl_inf
+    N = gloc @ uax # distance upward from center of the earth, assuming that's how the cylinder is oriented
+    rlat = xyz2lat(*base)
+    msl = earthradius(rlat)
+    N -= msl
+    N /= N.max() # normalize to 0..1
+    ax.plot_surface(gloc[:,:,0], gloc[:,:,1], gloc[:,:,2],
+                           facecolors=mp.cm.terrain(N), rstride=stride, cstride=stride)
+    vmark = np.array(base) * 1.00005
+    ax.scatter(*vmark, marker='^', s=100, c='r')
+    # the above draws a triangle at the vent location, but the surface usually obscures it.
+    # vmark is multiplied by 1.00005 to lift it above the surface a little,
+    # but it still doesn't show up reliably.
+    plotcylinder(base, uax, length, radius, ax, color='r')
+    NR = np.array([[gloc[:,:,i].min(), gloc[:,:,i].max()] for i in [0,1,2]])
+    ax.auto_scale_xyz(*NR)
+    ax.set_aspect(lengthlon(rlat * 180 / pi) / lengthlat(rlat * 180 / pi))
+
 
 def equalize3d(ax, maxi=True):
     """Set aspect ratio so all three axes have the same scale."""
