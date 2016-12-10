@@ -161,6 +161,19 @@ def heatmap(gloc, sxpos, cyl_inf, elthresh=None):
         heat[i,:,:] = np.sum(GD[:,:,np.newaxis] * angdo, 0)
     return heat
 
+def drawheatmap(lons, lats, heat, hgts, vent):
+    from matplotlib import colors
+    plt.rcParams['axes.formatter.useoffset'] = False
+    aspect = lengthlat(vent[0]) / lengthlon(vent[0])
+    fig = plt.figure(figsize=(8, 4*(aspect + 1)))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.contour(lons, lats, hgts, colors='k')
+    ax.set_aspect(aspect)
+    surf = ax.pcolormesh(lons, lats, heat, norm=colors.LogNorm(vmin=heat.min(), vmax=heat.max()))
+    ax.scatter(vent[1], vent[0], marker='^', s=100, c='r')
+    fig.colorbar(surf)
+    return ax
+
 # Loading SRTM data
 hgts1 = np.fromfile('N37E014.hgt', dtype='>i2').reshape((3601, 3601))
 hgts2 = np.fromfile('N37E015.hgt', dtype='>i2').reshape((3601, 3601))
@@ -181,11 +194,6 @@ vent2_xyz = (4879984.887685, 1306875.998159, 3885561.186548)
 # We look at lats 37.71 to 37.8, lons 14.94 to 15.05 (about 5 km around the peak)
 latrange = slice(720, 1045) # .2*3600 -- .29 * 3600
 lonrange = slice(3384, 3781) # .94*3600 -- 1.05*3600
-ax = plt.subplot(1, 1, 1)
-ax.contour(LONS[lonrange], LATS[latrange], hgts[latrange, lonrange], colors='k')
-ax.set_aspect(lengthlat(peak_llh[0]) / lengthlon(peak_llh[0]))
-
-ax.scatter(vent1_llh[1], vent1_llh[0], marker='^', s=100, c='r')
 
 eht = hgts[latrange, lonrange]
 rlat = LATS[latrange] * np.pi / 180
@@ -211,6 +219,7 @@ sxpos = np.array([[mvec(t) @ cofns[prn](t) for t in range(start, stop, 300)] for
 
 cyl_inf = cylinfo(vent1_xyz, 6000, 2000)
 
-# from matplotlib import colors
-# heat = heatmap(gloc, sxpos, cyl_inf)
-# ax.pcolormesh(LONS[lonrange], LATS[latrange], heat[:,:,0], norm=colors.LogNorm(vmin=61, vmax=2577))
+"""
+heat = heatmap(gloc, sxpos, cyl_inf)
+drawheatmap(LONS[lonrange], LATS[latrange], heat[:,:,0], eht, vent1_llh)
+"""
