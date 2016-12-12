@@ -5,6 +5,7 @@ from math import sqrt
 from plot import polarazel
 from coords import xyz2llh, earthnormal_xyz, lengthlat, lengthlon, WGS84
 from satpos import myinterp, mvec, coeffs
+import findfirst
 
 ETNA0 = (4878146, 1309017, 3886374) # ECEF in meters
 REDBT = (-2802350, -1444879, 5527495)
@@ -165,13 +166,15 @@ def drawheatmap(lons, lats, heat, hgts, vent):
     from matplotlib import colors
     plt.rcParams['axes.formatter.useoffset'] = False
     aspect = lengthlat(vent[0]) / lengthlon(vent[0])
-    fig = plt.figure(figsize=(8, 4*(aspect + 1)))
-    ax = fig.add_subplot(1, 1, 1)
-    ax.contour(lons, lats, hgts, colors='k')
-    ax.set_aspect(aspect)
+    fig = plt.figure(figsize=(8, 7.1875))
+    ax = fig.add_axes([0.08, 0.06, 0.88, 0.88], aspect=aspect, anchor='SW') # left, bot, width, height
+    ax.contour(lons, lats, hgts, colors='k') # this resizes the axes
     surf = ax.pcolormesh(lons, lats, heat, norm=colors.LogNorm(vmin=heat.min(), vmax=heat.max()))
+    ax.autoscale(enable=False) # otherwise the scatter command messes up the axes
     ax.scatter(vent[1], vent[0], marker='^', s=100, c='r')
-    fig.colorbar(surf)
+    box = ax.get_position()
+    cax = fig.add_axes([0.9, box.y0, 0.04, box.height])
+    fig.colorbar(surf, cax=cax)
     return ax
 
 # Loading SRTM data
@@ -191,9 +194,16 @@ vent1_xyz = (4879893.036667, 1307745.970325, 3885090.992257)
 vent2_llh = (37.7507, 14.9922, 3200)
 vent2_xyz = (4879984.887685, 1306875.998159, 3885561.186548)
 
-# We look at lats 37.71 to 37.8, lons 14.94 to 15.05 (about 5 km around the peak)
-latrange = slice(720, 1045) # .2*3600 -- .29 * 3600
-lonrange = slice(3384, 3781) # .94*3600 -- 1.05*3600
+DIST = 6000 # map 6 km each way around the peak
+
+londel = DIST / lengthlon(peak_llh[0])
+latdel = DIST / lengthlat(peak_llh[0])
+
+lonind = LONS.searchsorted([peak_llh[1] - londel, peak_llh[1] + londel])
+latind = [findfirst.findfirstlt(LATS, peak_llh[0] + latdel),
+          findfirst.findfirstlt(LATS, peak_llh[0] - latdel)]
+latrange = slice(*latind)
+lonrange = slice(*lonind)
 
 eht = hgts[latrange, lonrange]
 rlat = LATS[latrange] * np.pi / 180
