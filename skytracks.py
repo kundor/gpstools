@@ -135,28 +135,6 @@ def subrows(A, B):
     C.shape = (n, m, k)
     return C
 
-@jit(nopython=True)
-def subrowsjit(A, B):
-    A = A.reshape(A.shape[0], 1, A.shape[1])
-    return A - B
-
-@jit(nopython=True)
-def sumcrossings(glocr, sxpos, uax, elthresh, Cr, length, eproj, eperp):
-    difs = subrowsjit(sxpos, glocr)
-    dproj = difs @ uax
-    angdo = np.greater.outer(dproj / np.linalg.norm(difs, axis=2), elthresh)
-    dperp = difs - np.multiply.outer(dproj, uax)
-    A = 2 * np.sum(dperp**2, 2)
-    B = 2 * np.sum(eperp * dperp, -1)
-    D = B**2 - 2*A*Cr
-    DD = np.sqrt(D) / A
-    BB = -B / A
-    SLNS = np.stack((BB - DD, BB + DD), -1)
-    T0 = np.maximum(-eproj / dproj, 0)
-    T1 = (length - eproj) / dproj
-    GD = np.logical_and(SLNS[:,:,0] < T1, SLNS[:,:,1] > T0)
-    return np.sum(GD[:,:,np.newaxis] * angdo, 0)
-
 def heatmap(gloc, sxpos, cyl_inf, elthresh=None):
     np.seterr(invalid='ignore')
     if elthresh is None:
@@ -170,7 +148,20 @@ def heatmap(gloc, sxpos, cyl_inf, elthresh=None):
     eperp = end0 - np.multiply.outer(eproj, uax)
     C = np.sum(eperp**2, 2) - radius**2
     for i in range(len(gloc)):
-        heat[i,:,:] = sumcrossings(gloc[i,:,:], sxpos, uax, elthresh, C[i], length, eproj[i], eperp[i])
+        difs = subrows(sxpos, gloc[i])
+        dproj = difs @ uax
+        angdo = np.greater.outer(dproj / np.linalg.norm(difs, axis=2), elthresh)
+        dperp = difs - np.multiply.outer(dproj, uax)
+        A = 2 * np.sum(dperp**2, 2)
+        B = 2 * np.sum(eperp[i] * dperp, -1)
+        D = B**2 - 2*A*C[i]
+        DD = np.sqrt(D) / A
+        BB = -B / A
+        SLNS = np.stack((BB - DD, BB + DD), -1)
+        T0 = np.maximum(-eproj[i] / dproj, 0)
+        T1 = (length - eproj[i]) / dproj
+        GD = np.logical_and(SLNS[:,:,0] < T1, SLNS[:,:,1] > T0)
+        heat[i] = np.sum(GD[:,:,np.newaxis] * angdo, 0)
     return heat
 
 def drawheatmap(lons, lats, heat, hgts, vent, iskm=False, dolog=False):
