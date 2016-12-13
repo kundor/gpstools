@@ -162,14 +162,22 @@ def heatmap(gloc, sxpos, cyl_inf, elthresh=None):
         heat[i,:,:] = np.sum(GD[:,:,np.newaxis] * angdo, 0)
     return heat
 
-def drawheatmap(lons, lats, heat, hgts, vent):
+def drawheatmap(lons, lats, heat, hgts, vent, iskm=False, dolog=False):
     from matplotlib import colors
     plt.rcParams['axes.formatter.useoffset'] = False
-    aspect = lengthlat(vent[0]) / lengthlon(vent[0])
+    if iskm:
+        aspect = 1
+    else:
+        aspect = lengthlat(vent[0]) / lengthlon(vent[0])
     fig = plt.figure(figsize=(8, 7.1875))
     ax = fig.add_axes([0.08, 0.06, 0.88, 0.88], aspect=aspect, anchor='SW') # left, bot, width, height
     ax.contour(lons, lats, hgts, colors='k') # this resizes the axes
-    surf = ax.pcolormesh(lons, lats, heat, norm=colors.LogNorm(vmin=heat.min(), vmax=heat.max()))
+    if dolog:
+        surf = ax.pcolormesh(lons, lats, heat, norm=colors.LogNorm(vmin=heat.min(), vmax=heat.max()))
+    else:
+        vmin = np.percentile(heat, 1)
+        vmax = np.percentile(heat, 88)
+        surf = ax.pcolormesh(lons, lats, heat, vmin=vmin, vmax=vmax)
     ax.autoscale(enable=False) # otherwise the scatter command messes up the axes
     ax.scatter(vent[1], vent[0], marker='^', s=100, c='r')
     box = ax.get_position()
@@ -227,9 +235,15 @@ cofns = [myinterp(start,
 stop = start + 900*(len(pl) - 11)
 sxpos = np.array([[mvec(t) @ cofns[prn](t) for t in range(start, stop, 300)] for prn in range(32)])
 
-cyl_inf = cylinfo(vent1_xyz, 6000, 2000)
+cyl_inf = cylinfo(vent1_xyz, 4000, 1414)
 
+nskm = (LATS[latrange] - peak_llh[0]) * lengthlat(peak_llh[0]) / 1000
+ewkm = (LONS[lonrange] - peak_llh[1]) * lengthlon(peak_llh[0]) / 1000
+
+ventkm = (lengthlat(peak_llh[0], vent1_llh[0]) / 1000,
+          (vent1_llh[1] - peak_llh[1]) * lengthlon(peak_llh[0]) / 1000)
 """
 heat = heatmap(gloc, sxpos, cyl_inf)
-drawheatmap(LONS[lonrange], LATS[latrange], heat[:,:,0], eht, vent1_llh)
+drawheatmap(LONS[lonrange], LATS[latrange], heat[:,:,0], eht, vent1_llh) # or
+drawheatmap(ewkm, nskm, heat[:,:,0], eht, ventkm, True)
 """
