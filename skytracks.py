@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy import sin, cos
@@ -193,6 +194,13 @@ def drawheatmap(lons, lats, heat, hgts, vent, iskm=False, dolog=False):
     box = ax.get_position()
     cax = fig.add_axes([0.9, box.y0, 0.04, box.height])
     fig.colorbar(surf, cax=cax)
+    if iskm:
+        ax.set_ylabel('North of peak (km)')
+        ax.set_xlabel('East of peak (km)')
+    else:
+        ax.set_ylabel('Latitude (°)')
+        ax.set_xlabel('Longitude (°)')
+    ax.set_title('Satellites visible through cylinder')
     return ax
 
 # Loading SRTM data
