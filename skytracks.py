@@ -181,7 +181,7 @@ def drawheatmap(lons, lats, heat, hgts, vent, iskm=False, dolog=False):
     else:
         aspect = lengthlat(vent[0]) / lengthlon(vent[0])
     fig = plt.figure(figsize=(8, 7.1875))
-    ax = fig.add_axes([0.08, 0.06, 0.88, 0.88], aspect=aspect, anchor='SW') # left, bot, width, height
+    ax = fig.add_axes([0.08, 0.07, 0.88, 0.88], aspect=aspect, anchor='SW') # left, bot, width, height
     ax.contour(lons, lats, hgts, colors='k') # this resizes the axes
     if dolog:
         surf = ax.pcolormesh(lons, lats, heat, norm=colors.LogNorm(vmin=heat.min(), vmax=heat.max()))
