@@ -1,9 +1,14 @@
+"""Functions to make azimuth/elevation skytracks of satellites passing over a
+given point, or a heatmap of ground locations with many lines-of-sight to satellites
+passing through a given cylinder.
+Currently hardcoded w.r.t. times, file locations.
+"""
 # -*- coding: utf-8 -*-
+from math import sqrt
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy import sin, cos
-from math import sqrt
-import os
 from plot import polarazel
 from coords import xyz2llh, earthnormal_xyz, lengthlat, lengthlon, WGS84
 from satpos import myinterp, mvec, coeffs
@@ -51,7 +56,7 @@ def quadformula(a, b, c):
     if a == b == c == 0:
         raise ValueError("Infinite solutions")
     elif a == b == 0:
-         return []
+        return []
     elif a == 0:
         return [-c/b]
     a *= 2
@@ -79,7 +84,7 @@ def _clip(vals, t0, t1):
         vals[1] = t1
     return True
 
-def _lci(eproj, eperp, C, dif, uax, length, radius):
+def _lci(eproj, eperp, C, dif, uax, length):
     # Parameterize the line by L(t) = end0 + t*dif
     dproj = dif @ uax
     dperp = dif - dproj*uax
@@ -89,7 +94,7 @@ def _lci(eproj, eperp, C, dif, uax, length, radius):
     t0 = -eproj / dproj # where line meets bottom of cylinder
     t1 = (length - eproj) / dproj # where line meets top of cylinder
     if not _clip(slns, t0, t1):
-        return np.zeros((0,3)) # empty array
+        return np.zeros((0, 3)) # empty array
     return np.outer(slns, dif)
 
 def linecylinderintersect(end0, end1, cyl_inf):
@@ -105,16 +110,16 @@ def linecylinderintersect(end0, end1, cyl_inf):
     i.e. the dot product of axis and end1 - end0 is positive; this should be the
     case if end1 is a satellite above the horizon.
     """
-    base, uax, length, radius = cyl_inf
-    rxloc, eproj, eperp, C = rxinfo(end0, cyl_inf)
-    return end0 + _lci(eproj, eperp, C, end1 - end0, uax, length, radius)
+    _, uax, length, _ = cyl_inf
+    _, eproj, eperp, C = rxinfo(end0, cyl_inf)
+    return end0 + _lci(eproj, eperp, C, end1 - end0, uax, length)
 
 def cylinfo(base, length, radius):
     axis = earthnormal_xyz(base)
     return (base, axis, length, radius)
 
 def rxinfo(rxloc, cyl_inf):
-    base, uax, length, radius = cyl_inf
+    base, uax, _, radius = cyl_inf
     end0 = rxloc - base
     eproj = end0 @ uax
     eperp = end0 - eproj*uax
@@ -158,8 +163,8 @@ def heatmap(gloc, sxpos, cyl_inf, elthresh=None):
         SLNS = np.stack((BB - DD, BB + DD), -1)
         T0 = np.maximum(-eproj[i] / dproj, 0)
         T1 = (length - eproj[i]) / dproj
-        GD = np.logical_and(SLNS[:,:,0] < T1, SLNS[:,:,1] > T0)
-        heat[i] = np.sum(GD[:,:,np.newaxis] * angdo, 0)
+        GD = np.logical_and(SLNS[:, :, 0] < T1, SLNS[:, :, 1] > T0)
+        heat[i] = np.sum(GD[:, :, np.newaxis] * angdo, 0)
     return heat
 
 def drawheatmap(lons, lats, heat, hgts, vent, iskm=False, dolog=False):
@@ -170,10 +175,12 @@ def drawheatmap(lons, lats, heat, hgts, vent, iskm=False, dolog=False):
     else:
         aspect = lengthlat(vent[0]) / lengthlon(vent[0])
     fig = plt.figure(figsize=(8, 7.1875))
-    ax = fig.add_axes([0.08, 0.07, 0.88, 0.88], aspect=aspect, anchor='SW') # left, bot, width, height
+    ax = fig.add_axes([0.08, 0.07, 0.88, 0.88], aspect=aspect, anchor='SW')
+                     #^left, bot, width, height
     ax.contour(lons, lats, hgts, colors='k') # this resizes the axes
     if dolog:
-        surf = ax.pcolormesh(lons, lats, heat, norm=colors.LogNorm(vmin=heat.min(), vmax=heat.max()))
+        surf = ax.pcolormesh(lons, lats, heat,
+                             norm=colors.LogNorm(vmin=heat.min(), vmax=heat.max()))
     else:
         vmin = np.percentile(heat, 1)
         vmax = np.percentile(heat, 88)
@@ -202,12 +209,13 @@ vent1_xyz = (4879893.036667, 1307745.970325, 3885090.992257)
 vent2_llh = (37.7507, 14.9922, 3200)
 vent2_xyz = (4879984.887685, 1306875.998159, 3885561.186548)
 
-def get_srtm(dir='/homes/nima9589/SRTM'):
-    os.chdir(dir)
+def get_srtm(sdir='/homes/nima9589/SRTM'):
+    files = ['N37E014.hgt', 'N37E015.hgt']
+    files = [os.path.join(sdir, f) for f in files]
     # Loading SRTM data
-    hgts1 = np.fromfile('N37E014.hgt', dtype='>i2').reshape((3601, 3601))
-    hgts2 = np.fromfile('N37E015.hgt', dtype='>i2').reshape((3601, 3601))
-    hgts = np.hstack((hgts1[:,:-1], hgts2))
+    hgts1 = np.fromfile(files[0], dtype='>i2').reshape((3601, 3601))
+    hgts2 = np.fromfile(files[1], dtype='>i2').reshape((3601, 3601))
+    hgts = np.hstack((hgts1[:, :-1], hgts2))
 
     lons = np.arange(14, 16.0001, 1/3600)
     lats = np.arange(38, 36.9999, -1/3600)
