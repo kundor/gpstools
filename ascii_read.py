@@ -230,7 +230,7 @@ def concat(filenames):
         i = nextfilenum(i, files, curtime)
     checkallclosed(files)
 
-def filter(filename):
+def vfilter(filename):
     """A generator yielding all the good data lines from the given file."""
     with open(filename, 'rb') as file:
         for line in file:

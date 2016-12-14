@@ -5,7 +5,7 @@ def gensnrs(lineiter):
     """Get the SNR values from each line in VAPR ASCII format.
 
     Lines should all be valid, so lineiter should either be a prefiltered
-    file object, or run through filter(filename).
+    file object, or run through vfilter(filename).
     """
     for line in lineiter:
         words = line.split(b',')
@@ -98,8 +98,8 @@ reportspans([36, 38, 40], bins)
 spanstarts = [36.4, 37, 37.6, 37.8, 38.2, 38.6, 39]
 reportspans(spanstarts, bins)
 
-from ascii_read import filter
-bins = calcsnrstat(gensnrs(filter('uart3.txt')))
+from ascii_read import vfilter
+bins = calcsnrstat(gensnrs(vfilter('uart3.txt')))
 
 filenames = ['vpr3%d0.16.snr89' % d for d in range(188, 240)]
 bins = calcsnrstat(gensnr89(filenames))
