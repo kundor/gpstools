@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy import sin, cos
 from math import sqrt
-from numba import jit
+from numba import guvectorize, float64, int32
 from plot import polarazel
 from coords import xyz2llh, earthnormal_xyz, lengthlat, lengthlon, WGS84
 from satpos import myinterp, mvec, coeffs
@@ -134,6 +134,44 @@ def subrows(A, B):
     C -= np.tile(B, (n, 1))
     C.shape = (n, m, k)
     return C
+
+def make_rx_summer(sxpos, cyl_inf):
+    base, uax, length, radius = cyl_inf
+    base = np.array(base)
+    @guvectorize([(float64[:], float64[:], int32[:])], '(m),(k)->(k)', nopython=True, target='parallel')
+    def sumrxcrossings(rxpos, elthresh, out):
+        end0 = rxpos - base
+        eproj = end0 @ uax
+        eperp = end0 - eproj * uax
+        difs = sxpos - rxpos
+        C = eperp @ eperp - radius**2
+        out[:] = 0
+        for i in range(len(difs)): # numba doesn't support 'for d in difs'
+            dproj = np.sum(difs[i] * uax)
+            dperp = difs[i] - dproj * uax
+            angdo = dproj / np.linalg.norm(difs[i]) > elthresh
+            if not angdo.any():
+                continue
+            A = 2 * np.sum(dperp**2)
+            B = -2 * np.sum(dperp * eperp)
+            D = B**2 - 2*A*C
+            if D < 0:
+                continue
+            D = np.sqrt(D) / A
+            B /= A
+            T0 = max(-eproj / dproj, 0)
+            T1 = (length - eproj) / dproj
+            out[angdo] += B - D < T1 and B + D > T0
+    return sumrxcrossings
+
+def heatmapjit(gloc, sxpos, cyl_inf, elthresh=None):
+    np.seterr(invalid='ignore')
+    if elthresh is None:
+        elthresh = [5, 10, 20] # degrees above horizon (roughly)
+    elthresh = np.array([cos((90 - el)*np.pi/180) for el in elthresh])
+    sxpos = sxpos.reshape(-1, 3)
+    sumrxcros = make_rx_summer(sxpos, cyl_inf)
+    return sumrxcros(gloc, elthresh)
 
 def heatmap(gloc, sxpos, cyl_inf, elthresh=None):
     np.seterr(invalid='ignore')
