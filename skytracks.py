@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy import sin, cos
 from math import sqrt
-from numba import guvectorize, float64, int32
+import os
 from plot import polarazel
 from coords import xyz2llh, earthnormal_xyz, lengthlat, lengthlon, WGS84
 from satpos import myinterp, mvec, coeffs
@@ -192,14 +192,7 @@ def drawheatmap(lons, lats, heat, hgts, vent, iskm=False, dolog=False):
     ax.set_title('Satellites visible through cylinder')
     return ax
 
-# Loading SRTM data
-hgts1 = np.fromfile('N37E014.hgt', dtype='>i2').reshape((3601, 3601))
-hgts2 = np.fromfile('N37E015.hgt', dtype='>i2').reshape((3601, 3601))
-hgts = np.hstack((hgts1[:,:-1], hgts2))
-
-LONS = np.arange(14, 16.0001, 1/3600)
-LATS = np.arange(38, 36.9999, -1/3600)
-
+# Etna location info
 peak_llh = (37.755278, 14.995277, 3340)
 peak_xyz = (4879720.957403, 1307086.174806, 3886048.858672)
 
@@ -209,48 +202,62 @@ vent1_xyz = (4879893.036667, 1307745.970325, 3885090.992257)
 vent2_llh = (37.7507, 14.9922, 3200)
 vent2_xyz = (4879984.887685, 1306875.998159, 3885561.186548)
 
-DIST = 6000 # map 6 km each way around the peak
+def get_srtm(dir='/homes/nima9589/SRTM'):
+    os.chdir(dir)
+    # Loading SRTM data
+    hgts1 = np.fromfile('N37E014.hgt', dtype='>i2').reshape((3601, 3601))
+    hgts2 = np.fromfile('N37E015.hgt', dtype='>i2').reshape((3601, 3601))
+    hgts = np.hstack((hgts1[:,:-1], hgts2))
 
-londel = DIST / lengthlon(peak_llh[0])
-latdel = DIST / lengthlat(peak_llh[0])
+    lons = np.arange(14, 16.0001, 1/3600)
+    lats = np.arange(38, 36.9999, -1/3600)
+    return hgts, lons, lats
 
-lonind = LONS.searchsorted([peak_llh[1] - londel, peak_llh[1] + londel])
-latind = [findfirst.findfirstlt(LATS, peak_llh[0] + latdel),
-          findfirst.findfirstlt(LATS, peak_llh[0] - latdel)]
-latrange = slice(*latind)
-lonrange = slice(*lonind)
+def groundlocs(llh, dist):
+    """Get ECEF ground locations for dist meters around llh coordinates."""
+    hgts, lons, lats = get_srtm()
+    londel = dist / lengthlon(llh[0])
+    latdel = dist / lengthlat(llh[0])
+    lonind = lons.searchsorted([llh[1] - londel, llh[1] + londel])
+    latind = [findfirst.findfirstlt(lats, llh[0] + latdel),
+              findfirst.findfirstlt(lats, llh[0] - latdel)]
+    latrange = slice(*latind)
+    lonrange = slice(*lonind)
 
-eht = hgts[latrange, lonrange]
-rlat = LATS[latrange] * np.pi / 180
-rlon = LONS[lonrange] * np.pi / 180
-slat = np.sin(rlat)
-enlat = WGS84.a / np.sqrt(1 - WGS84.e2 * slat * slat)
-enlat.shape = (len(enlat), 1)
-slat.shape = (len(slat), 1)
-X = (enlat + eht) * np.outer(np.cos(rlat), np.cos(rlon))
-Y = (enlat + eht) * np.outer(np.cos(rlat), np.sin(rlon))
-Z = ((1 - WGS84.e2) * enlat + eht) * slat
-gloc = np.stack((X, Y, Z), axis=-1)
+    eht = hgts[latrange, lonrange]
+    rlat = lats[latrange] * np.pi / 180
+    rlon = lons[lonrange] * np.pi / 180
+    slat = np.sin(rlat)
+    enlat = WGS84.a / np.sqrt(1 - WGS84.e2 * slat**2)
+    enlat.shape = (len(enlat), 1)
+    slat.shape = (len(slat), 1)
+    X = (enlat + eht) * np.outer(np.cos(rlat), np.cos(rlon))
+    Y = (enlat + eht) * np.outer(np.cos(rlat), np.sin(rlon))
+    Z = ((1 - WGS84.e2) * enlat + eht) * slat
+    return np.stack((X, Y, Z), axis=-1), eht, lats[latrange], lons[lonrange]
 
-pl = quickloadsp3('../igs19233.sp3')
-start = ((((1923 * 7) + 3) * 24 + 1) * 60 + 15) * 60
-cofns = [myinterp(start,
-                  900,
-                  [coeffs(range(start + 900*idx, start + 900*(idx+11), 900),
-                          pl[idx:idx+11, prn, :]) for idx in range(len(pl) - 10)])
-         for prn in range(32)]
-stop = start + 900*(len(pl) - 11)
-sxpos = np.array([[mvec(t) @ cofns[prn](t) for t in range(start, stop, 300)] for prn in range(32)])
+def satpositions():
+    pl = quickloadsp3('/homes/nima9589/igs19233.sp3')
+    start = ((((1923 * 7) + 3) * 24 + 1) * 60 + 15) * 60
+    cofns = [myinterp(start,
+                      900,
+                      [coeffs(range(start + 900*idx, start + 900*(idx+11), 900),
+                              pl[idx:idx+11, prn, :]) for idx in range(len(pl) - 10)])
+             for prn in range(32)]
+    stop = start + 900*(len(pl) - 11)
+    return np.array([[mvec(t) @ cofns[prn](t) for t in range(start, stop, 300)] for prn in range(32)])
 
+"""
 cyl_inf = cylinfo(vent1_xyz, 4000, 1414)
+gloc, hgts, lats, lons = groundlocs(peak_llh, 6000)
+sxpos = satpositions()
+heat = heatmap(gloc, sxpos, cyl_inf)
 
-nskm = (LATS[latrange] - peak_llh[0]) * lengthlat(peak_llh[0]) / 1000
-ewkm = (LONS[lonrange] - peak_llh[1]) * lengthlon(peak_llh[0]) / 1000
-
+nskm = (lats - peak_llh[0]) * lengthlat(peak_llh[0]) / 1000
+ewkm = (lons - peak_llh[1]) * lengthlon(peak_llh[0]) / 1000
 ventkm = (lengthlat(peak_llh[0], vent1_llh[0]) / 1000,
           (vent1_llh[1] - peak_llh[1]) * lengthlon(peak_llh[0]) / 1000)
-"""
-heat = heatmap(gloc, sxpos, cyl_inf)
-drawheatmap(LONS[lonrange], LATS[latrange], heat[:,:,0], eht, vent1_llh) # or
-drawheatmap(ewkm, nskm, heat[:,:,0], eht, ventkm, True)
+
+drawheatmap(lons, lats, heat[:,:,0], hgts, vent1_llh) # or
+drawheatmap(ewkm, nskm, heat[:,:,0], hgts, ventkm, True)
 """
