@@ -143,24 +143,23 @@ def make_rx_summer(sxpos, cyl_inf):
         end0 = rxpos - base
         eproj = end0 @ uax
         eperp = end0 - eproj * uax
-        difs = sxpos - rxpos
         C = eperp @ eperp - radius**2
         out[:] = 0
-        for i in range(len(difs)): # numba doesn't support 'for d in difs'
-            dproj = np.sum(difs[i] * uax)
-            dperp = difs[i] - dproj * uax
-            angdo = dproj / np.linalg.norm(difs[i]) > elthresh
+        for i in range(len(sxpos)): # numba doesn't support 'for d in difs'
+            dif = sxpos[i] - rxpos
+            dproj = dif @ uax
+            dperp = dif - dproj * uax
+            angdo = dproj / np.linalg.norm(dif) > elthresh
             if not angdo.any():
                 continue
-            A = 2 * np.sum(dperp**2)
-            B = -2 * np.sum(dperp * eperp)
+            A = 2 * dperp @ dperp
+            B = -2 * dperp @ eperp
             D = B**2 - 2*A*C
             if D < 0:
                 continue
-            D = np.sqrt(D) / A
-            B /= A
-            T0 = max(-eproj / dproj, 0)
-            T1 = (length - eproj) / dproj
+            D = np.sqrt(D)
+            T0 = A * max(-eproj / dproj, 0)
+            T1 = A * (length - eproj) / dproj
             out[angdo] += B - D < T1 and B + D > T0
     return sumrxcrossings
 
