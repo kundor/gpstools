@@ -135,43 +135,6 @@ def subrows(A, B):
     C.shape = (n, m, k)
     return C
 
-def make_rx_summer(sxpos, cyl_inf):
-    base, uax, length, radius = cyl_inf
-    base = np.array(base)
-    @guvectorize([(float64[:], float64[:], int32[:])], '(m),(k)->(k)', nopython=True, target='parallel')
-    def sumrxcrossings(rxpos, elthresh, out):
-        end0 = rxpos - base
-        eproj = end0 @ uax
-        eperp = end0 - eproj * uax
-        C = eperp @ eperp - radius**2
-        out[:] = 0
-        for i in range(len(sxpos)): # numba doesn't support 'for d in difs'
-            dif = sxpos[i] - rxpos
-            dproj = dif @ uax
-            dperp = dif - dproj * uax
-            angdo = dproj / np.linalg.norm(dif) > elthresh
-            if not angdo.any():
-                continue
-            A = 2 * dperp @ dperp
-            B = -2 * dperp @ eperp
-            D = B**2 - 2*A*C
-            if D < 0:
-                continue
-            D = np.sqrt(D)
-            T0 = A * max(-eproj / dproj, 0)
-            T1 = A * (length - eproj) / dproj
-            out[angdo] += B - D < T1 and B + D > T0
-    return sumrxcrossings
-
-def heatmapjit(gloc, sxpos, cyl_inf, elthresh=None):
-    np.seterr(invalid='ignore')
-    if elthresh is None:
-        elthresh = [5, 10, 20] # degrees above horizon (roughly)
-    elthresh = np.array([cos((90 - el)*np.pi/180) for el in elthresh])
-    sxpos = sxpos.reshape(-1, 3)
-    sumrxcros = make_rx_summer(sxpos, cyl_inf)
-    return sumrxcros(gloc, elthresh)
-
 def heatmap(gloc, sxpos, cyl_inf, elthresh=None):
     np.seterr(invalid='ignore')
     if elthresh is None:
