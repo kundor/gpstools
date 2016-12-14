@@ -92,7 +92,7 @@ def _lci(eproj, eperp, C, dif, uax, length, radius):
         return np.zeros((0,3)) # empty array
     return np.outer(slns, dif)
 
-def linecylinderintersect(end0, end1, base, axis, radius):
+def linecylinderintersect(end0, end1, cyl_inf):
     """Find intersections of a line segment with a finite cylinder.
 
     Return points where the line segment from end0 to end1 passes through the
@@ -105,11 +105,9 @@ def linecylinderintersect(end0, end1, base, axis, radius):
     i.e. the dot product of axis and end1 - end0 is positive; this should be the
     case if end1 is a satellite above the horizon.
     """
-    length = np.linalg.norm(axis)
-    uax = axis / length
-    rxloc, eproj, eperp, C = rxinfo(end0, (base, uax, length, radius))
+    base, uax, length, radius = cyl_inf
+    rxloc, eproj, eperp, C = rxinfo(end0, cyl_inf)
     return end0 + _lci(eproj, eperp, C, end1 - end0, uax, length, radius)
-#    blens = np.dot(ipts, uax) # make sure 0 < blen < length
 
 def cylinfo(base, length, radius):
     axis = earthnormal_xyz(base)
