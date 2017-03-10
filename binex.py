@@ -6,7 +6,6 @@ from functools import reduce
 from operator import xor
 from hashlib import md5
 from binascii import crc32, crc_hqx
-import io
 
 SYNC = b'\xC2'
 
@@ -16,15 +15,17 @@ RECS = {192 : 'SNR',
 
 def info(*args, logfile=open('/tmp/loggin', 'a')):
     print(*args, file=logfile, flush=True)
-    
+
 
 def readsync(strm):
     """Read a sync byte from the stream. If we don't see one, scan forward for it."""
-    read = 0
-    while strm.read(1) != SYNC:
-        read += 1
+    read = b''
+    r = strm.read(1)
+    while r != SYNC:
+        read += r
+        r = strm.read(1)
     if read:
-        info("Skipped", str(read), "bytes before SYNC.")
+        info("Skipped", len(read), "bytes before SYNC:", read)
 
 
 def read_ubnxi(strm):
@@ -36,9 +37,12 @@ def read_ubnxi(strm):
     """
     val = 0
     byts = b''
-    for b in range(3):
-        byts += strm.read(1)
-        byt = byts[-1] # indexing bytes converts to int
+    for b in range(4):
+        byt = strm.read(1)
+        if not byt:
+            raise EOFError('ubnxi cut off by end of stream')
+        byts += byt
+        byt = ord(byt)
         if b < 3:
             masked = byt & 127
         else:
@@ -74,9 +78,32 @@ def peeker(strm, num):
     assert len(vals) == num, "FIXME: Need to read more into buffer to peek ahead"
     return vals
 
+def bnx_prn(byt):
+    """Interpret a BINEX 1-byte satellite ID.
+
+    See http://binex.unavco.org/conventions.html#SVid1_details
+    Return PRN for GPS (1--32), SBAS (120--151), QZSS (193--200),
+    32 + PRN for Galileo (33--64), and 64 + slot # for GLONASS (65--96).
+    """
+    if isinstance(byt, bytes):
+        byt = ord(byt)
+    satsys = byt >> 5
+    if satsys:
+        info("Non-GPS satellite system:", satsys)
+        if satsys > 5:
+            info('   Impossible satsys! Greater than 5 reserved.') # raise ValueError...
+    corrections = [1, 65, 120, 33, 201, 193, 0, 0]
+    # GPS, add 1 for PRN
+    # GLONASS, add 1 for slot #, return 64 + slot #
+    # SBAS, add 120 for PRN
+    # Galileo, add 1 for prn, and 32 to map into 33--64
+    # Beidou / COMPASS: undefined, but NMEA reserves 201--235
+    # QZSS, add 193 for PRN
+    return (byt & 31) + corrections[satsys]
+
 def verify(strm, msg):
     """Compute the checksum for msg and match it in the stream.
-    
+
     The correct number of bytes for the length of msg are consumed from the stream
     (0--127 bytes: 1 byte read; 128--4095: 2 read; 4096--1048575: 4 read; otherwise 16).
     If they do not match, we just complain.
@@ -87,7 +114,22 @@ def verify(strm, msg):
     if compcrc != readcrc:
         info('Bad checksum! Computed', compcrc, '\n'
              '              Found   ', readcrc)
- 
+
+def snr_msg(msg):
+    """Read SNR record. Return tuple of RXID, GPS week, GPS second of week, and
+    a list of PRN, SNR pairs."""
+    rxid = msg[0]
+    gmin = int.from_bytes(msg[1:5], 'little')
+    gmsc = int.from_bytes(msg[5:7], 'little')
+    i = 7
+    snrs = []
+    while i < len(msg):
+        prn = bnx_prn(msg[i])
+        snr = int.from_bytes(msg[i+1:i+3], 'little')
+        snrs += [(prn, snr)]
+        i += 1 + len(sbytes)
+    return rxid, gmin//10080, (gmin % 10080)*60 + gmsc/1000, snrs
+
 def read_record(strm):
     readsync(strm)
     idbytes, recid = read_ubnxi(strm)
@@ -97,4 +139,4 @@ def read_record(strm):
     msg = strm.read(msglen)
     assert len(msg) == msglen
     verify(strm, idbytes + lenbytes + msg)
-    
+
