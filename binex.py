@@ -9,13 +9,8 @@ from binascii import crc32, crc_hqx
 
 SYNC = b'\xC2'
 
-RECS = {192 : 'SNR',
-        193 : 'Housekeeping',
-        194 : 'Meta'}
-
 def info(*args, logfile=open('/tmp/loggin', 'a')):
     print(*args, file=logfile, flush=True)
-
 
 def readsync(strm):
     """Read a sync byte from the stream. If we don't see one, scan forward for it."""
@@ -150,6 +145,9 @@ def hk_msg(msg):
     err = msg[33]
     return rxid, gtime, mac, lon, lat, alt, volt, temp, msgct, err
 
+RECS = {192 : snr_msg,
+        193 : hk_msg}
+
 def read_record(strm):
     readsync(strm)
     idbytes, recid = read_ubnxi(strm)
@@ -159,5 +157,7 @@ def read_record(strm):
     msg = strm.read(msglen)
     assert len(msg) == msglen
     verify(strm, idbytes + lenbytes + msg)
-    return recid, msg
-
+    # When verification fails, we could try advancing to the next sync byte
+    # within the already-read message, and attempt to read a record there.
+    # (Currently, we start trying after the end of all data previously read.)
+    return recid, RECS[recid](msg)
