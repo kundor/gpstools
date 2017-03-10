@@ -20,7 +20,7 @@ with paramiko.transport.Transport(VHOST) as transpo:
     with transpo.open_session() as chan:
         chan.exec_command(VCMD)
         byt = chan.recv(50)
-	if not byt:
+    if not byt:
             # channel is closed
         # do stuff with byt
         sendall(data) # blocks until all of data is sent
