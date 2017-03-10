@@ -1,9 +1,6 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Thu Mar  9 10:58:56 2017
-
-@author: nima9589
+Functions to process little-endian, forward-readable, regular-CRC BINEX files.
+See http://binex.unavco.org/ for more information.
 """
 from functools import reduce
 from operator import xor
@@ -90,11 +87,7 @@ def verify(strm, msg):
     if compcrc != readcrc:
         info('Bad checksum! Computed', compcrc, '\n'
              '              Found   ', readcrc)
-
-`
-        
-
-        
+ 
 def read_record(strm):
     readsync(strm)
     idbytes, recid = read_ubnxi(strm)
