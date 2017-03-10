@@ -22,6 +22,8 @@ def readsync(strm):
     read = b''
     r = strm.read(1)
     while r != SYNC:
+        if not r:
+            raise EOFError('End of file encountered before sync byte')
         read += r
         r = strm.read(1)
     if read:
@@ -91,7 +93,7 @@ def bnx_prn(byt):
     if satsys:
         info("Non-GPS satellite system:", satsys)
         if satsys > 5:
-            info('   Impossible satsys! Greater than 5 reserved.') # raise ValueError...
+            raise ValueError('   Impossible satsys! Greater than 5 reserved.')
     corrections = [1, 65, 120, 33, 201, 193, 0, 0]
     # GPS, add 1 for PRN
     # GLONASS, add 1 for slot #, return 64 + slot #
@@ -115,15 +117,38 @@ def verify(strm, msg):
         info('Bad checksum! Computed', compcrc, '\n'
              '              Found   ', readcrc)
 
+def binex_to_weeksow(msg):
+    """Convert 6-byte (millisecond) binex timestamp to a pair: GPS week, second of week.
+
+    See http://binex.unavco.org/#time_stamps.
+    """
+    gmin = int.from_bytes(msg[:4], 'little')
+    gmsc = int.from_bytes(msg[4:6], 'little')
+    return gmin//10080, (gmin % 10080)*60 + gmsc/1000
+
 def snr_msg(msg):
-    """Read SNR record. Return tuple of RXID, GPS week, GPS second of week, and
+    """Read SNR record. Return tuple of RXID, (GPS week, second of week) pair, and
     a list of PRN, SNR pairs."""
     rxid = msg[0]
-    gmin = int.from_bytes(msg[1:5], 'little')
-    gmsc = int.from_bytes(msg[5:7], 'little')
     snrs = [(bnx_prn(msg[i]), int.from_bytes(msg[i+1:i+3], 'little'))
             for i in range(7, len(msg), 3)]
-    return rxid, gmin//10080, (gmin % 10080)*60 + gmsc/1000, snrs
+    return rxid, binex_to_weeksow(msg[1:7]), snrs
+
+def hk_msg(msg):
+    """Read HK record. Return tuple of RXID, (GPS week, second of week) pair,
+    MAC, longitude, latitude, altitude, voltage, temperature, message count, and
+    error flags."""
+    rxid = msg[0]
+    gtime = binex_to_weeksow(msg[1:7])
+    mac = msg[7:15].hex()
+    lon = int.from_bytes(msg[15:19], 'little', signed=True) / 10**7 # decimal degrees
+    lat = int.from_bytes(msg[19:23], 'little', signed=True) / 10**7 # decimal degrees
+    alt = int.from_bytes(msg[23:27], 'little', signed=True) / 1000 # meters above ellipsoid
+    volt = int.from_bytes(msg[27:29], 'little') / 100
+    temp = msg[29] # only top byte used for now. degrees celsius
+    msgct = int.from_bytes(msg[31:33], 'little')
+    err = msg[33]
+    return rxid, gtime, mac, lon, lat, alt, volt, temp, msgct, err
 
 def read_record(strm):
     readsync(strm)
@@ -134,4 +159,5 @@ def read_record(strm):
     msg = strm.read(msglen)
     assert len(msg) == msglen
     verify(strm, idbytes + lenbytes + msg)
+    return recid, msg
 
