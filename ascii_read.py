@@ -33,7 +33,7 @@ from numpy import sin, cos
 import re
 from coords import xyz2llh
 from gpstime import leapseconds
-from gpsazel import satcoeffs
+from gpsazel import satcoeffs, mvec
 from fetchnav import getsp3file
 
 #%% Stuff to configure
