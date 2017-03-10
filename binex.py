@@ -121,13 +121,8 @@ def snr_msg(msg):
     rxid = msg[0]
     gmin = int.from_bytes(msg[1:5], 'little')
     gmsc = int.from_bytes(msg[5:7], 'little')
-    i = 7
-    snrs = []
-    while i < len(msg):
-        prn = bnx_prn(msg[i])
-        snr = int.from_bytes(msg[i+1:i+3], 'little')
-        snrs += [(prn, snr)]
-        i += 1 + len(sbytes)
+    snrs = [(bnx_prn(msg[i]), int.from_bytes(msg[i+1:i+3], 'little'))
+            for i in range(7, len(msg), 3)]
     return rxid, gmin//10080, (gmin % 10080)*60 + gmsc/1000, snrs
 
 def read_record(strm):
