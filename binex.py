@@ -137,10 +137,10 @@ def hk_msg(msg):
     rxid = msg[0]
     gtime = binex_to_weeksow(msg[1:7])
     mac = msg[7:15].hex()
-    lon = int.from_bytes(msg[15:19], 'little', signed=True) / 10**7 # decimal degrees
-    lat = int.from_bytes(msg[19:23], 'little', signed=True) / 10**7 # decimal degrees
-    alt = int.from_bytes(msg[23:27], 'little', signed=True) / 1000 # meters above ellipsoid
-    volt = int.from_bytes(msg[27:29], 'little') / 100
+    lon = int.from_bytes(msg[15:19], 'little', signed=True) # decimal degrees * 10**7
+    lat = int.from_bytes(msg[19:23], 'little', signed=True) # decimal degrees * 10**7
+    alt = int.from_bytes(msg[23:27], 'little', signed=True) # millimeters above ellipsoid
+    volt = int.from_bytes(msg[27:29], 'little')
     temp = msg[29] # only top byte used for now. degrees celsius
     msgct = int.from_bytes(msg[31:33], 'little')
     err = msg[33]
