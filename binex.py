@@ -136,7 +136,7 @@ def hk_msg(msg):
     error flags."""
     rxid = msg[0]
     gtime = binex_to_weeksow(msg[1:7])
-    mac = msg[7:15].hex()
+    mac = int.from_bytes(msg[7:15], 'little')
     lon = int.from_bytes(msg[15:19], 'little', signed=True) # decimal degrees * 10**7
     lat = int.from_bytes(msg[19:23], 'little', signed=True) # decimal degrees * 10**7
     alt = int.from_bytes(msg[23:27], 'little', signed=True) # millimeters above ellipsoid
