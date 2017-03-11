@@ -6,8 +6,9 @@ Created on Fri Mar 10 09:04:30 2017
 @author: nima9589
 """
 from collections import defaultdict
-from binex import *
 import numpy as np
+from binex import *
+from ascii_read import gpstotsecgps, poslist, mvec, satcoeffs
 
 IN = open(0, 'rb')
 
@@ -21,9 +22,14 @@ def weeksow_to_np(week, sow):
     """Convert GPS week and (fractional) second-of-week to numpy datetime64 in GPS time."""
     return GPSepoch + np.timedelta64(week, 'W') + np.timedelta64(sow*1e6, 'us')
 
-def gpstotsecgps(ndt):
-    """GPS seconds since epoch for a numpy datetime64 in GPS time."""
-    return (ndt - GPSepoch) / np.timedelta64(1, 's')
+def assignrec(arr, ind, val):
+    """Assign val to arr[ind], growing it if necessary."""
+    try:
+        arr[ind] = val
+    except IndexError:
+        newlen = int(len(arr)*1.2)
+        arr.resize((newlen,))
+        arr[ind] = val
 
 def addrecords(SNR, weeksow, snrs, curi, cofns):
     """Add snr records to array SNR, starting at index curi."""
@@ -32,22 +38,37 @@ def addrecords(SNR, weeksow, snrs, curi, cofns):
     for prn, snr in snrs:
         sxloc = mvec(totsec) @ cofns[prn](totsec)
         az, el = azel(sxloc)
-        try:
-            SNR[curi] = (prn, time, el, az, snr)
-        except IndexError:
-            newlen = int(len(SNR)*1.2)
-            SNR.resize((newlen,))
-            SNR[curi] = (prn, time, el, az, snr)
+        assignrec(SNR, curi, (prn, time, el, az, snr))
         curi += 1
     return curi
 
 def readall():
     SNRs = defaultdict(lambda: np.empty(1000, dtype=SNR_REC))
     curind = defaultdict(int)
-    HKs = np.empty(1000, dtype=HK_REC)
+    HK = np.empty(1000, dtype=HK_REC)
+    curh = 0
+    cofns = None
+    numempty = 0
     while True:
         rid, vals = read_record(IN)
         if rid == 192:
             rxid, weeksow, snrs = vals
+            if not snrs or weeksow[0] < 1000:
+                numempty += 1
+                continue
+            if numempty:
+                info("Skipped", numempty, "empty or early records.")
+                numempty = 0
+            if not cofns:
+                time0 = weeksow_to_np(*weeksow)
+                pl, epoch = poslist(time0)
+                cofns = satcoeffs(pl)
             curind[rxid] = addrecords(SNRs[rxid], weeksow, snrs, curind[rxid], cofns)
-
+        elif rid == 193:
+            vals = vals[0], weeksow_to_np(*vals[1]), *vals[2:]
+            assignrec(HK, curh, vals)
+            curh += 1
+    HK.resize((curh,))
+    for rxid in curind:
+        SNRs[rxid].resize((curind[rxid],))
+   return SNRs, HK
