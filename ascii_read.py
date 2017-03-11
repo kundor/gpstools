@@ -245,18 +245,27 @@ def sp3headtime(line):
     return np.datetime64('{}-{}-{}T{}:{}:{}'.format(*(line[b:e].strip().zfill(e - b) for b, e in fields)), 'us')
 
 def readsp3(sp3file):
-    pl = np.loadtxt(sp3file, skiprows=22, usecols=(1, 2, 3), comments=['*', 'E', 'V'])
-# This assumes all 32 PRNs are present, in order, for each epoch
-# Also assuming interval is 900 seconds (15 minutes)
-    pl.shape = (-1, 32, 3) # reshape to 96x32x3 (-1 means 'fit the data')
-    pl *= 1000
     with open(sp3file) as fid:
         line = fid.readline()
         time0 = sp3headtime(line)
         line = fid.readline().split()
         assert line[3] == '900.00000000'
-        line = fid.readline().split()
-        assert line[1] == '32'
+        line = fid.readline()
+        numsat =  int(line.split()[1])
+        if numsat != 32:
+            end = min(len(line), 10 + 3*numsat)
+            prnlist = [int(line[i:i+2])-1 for i in range(10, end, 3)]
+            if numsat > 17:
+                line = fid.readline()
+                end = min(len(line), 10 + 3*(numsat - 17))
+                prnlist += [int(line[i:i+2])-1 for i in range(10, end, 3)]
+    pl = np.loadtxt(sp3file, skiprows=22, usecols=(1, 2, 3), comments=['*', 'E', 'V'])
+    pl.shape = (-1, numsat, 3) # reshape to 96xNx3 (-1 means 'fit the data')
+    pl *= 1000
+    if numsat != 32:
+        B = np.zeros((len(pl), 32, 3))
+        B[:, prnlist, :] = pl
+        pl = B
     return pl, time0
 
 def poslist(time):
