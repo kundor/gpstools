@@ -10,8 +10,6 @@ import numpy as np
 from binex import *
 from ascii_read import gpstotsecgps, poslist, mvec, satcoeffs
 
-IN = open(0, 'rb')
-
 SNR_REC = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('snr', 'u2')])
 HK_REC = np.dtype([('rxid', 'u1'), ('time', 'M8[us]'), ('mac', 'u8'), ('lon', 'i4'),
                    ('lat', 'i4'), ('alt', 'i4'), ('volt', 'u2'), ('temp', 'i2'),
@@ -20,7 +18,7 @@ GPSepoch = np.datetime64('1980-01-06', 'us')
 
 def weeksow_to_np(week, sow):
     """Convert GPS week and (fractional) second-of-week to numpy datetime64 in GPS time."""
-    return GPSepoch + np.timedelta64(week, 'W') + np.timedelta64(sow*1e6, 'us')
+    return GPSepoch + np.timedelta64(week, 'W') + np.timedelta64(round(sow*1e6), 'us')
 
 def assignrec(arr, ind, val):
     """Assign val to arr[ind], growing it if necessary."""
@@ -42,7 +40,7 @@ def addrecords(SNR, weeksow, snrs, curi, cofns):
         curi += 1
     return curi
 
-def readall():
+def readall(fid):
     SNRs = defaultdict(lambda: np.empty(1000, dtype=SNR_REC))
     curind = defaultdict(int)
     HK = np.empty(1000, dtype=HK_REC)
@@ -50,7 +48,7 @@ def readall():
     cofns = None
     numempty = 0
     while True:
-        rid, vals = read_record(IN)
+        rid, vals = read_record(fid)
         if rid == 192:
             rxid, weeksow, snrs = vals
             if not snrs or weeksow[0] < 1000:
@@ -71,4 +69,4 @@ def readall():
     HK.resize((curh,))
     for rxid in curind:
         SNRs[rxid].resize((curind[rxid],))
-   return SNRs, HK
+    return SNRs, HK
