@@ -90,7 +90,9 @@ def bnx_prn(byt):
         info("Non-GPS satellite system:", satsys)
         if satsys > 5:
             raise ValueError('   Impossible satsys! Greater than 5 reserved.')
-    corrections = [1, 65, 120, 33, 201, 193, 0, 0]
+    # FIXME: KLUDGE: currently GPS PRNs are not being subtraced by 1 at the source
+    #  (first value below should be 1)
+    corrections = [0, 65, 120, 33, 201, 193, 0, 0]
     # GPS, add 1 for PRN
     # GLONASS, add 1 for slot #, return 64 + slot #
     # SBAS, add 120 for PRN
