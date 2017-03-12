@@ -134,17 +134,19 @@ def hk_msg(msg):
     """Read HK record. Return tuple of RXID, (GPS week, second of week) pair,
     MAC, longitude, latitude, altitude, voltage, temperature, message count, and
     error flags."""
-    rxid = msg[0]
-    gtime = binex_to_weeksow(msg[1:7])
-    mac = int.from_bytes(msg[7:15], 'little')
-    lon = int.from_bytes(msg[15:19], 'little', signed=True) # decimal degrees * 10**7
-    lat = int.from_bytes(msg[19:23], 'little', signed=True) # decimal degrees * 10**7
-    alt = int.from_bytes(msg[23:27], 'little', signed=True) # millimeters above ellipsoid
-    volt = int.from_bytes(msg[27:29], 'little')
-    temp = msg[29] # only top byte used for now. degrees celsius
-    msgct = int.from_bytes(msg[31:33], 'little')
-    err = msg[33]
-    return rxid, gtime, mac, lon, lat, alt, volt, temp, msgct, err
+    uint = lambda x: int.from_bytes(x, 'little')
+    sint = lambda x: int.from_bytes(x, 'little', signed=True)
+    fields = ((0, 1, uint),   # RXID
+              (1, 7, binex_to_weeksow), # time
+              (7, 15, uint),  # MAC
+              (15, 19, sint), # lon, decimal degrees * 10**7
+              (19, 23, sint), # lat, decimal degrees * 10**7
+              (23, 27, sint), # alt, millimeters above ellipsoid
+              (27, 29, uint), # volt
+              (29, 30, uint), # temp, only top byte used for now. degrees celsius
+              (31, 33, uint), # msgct
+              (33, 34, uint)) # error flags
+    return [fn(msg[a:b]) for a,b,fn in fields]
 
 RECS = {192 : snr_msg,
         193 : hk_msg}
