@@ -77,17 +77,20 @@ def readall(fid):
     HK = np.empty(1000, dtype=HK_REC)
     curh = 0
     cofns = None # compute as soon as we find a good time record
-    numempty = numnoloc = 0
+    numempty = numearly = numnoloc = 0
     while True:
         rid, vals = read_record(fid)
         if rid == 192:
             rxid, weeksow, snrs = vals
-            if not snrs or weeksow[0] < 1000:
+            if not snrs:
                 numempty += 1
                 continue
-            if numempty:
-                info("Skipped", numempty, "empty or early records.")
-                numempty = 0
+            if weeksow[0] < 1000:
+                numearly += 1
+                continue
+            if numempty or numearly:
+                info("Skipped", numempty, "empty and", numearly, "early records.")
+                numempty = numearly = 0
             if rxid not in rxloc:
                 numnoloc += 1
                 continue
