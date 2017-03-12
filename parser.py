@@ -59,9 +59,8 @@ def assignrec(arr, ind, val):
         arr.resize((newlen,), refcheck=False)
         arr[ind] = val
 
-def addrecords(SNR, weeksow, snrs, curi, cofns, rxloc, trans):
+def addrecords(SNR, time, snrs, curi, cofns, rxloc, trans):
     """Add snr records to array SNR, starting at index curi."""
-    time = weeksow_to_np(*weeksow)
     totsec = gpstotsecgps(time)
     for prn, snr in snrs:
         sxloc = mvec(totsec) @ cofns[prn-1](totsec)
@@ -95,11 +94,17 @@ def readall(fid):
             if numnoloc:
                 info("Skipped", numnoloc, "records before receiver", rxid, "location was known.")
                 numnoloc = 0
+            time = weeksow_to_np(*weeksow)
             if not cofns:
-                time0 = weeksow_to_np(*weeksow)
-                pl, epoch = poslist(time0)
+                pl, epoch = poslist(time)
                 cofns = satcoeffs(pl, epoch)
-            curind[rxid] = addrecords(SNRs[rxid], weeksow, snrs, curind[rxid], cofns,
+                end_time = epoch + np.timedelta64(15, 'm') * (len(pl) - 9) # 2 hours before last entry
+            if time > end_time:
+                info("Past the end of our satellite position list--we should fetch another sp3 file,"
+                     " merge the lists, and recompute our fitting coefficients."
+                     " But we're giving up instead.")
+                break
+            curind[rxid] = addrecords(SNRs[rxid], time, snrs, curind[rxid], cofns,
                                       rxloc[rxid], trans[rxid])
         elif rid == 193:
             rxid = vals[0]
