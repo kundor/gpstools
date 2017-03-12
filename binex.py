@@ -157,6 +157,9 @@ def read_record(strm):
     if recid not in RECS:
         info('Record ID', recid, 'unknown')
     lenbytes, msglen = read_ubnxi(strm)
+    # FIXME: KLUDGE: currently length is wrong in the stream for SNR records
+    if recid == 192:
+        msglen = round(msglen/3)*3 + 1 # should always be 1 mod 3
     msg = strm.read(msglen)
     assert len(msg) == msglen
     verify(strm, idbytes + lenbytes + msg)
