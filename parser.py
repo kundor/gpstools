@@ -116,8 +116,8 @@ def readall(fid):
             curh += 1
             if rxid not in rxloc:
                 lon, lat, alt = vals[3:6]
-                lon /= 10**7
-                lat /= -10**7 # KLUDGE: have non-negated west latitude?
+                lon /= -1e7  # KLUDGE: have non-negated west latitude?
+                lat /= 1e7
                 alt /= 1000
                 info("Receiver", rxid, "reported at", lon, "°E, ", lat, "°N, ", alt, " m.")
                 lon *= np.pi / 180
