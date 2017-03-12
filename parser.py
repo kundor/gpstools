@@ -101,7 +101,7 @@ def readall(fid):
             if not cofns:
                 pl, epoch = poslist(time)
                 cofns = satcoeffs(pl, epoch)
-                end_time = epoch + np.timedelta64(15, 'm') * (len(pl) - 9) # 2 hours before last entry
+                end_time = epoch + np.timedelta64(15, 'm') * (len(pl) - 7) # 1.5 hours before last entry
             if time > end_time:
                 info("Past the end of our satellite position list--we should fetch another sp3 file,"
                      " merge the lists, and recompute our fitting coefficients."
@@ -117,7 +117,7 @@ def readall(fid):
             if rxid not in rxloc:
                 lon, lat, alt = vals[3:6]
                 lon /= 10**7
-                lat /= 10**7
+                lat /= -10**7 # KLUDGE: have non-negated west latitude?
                 alt /= 1000
                 info("Receiver", rxid, "reported at", lon, "°E, ", lat, "°N, ", alt, " m.")
                 lon *= np.pi / 180
