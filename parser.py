@@ -98,15 +98,10 @@ def readall(fid):
                 info("Skipped", numnoloc, "records before receiver", rxid, "location was known.")
                 numnoloc = 0
             time = weeksow_to_np(*weeksow)
-            if not cofns:
+            if not cofns or time > end_time:
                 pl, epoch = poslist(time)
                 cofns = satcoeffs(pl, epoch)
                 end_time = epoch + np.timedelta64(15, 'm') * (len(pl) - 7) # 1.5 hours before last entry
-            if time > end_time:
-                info("Past the end of our satellite position list--we should fetch another sp3 file,"
-                     " merge the lists, and recompute our fitting coefficients."
-                     " But we're giving up instead.")
-                break
             curind[rxid] = addrecords(SNRs[rxid], time, snrs, curind[rxid], cofns,
                                       rxloc[rxid], trans[rxid])
         elif rid == 193:
