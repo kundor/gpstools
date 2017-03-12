@@ -274,6 +274,11 @@ def poslist(time):
     week = gpsweekgps(time)
     sow = gpssowgps(time)
     pl, epoch = readsp3(getsp3file((week, sow)))
+    endtime = epoch + min15*len(pl)
+    if endtime - time < np.timedelta64(2, 'h'):
+        gtime = min(endtime + np.timedelta64(4, 'h'),
+                    np.datetime64('now', 'us') + np.timedelta64(8, 'h'))
+        pl, epoch = readsp3(getsp3file((gpsweekgps(gtime), gpssowgps(gtime))))
     if time - epoch < np.timedelta64(2, 'h'):
         pl0, epoch0 = readsp3(getsp3file((week, sow - 60*60*12)))
 # note: negative seconds of week will work fine
