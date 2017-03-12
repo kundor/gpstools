@@ -56,7 +56,7 @@ def assignrec(arr, ind, val):
         arr[ind] = val
     except IndexError:
         newlen = int(len(arr)*1.2)
-        arr.resize((newlen,))
+        arr.resize((newlen,), refcheck=False)
         arr[ind] = val
 
 def addrecords(SNR, weeksow, snrs, curi, cofns, rxloc, trans):
@@ -70,7 +70,7 @@ def addrecords(SNR, weeksow, snrs, curi, cofns, rxloc, trans):
         curi += 1
     return curi
 
-def readall(fid, report=False):
+def readall(fid):
     SNRs = defaultdict(lambda: np.empty(1000, dtype=SNR_REC))
     curind = defaultdict(int) # how far we've filled the corresponding SNR array
     rxloc = {} # for each rxid, its location, filled in when we get a HK record
@@ -93,7 +93,8 @@ def readall(fid, report=False):
                 numnoloc += 1
                 continue
             if numnoloc:
-                info("Skipped", numnoloc, "records before receiver location was known.")
+                info("Skipped", numnoloc, "records before receiver", rxid, "location was known.")
+                numnoloc = 0
             if not cofns:
                 time0 = weeksow_to_np(*weeksow)
                 pl, epoch = poslist(time0)
