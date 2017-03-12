@@ -79,7 +79,10 @@ def readall(fid):
     cofns = None # compute as soon as we find a good time record
     numempty = numearly = numnoloc = 0
     while True:
-        rid, vals = read_record(fid)
+        try:
+            rid, vals = read_record(fid)
+        except EOFError:
+            break
         if rid == 192:
             rxid, weeksow, snrs = vals
             if not snrs:
