@@ -96,8 +96,10 @@ def readall(fid):
             if weeksow[0] < 1000:
                 numearly += 1
                 continue
+            time = weeksow_to_np(*weeksow)
             if numempty or numearly:
-                info("Skipped", numempty, "empty and", numearly, "early records.")
+                info("Skipped", numempty, "empty and", numearly, "early records. "
+                     "({%X})".format(time.tolist()))
                 numempty = numearly = 0
             if rxid not in rxloc:
                 numnoloc += 1
@@ -105,7 +107,6 @@ def readall(fid):
             if numnoloc:
                 info("Skipped", numnoloc, "records before receiver", rxid, "location was known.")
                 numnoloc = 0
-            time = weeksow_to_np(*weeksow)
             if not cofns or time > end_time:
                 pl, epoch = poslist(time)
                 cofns = satcoeffs(pl, epoch)
@@ -138,7 +139,7 @@ def out_snr88(SNR, filename):
     with open(filename, 'wt') as fid:
         for rec in SNR:
             fid.write('{:3} {:9.4f} {:9.4f} {:9.1f}      0.      0. {:6.2f}     0.\n'.format(
-                       rec.prn, rec.el, rec.az, sod(rec.time), rec.snr/10)) 
+                       rec.prn, rec.el, rec.az, sod(rec.time), rec.snr/10))
 
 def write_all_snr88(SNRs, prefix='rx'):
     """Write out each receiver's snr records in a file in the current directory.
