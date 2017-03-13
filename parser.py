@@ -99,7 +99,7 @@ def readall(fid):
             time = weeksow_to_np(*weeksow)
             if numempty or numearly:
                 info("Skipped", numempty, "empty and", numearly, "early records. "
-                     "({%X})".format(time.tolist()))
+                        "({:%X})".format(time.tolist()))
                 numempty = numearly = 0
             if rxid not in rxloc:
                 numnoloc += 1
