@@ -120,7 +120,10 @@ def readall(fid):
             curh += 1
             if rxid not in rxloc:
                 lon, lat, alt = vals[3:6]
-                lon /= -1e7  # KLUDGE: have non-negated west latitude?
+                lon /= 1e7
+                if lon > 0 and vals[1] < np.datetime64('2017-03-14'):
+                    lon *= -1 # All our data before this date is in the western hemisphere,
+                    # but some was reported with the wrong sign; fix it.
                 lat /= 1e7
                 alt /= 1000
                 info("Receiver", rxid, "reported at", lon, "°E, ", lat, "°N, ", alt, " m.")
