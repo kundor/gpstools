@@ -69,7 +69,7 @@ def checksum(msg):
         # 16-byte CRC: 128-bit MD5 checksum
         return md5(msg).digest()
 
-def bnx_prn(byt):
+def bnx_prn(byt, badprns):
     """Interpret a BINEX 1-byte satellite ID.
 
     See http://binex.unavco.org/conventions.html#SVid1_details
@@ -85,7 +85,7 @@ def bnx_prn(byt):
             raise ValueError('   Impossible satsys! Greater than 5 reserved.')
     # FIXME: KLUDGE: currently GPS PRNs are not being subtraced by 1 at the source
     #  (first value below should be 1)
-    corrections = [0, 65, 120, 33, 201, 193, 0, 0]
+    corrections = [1 - badprns, 65, 120, 33, 201, 193, 0, 0]
     # GPS, add 1 for PRN
     # GLONASS, add 1 for slot #, return 64 + slot #
     # SBAS, add 120 for PRN
@@ -121,7 +121,8 @@ def snr_msg(msg):
     """Read SNR record. Return tuple of RXID, (GPS week, second of week) pair, and
     a list of PRN, SNR pairs."""
     rxid = msg[0]
-    snrs = [(bnx_prn(msg[i]), int.from_bytes(msg[i+1:i+3], 'little'))
+    badprns = (rxid == 5) # Incorrect prns were put out in this software version
+    snrs = [(bnx_prn(msg[i], badprns), int.from_bytes(msg[i+1:i+3], 'little'))
             for i in range(7, len(msg), 3)]
     return rxid, binex_to_weeksow(msg[1:7]), snrs
 
