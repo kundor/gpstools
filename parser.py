@@ -11,7 +11,7 @@ import numpy as np
 from binex import read_record, info
 from ascii_read import gpstotsecgps, poslist
 from satpos import mvec, myinterp
-from coords import llh2xyz
+from coords import llh2xyz, get_ellipsoid_ht
 
 SNR_REC = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('snr', 'u2')])
 HK_REC = np.dtype([('rxid', 'u1'), ('time', 'M8[us]'), ('mac', 'u8'), ('lon', 'i4'),
@@ -125,7 +125,11 @@ def readall(fid):
                     info('Forcing longitude to western hemisphere, to correct '
                          'bad data before 2017-03-14')
                 lat /= 1e7
-                alt /= 1000
+                if alt:
+                    alt /= 1000
+                else:
+                    alt = get_ellipsoid_ht(lat, lon)
+                    info('Obtaining terrain altitude from Google and Unavco.')
                 info("Receiver", rxid, "reported at", lon, "°E, ", lat, "°N, ", alt, " m.")
                 lon *= np.pi / 180
                 lat *= np.pi / 180
