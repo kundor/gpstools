@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib as mp
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D #analysis:ignore
+from ascii_read import gpssowgps
 
 def posneg(arr):
     """Check that input consists of some positive entries followed by negative entries,
@@ -38,21 +39,19 @@ def dorises(snrdata, prn):
             min(az[rb:re+1]), max(az[rb:re+1])))
     plt.tight_layout()
 
-def dorises2(snrdata, prn, doy0):
+def dorises2(snrdata, prn):
     """Plot snr vs. elevation for all periods of rising elevation.
 
     Plot each ascension in a different figure, and save to a file instead of
-    displaying. Input is a list of Records (metadata is not expected, unlike dorises).
-    The time field (fourth entry of each record) is expected to be seconds of week.
+    displaying. Input is a numpy array of SNR records.
     """
     plt.ioff()
-    try:
-        _, el, az, sow, snr = zip(*(r for r in snrdata if r.prn == prn))
-    except ValueError:
+    snrdata = snrdata[snrdata.prn == prn]
+    if not snrdata.size:
         print('PRN {} not found'.format(prn))
         return
-    eles = np.array(el)
-    azis = np.array(az)
+    eles, azis, snr = snrdata.el, snrdata.az, snrdata.snr
+    sow = gpssowgps(snrdata.time)
     riz = rises(eles, sow, prn)
     for beg, peak, end in riz:
         fig = plt.figure(figsize=(16,6))
@@ -68,8 +67,8 @@ def dorises2(snrdata, prn, doy0):
         plt.xlim(floor(eles[beg]), ceil(twoel - eles[end]))
         plt.xlabel('Elevation')
         plt.ylabel('SNR')
-        doy = int(doy0 + sow[beg]//86400)
-        daz = np.diff(az[beg:end+1])
+        doy = snrdata[beg].time.tolist().strftime('%j')
+        daz = np.diff(azis[beg:end+1])
         if (daz >= 0).all():
             azinc = r'$\uparrow$'
         elif (daz <= 0).all():
@@ -82,11 +81,11 @@ def dorises2(snrdata, prn, doy0):
             print('Azimuths are not monotone.')
             azinc = ''
         plt.title('PRN {}, DoY {}, {}--{}, Az {:.0f}--{:.0f} {}'.format(
-            prn, doy, sowhrmin(sow[beg]), sowhrmin(sow[peak]), az[beg], az[end], azinc))
+            prn, doy, sowhrmin(sow[beg]), sowhrmin(sow[peak]), azis[beg], azis[end], azinc))
         ax1 = plt.subplot(gs[1], projection='polar')
         polarazel(azis[beg:end+1], eles[beg:end+1], ax1)
         plt.tight_layout()
-        quart = int(5 - az[beg] // 90)  # rising quarter
+        quart = int(5 - azis[beg] // 90)  # rising quarter
         if quart == 5:
             quart = 1
         hr = (int(sow[beg]) % 86400) // 3600
