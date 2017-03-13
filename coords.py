@@ -7,6 +7,9 @@ and azimuth and elevation from a base point (in radians).
 """
 
 from math import atan2, cos, sin, sqrt, pi
+import urllib
+import json
+import re
 import scipy.integrate
 import numpy as np
 
@@ -54,6 +57,42 @@ def earthradius(lat):
     sl2 = sin(lat)**2
     return sqrt((WGS84.a**4 * cl2 + WGS84.b**4 * sl2)
                 / (WGS84.a**2 * cl2 + WGS84.b**2 * sl2))
+
+def jsonfetch(url, **kwargs):
+    """Make a GET request to url with parameters from the keyword arguments; parse result as JSON."""
+    with urllib.request.urlopen(url + '?' + urllib.parse.urlencode(kwargs)) as resp:
+        enc = resp.info().get_content_charset('utf-8')
+        return json.loads(resp.read().decode(enc))
+
+def google_ht(lat, lon):
+    """Fetch height above the geoid (m) from Google Maps at the given coordinates (decimal degrees.)"""
+    gkey = 'AIzaSyAH97PQ2KdkgQzjdkYX6YLDOADncFygY8g'
+    gurl = 'https://maps.googleapis.com/maps/api/elevation/json'
+    resp = jsonfetch(gurl, key=gkey, locations='{},{}'.format(lat, lon))
+    return resp['results'][0]['elevation']
+
+def orthometric_ht(lat, lon):
+    """Fetch ellipsoid height - geoid height from online UNAVCO calculator.
+
+    Given lat, lon in decimal degrees, return orthometric height (m).
+    Add the result to the geoid height to get ellipsoid height.
+    """
+    url = 'http://jules.unavco.org/Geoid/Geoid'
+    dat = urllib.parse.urlencode(dict(lat=lat, lon=lon, gpsheight=0)).encode('ascii')
+    with urllib.request.urlopen(url, dat) as resp:
+        enc = resp.info().get_content_charset('utf-8')
+        text = resp.read().decode(enc)
+    mch = re.search(r'Orthometric height [^0-9]* EGM96 [^0-9]* (-?[0-9]+\.[0-9]+)', text)
+    if not mch:
+        return None
+    return float(mch.group(1))
+
+def get_ellipsoid_ht(lat, lon):
+    """Use Google Maps API and UNAVCO calculator to determine ellipsoid height (m).
+
+    lat, lon in decimal degrees.
+    """
+    return google_ht(lat, lon) + orthometric_ht(lat, lon)
 
 def earthnormal_xyz(x, y=None, z=None):
     """Unit normal vector to the WGS84 ellipsoid at the given ECEF coordinates."""
