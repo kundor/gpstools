@@ -133,6 +133,15 @@ def _mode(arr):
     vals, ct = np.unique(arr, return_counts=True)
     return vals[np.argmax(ct)]
 
+def _gethouraxes(figsize, **kwargs):
+    """Return figure and axes set up for plotting against time, labeled HH:MM."""
+    fig = plt.figure(figsize=figsize)
+    ax = fig.add_subplot(1, 1, 1, **kwargs)
+    ax.xaxis_date()
+    ax.xaxis.set_major_formatter(mp.dates.DateFormatter('%H:%M'))
+    ax.set_xlabel('Time (UTC)')
+    return fig, ax
+
 def tempvolt(hk):
     """Plot temperature and voltage for each receiver in a recarray of housekeeping records.
 
@@ -141,28 +150,46 @@ def tempvolt(hk):
     """
     plt.ioff()
     for rx in np.unique(hk.rxid):
-        fig = plt.figure(figsize=(10,4))
-        ax = fig.add_subplot(1, 1, 1)
-        ax.xaxis_date()
-        ax.xaxis.set_major_formatter(mp.dates.DateFormatter('%H:%M'))
         mask = hk.rxid == rx
         times = hk[mask].time.tolist()
         volt = hk[mask].volt / 100
         temp = hk[mask].temp
+        doy = _mode(hk[mask].time.astype('M8[D]'))
+        title = 'Rx{:02} {:%Y-%m-%d}: Voltage and Temperature'.format(rx, doy)
+        fig, ax = _gethouraxes((10, 4), title=title)
         ax.scatter(times, volt, c='b')
         ax.set_ylabel('Volts', color='b')
-        ax.set_xlabel('Time (UTC)')
-        ax.set_title('Rx{:02} {:%Y-%m-%d}: Voltage and Temperature'.format(rx, times[0]))
         ax2 = ax.twinx()
         ax2.scatter(times, temp, c='r')
         ax.set_xlim(min(times), max(times))
         ax2.set_ylabel('Temperature (°C)', color='r')
         fig.tight_layout()
-        doy = _mode(hk[mask].time.astype('M8[D]'))
         fig.savefig('TV-RX{:02}-{:%j}.png'.format(rx, doy.tolist()))
         plt.close(fig)
 
+def numsats(snr, rxid=None):
+    """Plot number of tracked satellites vs. time from a recarray of SNR records.
 
+    If rxid is given, an image is written out in the current directory, named
+    NS-RX##-DOY.png. Otherwise the figure is returned.
+    """
+    time, numsats = np.unique(snr.time.astype('M8[s]'), return_counts=True) # round to seconds
+    doy = _mode(time.astype('M8[D]')) # most common day
+    time = time.tolist() # get datetime.datetime, which matplotlib can handle
+    if rxid:
+        plt.ioff()
+        title = 'Rx{:02} {:%Y-%m-%d}: Number of satellites'.format(rxid, doy)
+    else:
+        title = 'VAPR {:%Y-%m-%d}: Number of satellites'.format(doy)
+    fig, ax = _gethouraxes((10, 4), title=title, ylabel='Tracked satellites')
+    ax.scatter(time, numsats)
+    ax.set_xlim(min(time), max(time))
+    fig.tight_layout()
+    if rxid:
+        fig.savefig('NS-RX{:02}-{:%j}.png'.format(rxid, doy.tolist()))
+        plt.close(fig)
+    else:
+        return fig
 
 def add_arrow(line, start_ind=None, direction='right', size=15, color=None):
     """Add an arrow to a line.
