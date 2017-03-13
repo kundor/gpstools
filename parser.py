@@ -149,6 +149,7 @@ def write_all_snr88(SNRs, prefix='rx'):
     for rxid, SNR in SNRs.items():
         epoch = SNR[0].time
         fname = prefix + '{:02}'.format(rxid) + epoch.tolist().strftime('%j0.%y.snr88')
+        info('Writing', fname, '...')
         out_snr88(SNR, fname)
 
 def macformat(mac):
@@ -169,7 +170,8 @@ def translate(fid):
     SNRs, HK = readall(fid)
     write_all_snr88(SNRs)
     epoch = HK[0].time
-    hkfile = epoch.tolist().strftime('HK_%j.%y.txt') # we need a site identifier
+    hkfile = epoch.tolist().strftime('HK_%j.%y.txt') # we need a site identifier!
+    info('Writing', hkfile, '...')
     with open(hkfile, 'wt') as fid:
         hkreport(HK, fid)
 
