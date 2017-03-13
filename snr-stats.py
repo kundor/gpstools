@@ -31,7 +31,7 @@ def gensnr89(filenames):
 def gensnrnp(arr):
     """Get the SNR values from a numpy recarray with SNR_REC datatype."""
     for rec in arr:
-        yield rec.snr
+        yield rec.snr / 10
 
 def reportspans(spanstarts, bins):
     pnum = sum(bins) / 100
