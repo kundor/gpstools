@@ -40,10 +40,12 @@ def dorises(snrdata, prn):
     plt.tight_layout()
 
 def dorises2(snrdata, prn):
-    """Plot snr vs. elevation for all periods of rising elevation.
+    """Plot snr vs. elevation for all periods of rising-then-falling elevation.
 
     Plot each ascension in a different figure, and save to a file instead of
-    displaying. Input is a numpy array of SNR records.
+    displaying. Input is a numpy recarray of SNR records. One image is generated
+    per rising/falling arc, named as PRN-DOY-HR-Q#.png (HR is the time the arc
+    begins, and # is the quadrant wherein the satellite rose.)
     """
     plt.ioff()
     snrdata = snrdata[snrdata.prn == prn]
@@ -125,6 +127,41 @@ def rises(el, sod, prn=None):
             continue
         riz.append([beg+1, peak, end])
     return riz
+
+def _mode(arr):
+    """Return the value occuring most often in arr."""
+    vals, ct = np.unique(arr, return_counts=True)
+    return vals[np.argmax(ct)]
+
+def tempvolt(hk):
+    """Plot temperature and voltage for each receiver in a recarray of housekeeping records.
+
+    The two plots are on the same axes, against time. One image per receiver is
+    written out in the current directory, named TV-RX##-DOY.png.
+    """
+    plt.ioff()
+    for rx in np.unique(hk.rxid):
+        fig = plt.figure(figsize=(10,4))
+        ax = fig.add_subplot(1, 1, 1)
+        ax.xaxis_date()
+        ax.xaxis.set_major_formatter(mp.dates.DateFormatter('%H:%M'))
+        mask = hk.rxid == rx
+        times = hk[mask].time.tolist()
+        volt = hk[mask].volt / 100
+        temp = hk[mask].temp
+        ax.scatter(times, volt, c='b')
+        ax.set_ylabel('Volts', color='b')
+        ax.set_xlabel('Time (UTC)')
+        ax.set_title('Rx{:02} {:%Y-%m-%d}: Voltage and Temperature'.format(rx, times[0]))
+        ax2 = ax.twinx()
+        ax2.scatter(times, temp, c='r')
+        ax.set_xlim(min(times), max(times))
+        ax2.set_ylabel('Temperature (°C)', color='r')
+        fig.tight_layout()
+        doy = _mode(hk[mask].time.astype('M8[D]'))
+        fig.savefig('TV-RX{:02}-{:%j}.png'.format(rx, doy.tolist()))
+        plt.close(fig)
+
 
 
 def add_arrow(line, start_ind=None, direction='right', size=15, color=None):
