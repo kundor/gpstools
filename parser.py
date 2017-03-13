@@ -90,16 +90,14 @@ def readall(fid):
             break
         if rid == 192:
             rxid, weeksow, snrs = vals
-            if not snrs:
-                numempty += 1
-                continue
-            if weeksow[0] < 1000:
-                numearly += 1
+            if not snrs or weeksow[0] < 1000:
+                numempty += (not snrs)
+                numearly += (weeksow[0] < 1000)
                 continue
             time = weeksow_to_np(*weeksow)
             if numempty or numearly:
                 info("Skipped", numempty, "empty and", numearly, "early records. "
-                        "({:%X})".format(time.tolist()))
+                        "({:%H:%M:%S})".format(time.tolist()))
                 numempty = numearly = 0
             if rxid not in rxloc:
                 numnoloc += 1
@@ -124,6 +122,8 @@ def readall(fid):
                 if lon > 0 and vals[1] < np.datetime64('2017-03-14'):
                     lon *= -1 # All our data before this date is in the western hemisphere,
                     # but some was reported with the wrong sign; fix it.
+                    info('Forcing longitude to western hemisphere, to correct '
+                         'bad data before 2017-03-14')
                 lat /= 1e7
                 alt /= 1000
                 info("Receiver", rxid, "reported at", lon, "°E, ", lat, "°N, ", alt, " m.")
