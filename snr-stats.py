@@ -12,7 +12,7 @@ def gensnrs(lineiter):
         for snr in words[3::2]:
             yield float(snr)
 
-def gensnr89(filenames):
+def gensnr89(filenames, minelev=None):
     """Get the SNR values from a list of files in snr89 format."""
     int89line = re.compile(r'(0[1-9]|[12][0-9]|3[012]) '
                            r'([0-8][0-9]|90) '
@@ -26,11 +26,15 @@ def gensnr89(filenames):
                 if not mch:
                     print('Bad line', line.strip())
                     continue
+                if minelev and float(mch.group(2)) < minelev:
+                    continue
                 yield float(mch.group(4))
 
-def gensnrnp(arr):
+def gensnrnp(arr, minelev=None):
     """Get the SNR values from a numpy recarray with SNR_REC datatype."""
     for rec in arr:
+        if minelev and rec.el < minelev:
+            continue
         yield float(rec.snr / 10)
 
 def reportspans(spanstarts, bins):
