@@ -137,7 +137,7 @@ def out_snr88(SNR, filename):
     """Output the records in the numpy array SNR to filename in snr88 format."""
     with open(filename, 'wt') as fid:
         for rec in SNR:
-            fid.write('{:02} {:.4f} {:.4f} {:.1f} 0 0 {:.1f} 0 0\n'.format(
+            fid.write('{:3} {:9.4f} {:9.4f} {:9.1f}      0.      0. {:6.2f}     0.\n'.format(
                        rec.prn, rec.el, rec.az, sod(rec.time), rec.snr/10)) 
 
 def write_all_snr88(SNRs, prefix='rx'):
