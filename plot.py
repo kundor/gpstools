@@ -174,7 +174,7 @@ def numsats(snr, rxid=None):
     NS-RX##-DOY.png. Otherwise the figure is returned.
     """
     time, numsats = np.unique(snr.time.astype('M8[s]'), return_counts=True) # round to seconds
-    doy = _mode(time.astype('M8[D]')) # most common day
+    doy = _mode(time.astype('M8[D]')).tolist() # most common day
     time = time.tolist() # get datetime.datetime, which matplotlib can handle
     if rxid:
         plt.ioff()
@@ -186,7 +186,7 @@ def numsats(snr, rxid=None):
     ax.set_xlim(min(time), max(time))
     fig.tight_layout()
     if rxid:
-        fig.savefig('NS-RX{:02}-{:%j}.png'.format(rxid, doy.tolist()))
+        fig.savefig('NS-RX{:02}-{:%j}.png'.format(rxid, doy))
         plt.close(fig)
     else:
         return fig
