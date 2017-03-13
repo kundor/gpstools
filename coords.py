@@ -92,7 +92,10 @@ def get_ellipsoid_ht(lat, lon):
 
     lat, lon in decimal degrees.
     """
-    return google_ht(lat, lon) + orthometric_ht(lat, lon)
+    orth = orthometric_ht(lat, lon) or 0
+    # if we fail to get the difference, we just use the geoid height
+    return round(google_ht(lat, lon) + orth, 3)
+    # Unavco only returns three digits, keeping the other digits is silly
 
 def earthnormal_xyz(x, y=None, z=None):
     """Unit normal vector to the WGS84 ellipsoid at the given ECEF coordinates."""

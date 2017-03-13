@@ -128,8 +128,8 @@ def readall(fid):
                 if alt:
                     alt /= 1000
                 else:
-                    alt = get_ellipsoid_ht(lat, lon)
                     info('Obtaining terrain altitude from Google and Unavco.')
+                    alt = get_ellipsoid_ht(lat, lon)
                 info("Receiver", rxid, "reported at", lon, "°E, ", lat, "°N, ", alt, " m.")
                 lon *= np.pi / 180
                 lat *= np.pi / 180
