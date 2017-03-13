@@ -69,13 +69,6 @@ def checksum(msg):
         # 16-byte CRC: 128-bit MD5 checksum
         return md5(msg).digest()
 
-def peeker(strm, num):
-    """Read num bytes from stream, without advancing."""
-    vals = strm.peek(num)[:num]
-# BufferedReader.peek just returns the entire buffer -- slice it down to size
-    assert len(vals) == num, "FIXME: Need to read more into buffer to peek ahead"
-    return vals
-
 def bnx_prn(byt):
     """Interpret a BINEX 1-byte satellite ID.
 
