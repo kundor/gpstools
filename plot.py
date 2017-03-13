@@ -60,7 +60,7 @@ def dorises2(snrdata, prn):
         pel = eles[peak]
         twoel = 2*pel
         ax0.scatter(eles[beg:peak+1], snr[beg:peak+1], s=1)
-        ax0.scatter(twoel - eles[beg:peak+1], snr[beg:peak+1], s=1)
+        ax0.scatter(twoel - eles[peak+1:end+1], snr[peak+1:end+1], s=1)
         xt = np.arange(pel/5, twoel-1, pel/5)
         xlab = ['{:.0f}°'.format(x if x <= pel else twoel - x) for x in xt]
         plt.xticks(xt, xlab)
