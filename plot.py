@@ -142,15 +142,27 @@ def _gethouraxes(figsize, **kwargs):
     ax.set_xlabel('Time (UTC)')
     return fig, ax
 
-def tempvolt(hk):
+def _thresh(hrs, endtime):
+    if endtime is None:
+        endtime = np.datetime64('now')
+    if hrs is not None:
+        return endtime - hrs * np.timedelta64(3600, 's')
+
+
+def tempvolt(hk, hrs=None, endtime=None):
     """Plot temperature and voltage for each receiver in a recarray of housekeeping records.
 
     The two plots are on the same axes, against time. One image per receiver is
     written out in the current directory, named TV-RX##-DOY.png.
+    If hrs is given, hrs hours preceding the datetime64 endtime (default now)
+    are plotted (otherwise, all data is plotted.)
     """
     plt.ioff()
+    thresh = _thresh(hrs, endtime)
     for rx in np.unique(hk.rxid):
         mask = hk.rxid == rx
+        if hrs is not None:
+            mask = np.logical_and(mask, hk.time > thresh)
         times = hk[mask].time.tolist()
         volt = hk[mask].volt / 100
         temp = hk[mask].temp
@@ -167,12 +179,15 @@ def tempvolt(hk):
         fig.savefig('TV-RX{:02}-{:%j}.png'.format(rx, doy.tolist()))
         plt.close(fig)
 
-def numsats(snr, rxid=None):
+def numsats(snr, rxid=None, hrs=None, endtime=None):
     """Plot number of tracked satellites vs. time from a recarray of SNR records.
 
     If rxid is given, an image is written out in the current directory, named
     NS-RX##-DOY.png. Otherwise the figure is returned.
     """
+    if hrs is not none:
+        thresh = _thresh(hrs, endtime)
+        snr = snr[snr.time > thresh]
     time, numsats = np.unique(snr.time.astype('M8[s]'), return_counts=True) # round to seconds
     doy = _mode(time.astype('M8[D]')).tolist() # most common day
     time = time.tolist() # get datetime.datetime, which matplotlib can handle
