@@ -7,17 +7,20 @@ Created on Fri Mar 10 09:04:30 2017
 """
 from collections import defaultdict
 import sys
+import os
 import numpy as np
 from binex import read_record, info
 from ascii_read import gpstotsecgps, poslist
 from satpos import mvec, myinterp
 from coords import llh2xyz, get_ellipsoid_ht
+import plot
 
 SNR_REC = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('snr', 'u2')])
 HK_REC = np.dtype([('rxid', 'u1'), ('time', 'M8[us]'), ('mac', 'u8'), ('lon', 'i4'),
                    ('lat', 'i4'), ('alt', 'i4'), ('volt', 'u2'), ('temp', 'i2'),
                    ('msgct', 'u2'), ('err', 'u1')])
 GPSepoch = np.datetime64('1980-01-06', 'us')
+PDIR='/usr/local/adm/config/apache/htdocs/i/vapr/VB001'
 
 def allcoeffs(poslist, epoch, n=5):
     """Return fitted coefficients for poslist an N*3 numpy array of ECEF locations
@@ -192,6 +195,24 @@ def translate(fid):
 
 # To read from stdin:
 # translate(open(0, 'rb'))
+
+def makeplots(SNRs, HK, symlink=True, pdir=PDIR, hours=4, endtime=None):
+    old = os.getcwd()
+    os.chdir(pdir)
+    plot.allrises(SNRs)
+    plot.tempvolt(HK, hours, endtime)
+    for rxid, SNR in SNRs.items():
+        allsnr = plot.prn_snr(SNR, rxid, hours, endtime)
+        nsx = plot.numsats(SNR, rxid, minelev=10, hrs=hours, endtime=endtime)
+        avg = plot.meansnr(SNR, rxid, hours, endtime)
+        if symlink:
+            suf = '-RX{:02}.png'.format(rxid)
+            os.symlink(allsnr, 'ALLSNR' + suf)
+            os.symlink(nsx, 'NS' + suf)
+            os.symlink(avg, 'AVG' + suf)
+            os.symlink('TV'+avg[3:], 'TV' + suf)
+    os.chdir(old)
+
 
 if __name__ == "__main__": # When this file is run as a script
     if len(sys.argv) != 2:
