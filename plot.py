@@ -188,7 +188,10 @@ def numsats(snr, rxid=None, hrs=None, endtime=None):
     if hrs is not None:
         thresh = _thresh(hrs, endtime)
         snr = snr[snr.time > thresh]
-    time, numsats = np.unique(snr.time.astype('M8[s]'), return_counts=True) # round to seconds
+    time, idx, numsats = np.unique(snr.time, return_index=True, return_counts=True)
+    for n, a, b in zip(numsats, idx, np.append(idx[1:], len(snr))):
+        if len(set(snr[a:b].prn)) != n:
+            print('Same PRN in multiple records?')
     doy = _mode(time.astype('M8[D]')).tolist() # most common day
     time = time.tolist() # get datetime.datetime, which matplotlib can handle
     if rxid:
