@@ -161,14 +161,25 @@ def prn_snr(SNR, hrs=4, endtime=None):
     numsat = len(prns)
     fig = plt.figure(figsize=(10, 2*numsat))
     gs = mp.gridspec.GridSpec(numsat, 2, width_ratios=[4,1])
+    axes = [0]*numsat
+    max_snr = max(SNR.snr) / 10
     for i, prn in enumerate(prns):
         psnr = SNR[SNR.prn == prn]
-        ax0 = plt.subplot(gs[i, 0])
-        ax0.scatter(psnr.time.tolist(), psnr.snr) 
-        ax0.ylabel('PRN {:02}'.format(prn))
-        ax0.ylim(0, SNR_MAX)
-
-    
+        if i:
+            ax = axes[i] = fig.add_subplot(gs[i, 0], sharex=axes[0])
+        else:
+            ax = axes[0] = fig.add_subplot(gs[0, 0])
+            ax.xaxis_date()
+            ax.xaxis.set_major_formatter(mp.dates.DateFormatter('%H:%M'))
+        ax.scatter(psnr.time.tolist(), psnr.snr / 10) 
+        ax.set_ylabel('PRN {:02}'.format(prn))
+        ax.set_ylim(0, max_snr)
+        ax1 = fig.add_subplot(gs[i, 1], projection='polar')
+        polarazel(psnr.az, psnr.el, ax1)
+    axes[-1].set_xlabel('Time (UTC)')
+    axes[0].set_xlim(thresh.tolist(), endtime.tolist())
+    fig.tight_layout()
+    return fig
 
 def tempvolt(hk, hrs=None, endtime=None):
     """Plot temperature and voltage for each receiver in a recarray of housekeeping records.
@@ -193,7 +204,7 @@ def tempvolt(hk, hrs=None, endtime=None):
         ax.scatter(times, volt, c='b')
         ax.set_ylabel('Volts', color='b')
         ax2 = ax.twinx()
-        ax2.scatter(times, temp, c='r')
+        ax2.plot(times, temp, c='r')
         if hrs is not None:
             ax.set_xlim(thresh.tolist(), endtime.tolist())
         else:
