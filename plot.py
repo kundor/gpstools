@@ -267,7 +267,10 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
     for a, b in zip(idx, idx[1:]):
         tsnr = snr[a:b].snr / 10
         means += [np.mean(tsnr)]
-        pmeans += [np.mean(tsnr[tsnr > 0])]
+        if np.count_nonzero(tsnr):
+            pmeans += [np.mean(tsnr[tsnr > 0])]
+        else:
+            pmeans += [0]
     if rxid:
         plt.ioff()
         title = 'Rx{:02} {:%Y-%m-%d}: Mean SNR'.format(rxid, doy)
@@ -275,7 +278,8 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
         title = 'VAPR {:%Y-%m-%d}: Mean SNR'.format(doy)
     fig, ax = _gethouraxes((6, 3), title=title, ylabel='Mean SNR')
     ax.scatter(time, means, s=2, c='b')
-    ax.scatter(time, pmeans, s=2, c='r')
+    pmeans = np.array(pmeans)
+    ax.scatter(time[pmeans > 0], pmeans[pmeans > 0], s=2, c='r')
     if hrs is not None:
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
