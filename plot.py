@@ -55,7 +55,7 @@ def dorises2(snrdata, prn):
     if not snrdata.size:
         print('PRN {} not found'.format(prn))
         return
-    eles, azis, snr = snrdata.el, snrdata.az, snrdata.snr
+    eles, azis, snr = snrdata.el, snrdata.az, snrdata.snr / 10
     sow = gpssowgps(snrdata.time)
     riz = rises(eles, sow, prn)
     for beg, peak, end in riz:
@@ -152,31 +152,32 @@ def _thresh(hrs, endtime):
         return endtime - hrs * np.timedelta64(3600, 's'), endtime
     return None, None
 
-def prn_snr(SNR, hrs=4, endtime=None):
+def prn_snr(SNR, hrs=4, endtime=None, omit_zero=True):
     """Plot SNR for each tracked satellite over the time period given."""
     thresh, endtime = _thresh(hrs, endtime)
     SNR = SNR[SNR.time > thresh]
+    if omit_zero:
+        SNR = SNR[SNR.snr > 0]
     prns, ct = np.unique(SNR.prn, return_counts=True)
     prns = prns[ct > 1800] # at least a half hour's data
     numsat = len(prns)
     fig = plt.figure(figsize=(10, 2*numsat))
     gs = mp.gridspec.GridSpec(numsat, 2, width_ratios=[4,1])
     axes = [0]*numsat
-    max_snr = max(SNR.snr) / 10
     for i, prn in enumerate(prns):
         psnr = SNR[SNR.prn == prn]
         if i:
-            ax = axes[i] = fig.add_subplot(gs[i, 0], sharex=axes[0])
+            ax = axes[i] = fig.add_subplot(gs[i, 0], sharex=axes[0], sharey=axes[0])
         else:
             ax = axes[0] = fig.add_subplot(gs[0, 0])
             ax.xaxis_date()
             ax.xaxis.set_major_formatter(mp.dates.DateFormatter('%H:%M'))
-        ax.scatter(psnr.time.tolist(), psnr.snr / 10) 
+        ax.scatter(psnr.time.tolist(), psnr.snr / 10, s=2)
         ax.set_ylabel('PRN {:02}'.format(prn))
-        ax.set_ylim(0, max_snr)
         ax1 = fig.add_subplot(gs[i, 1], projection='polar')
-        polarazel(psnr.az, psnr.el, ax1)
+        polarazel(psnr.az, psnr.el, ax1, label_el=False)
     axes[-1].set_xlabel('Time (UTC)')
+    axes[0].set_ylim(min(SNR.snr) / 10, max(SNR.snr) / 10)
     axes[0].set_xlim(thresh.tolist(), endtime.tolist())
     fig.tight_layout()
     return fig
@@ -320,7 +321,7 @@ def _getaxis(ax, projection, figsize=None):
         ax = fig.add_subplot(1, 1, 1, projection=projection)
     return ax
 
-def polarazel(azis, eles, ax=None):
+def polarazel(azis, eles, ax=None, label_el=True):
     """Plot azimuth and elevations (in degrees) as a curve on a polar plot.
 
     Input should be numpy arrays."""
@@ -329,8 +330,9 @@ def polarazel(azis, eles, ax=None):
     xloc, _ = plt.xticks()
     xlab = (90 - xloc * 180 / pi) % 360
     plt.xticks(xloc, ['{:.0f}°'.format(x) for x in xlab])
-    yloc = range(20, 90, 20)
-    plt.yticks(yloc, (str(90 - y) for y in yloc))
+    if label_el:
+        yloc = range(20, 90, 20)
+        plt.yticks(yloc, (str(90 - y) for y in yloc))
     add_arrow(line[0])
 
 def snrVSel(snrdata, prn, secstart=0, secend=86400, color=None):
