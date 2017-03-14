@@ -361,7 +361,7 @@ def _getaxis(ax, projection, figsize=None):
     if ax is None:
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(1, 1, 1, projection=projection)
-    return ax'AVG-RX{:02}-{:%j}.png'.format(rxid, doy)
+    return ax
 
 def polarazel(azis, eles, ax=None, label_el=True):
     """Plot azimuth and elevations (in degrees) as a curve on a polar plot.
@@ -370,7 +370,7 @@ def polarazel(azis, eles, ax=None, label_el=True):
     ax = _getaxis(ax, 'polar')
     line = ax.plot((90 - azis)/180 * pi, 90 - eles)
     xloc, _ = plt.xticks()
-    xlab = (90 - xloc * 180 / pi) % 360'AVG-RX{:02}-{:%j}.png'.format(rxid, doy)
+    xlab = (90 - xloc * 180 / pi) % 360
     plt.xticks(xloc, ['{:.0f}°'.format(x) for x in xlab])
     yloc = range(20, 90, 20)
     if label_el:
