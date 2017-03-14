@@ -166,9 +166,9 @@ def tempvolt(hk, hrs=None, endtime=None):
         times = hk[mask].time.tolist()
         volt = hk[mask].volt / 100
         temp = hk[mask].temp
-        doy = _mode(hk[mask].time.astype('M8[D]'))
+        doy = _mode(hk[mask].time.astype('M8[D]')).tolist()
         title = 'Rx{:02} {:%Y-%m-%d}: Voltage and Temperature'.format(rx, doy)
-        fig, ax = _gethouraxes((10, 4), title=title)
+        fig, ax = _gethouraxes((6, 3), title=title)
         ax.scatter(times, volt, c='b')
         ax.set_ylabel('Volts', color='b')
         ax2 = ax.twinx()
@@ -176,7 +176,7 @@ def tempvolt(hk, hrs=None, endtime=None):
         ax.set_xlim(min(times), max(times))
         ax2.set_ylabel('Temperature (°C)', color='r')
         fig.tight_layout()
-        fig.savefig('TV-RX{:02}-{:%j}.png'.format(rx, doy.tolist()))
+        fig.savefig('TV-RX{:02}-{:%j}.png'.format(rx, doy))
         plt.close(fig)
 
 def numsats(snr, rxid=None, hrs=None, endtime=None):
@@ -196,12 +196,43 @@ def numsats(snr, rxid=None, hrs=None, endtime=None):
         title = 'Rx{:02} {:%Y-%m-%d}: Number of satellites'.format(rxid, doy)
     else:
         title = 'VAPR {:%Y-%m-%d}: Number of satellites'.format(doy)
-    fig, ax = _gethouraxes((10, 4), title=title, ylabel='Tracked satellites')
-    ax.scatter(time, numsats)
+    fig, ax = _gethouraxes((6, 3), title=title, ylabel='Tracked satellites')
+    ax.plot(time, numsats)
     ax.set_xlim(min(time), max(time))
     fig.tight_layout()
     if rxid:
         fig.savefig('NS-RX{:02}-{:%j}.png'.format(rxid, doy))
+        plt.close(fig)
+    else:
+        return fig
+
+def meansnr(snr, rxid=None, hrs=None, endtime=None):
+    """Plot mean snr vs. time from a recarray of SNR records.
+
+    If rxid is given, an image is written out in the current directory, named
+    AVG-RX##-DOY.png. Otherwise the figure is returned.
+    """
+    if hrs is not none:
+        thresh = _thresh(hrs, endtime)
+        snr = snr[snr.time > thresh]
+    time, idx = np.unique(snr.time.astype('M8[s]'), return_index=True) # round to seconds
+    doy = _mode(time.astype('M8[D]')).tolist() # most common day
+    time = time.tolist() # get datetime.datetime, which matplotlib can handle
+    idx = np.append(idx, len(snr))
+    means = []
+    for a, b in zip(idx, idx[1:]):
+        means += [np.mean(snr[a:b].snr)/100]
+    if rxid:
+        plt.ioff()
+        title = 'Rx{:02} {:%Y-%m-%d}: Mean SNR'.format(rxid, doy)
+    else:
+        title = 'VAPR {:%Y-%m-%d}: Mean SNR'.format(doy)
+    fig, ax = _gethouraxes((6, 3), title=title, ylabel='Mean SNR')
+    ax.scatter(time, means)
+    ax.set_xlim(min(time), max(time))
+    fig.tight_layout()
+    if rxid:
+        fig.savefig('AVG-RX{:02}-{:%j}.png'.format(rxid, doy))
         plt.close(fig)
     else:
         return fig
