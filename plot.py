@@ -7,8 +7,8 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D #analysis:ignore
 from ascii_read import gpssowgps
 
-SNR_MAX = 56 # top of snr range for plots
-# (fixed to enable visual comparison of different plots)
+SNR_MIN = 20
+SNR_MAX = 56 # range to use for snr plots, to enable visual comparison between plots
 
 def posneg(arr):
     """Check that input consists of some positive entries followed by negative entries,
@@ -73,6 +73,12 @@ def dorises2(snrdata, prn):
         xlab = ['{:.0f}°'.format(x if x <= pel else twoel - x) for x in xt]
         plt.xticks(xt, xlab)
         plt.xlim(floor(eles[beg]), ceil(twoel - eles[end]))
+        plt.ylim(SNR_MIN, SNR_MAX)
+        tsnr = snr[beg:end+1]
+        if min(tsnr[tsnr > 0]) < SNR_MIN or max(tsnr) > SNR_MAX:
+            print('Warning: SNRs are off the plot: {} in [{}, {}), {} in ({}, {}]'.format(
+                    np.count_nonzero(tsnr[tsnr > 0] < SNR_MIN), min(tsnr[tsnr > 0]), SNR_MIN,
+                    np.count_nonzero(tsnr > SNR_MAX), max(tsnr), SNR_MAX))
         plt.xlabel('Elevation')
         plt.ylabel('SNR (dB-Hz)')
         doy = snrdata[beg].time.tolist().strftime('%j')
@@ -299,10 +305,11 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
     if hrs is not None:
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
-        ax.set_xlim(min(time), max(time))
+        ax.set_xlim(min(time.tolist()), max(time.tolist()))
     ax.set_ylim(0, SNR_MAX)
     if max(pmeans) > SNR_MAX:
-        print('Warning: Mean SNRs off the plot ({} > {})'.format(max(pmeans), SNR_MAX))
+        print('Warning: {} mean SNRs off the plot ({} > {})'.format(
+                np.count_nonzero(pmeans > SNR_MAX), max(pmeans), SNR_MAX))
     fig.tight_layout()
     if rxid:
         fig.savefig('AVG-RX{:02}-{:%j}.png'.format(rxid, doy))
