@@ -212,7 +212,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
     If rxid is given, an image is written out in the current directory, named
     AVG-RX##-DOY.png. Otherwise the figure is returned.
     """
-    if hrs is not none:
+    if hrs is not None:
         thresh = _thresh(hrs, endtime)
         snr = snr[snr.time > thresh]
     time, idx = np.unique(snr.time.astype('M8[s]'), return_index=True) # round to seconds
