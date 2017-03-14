@@ -185,7 +185,7 @@ def numsats(snr, rxid=None, hrs=None, endtime=None):
     If rxid is given, an image is written out in the current directory, named
     NS-RX##-DOY.png. Otherwise the figure is returned.
     """
-    if hrs is not none:
+    if hrs is not None:
         thresh = _thresh(hrs, endtime)
         snr = snr[snr.time > thresh]
     time, numsats = np.unique(snr.time.astype('M8[s]'), return_counts=True) # round to seconds
