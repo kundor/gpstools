@@ -1,4 +1,6 @@
 from math import floor, ceil, pi
+import os
+from contexlib import suppress
 import numpy as np
 import matplotlib as mp
 from matplotlib import pyplot as plt
@@ -59,13 +61,14 @@ def dorises2(snrdata, prn):
     sow = gpssowgps(snrdata.time)
     riz = rises(eles, sow, prn)
     for beg, peak, end in riz:
-        fig = plt.figure(figsize=(16,6))
+        fig = plt.figure(figsize=(12,4))
         gs = mp.gridspec.GridSpec(1, 2, width_ratios=[4,1])
         ax0 = plt.subplot(gs[0])
         pel = eles[peak]
         twoel = 2*pel
         ax0.scatter(eles[beg:peak+1], snr[beg:peak+1], s=1)
         ax0.scatter(twoel - eles[peak+1:end+1], snr[peak+1:end+1], s=1)
+        ax0.axvline(eles[peak])
         xt = np.arange(pel/5, twoel-1, pel/5)
         xlab = ['{:.0f}°'.format(x if x <= pel else twoel - x) for x in xt]
         plt.xticks(xt, xlab)
@@ -96,6 +99,20 @@ def dorises2(snrdata, prn):
         hr = (int(sow[beg]) % 86400) // 3600
         plt.savefig('{:02d}-{}-{:02d}-Q{}.png'.format(prn, doy, hr, quart))
         plt.close(fig)
+
+def allrises(SNR):
+    """Plot all rising/falling arcs for each PRN found for each rxid in SNR.
+
+    Plots are saved to images in subdirectory named rx## under the current directory.
+    """
+    for rxid in SNR:
+        rdir = 'rx{:02}'.format(rxid)
+        with suppress(FileExistsError):
+            os.mkdir(rdir)
+        os.chdir(rdir)
+        for prn in np.unique(SNR[rxid].prn):
+            dorises2(SNR[rxid], prn)
+        os.chdir(os.pardir)
 
 def sodhrmin(sod):
     return '{:02d}:{:02d}'.format(sod//3600, (sod % 3600)//60)
