@@ -260,7 +260,6 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
         snr = snr[snr.time > thresh]
     time, idx = np.unique(snr.time, return_index=True)
     doy = _mode(time.astype('M8[D]')).tolist() # most common day
-    time = time.tolist() # get datetime.datetime, which matplotlib can handle
     idx = np.append(idx, len(snr))
     means = []
     pmeans = []
@@ -277,9 +276,9 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
     else:
         title = 'VAPR {:%Y-%m-%d}: Mean SNR'.format(doy)
     fig, ax = _gethouraxes((6, 3), title=title, ylabel='Mean SNR')
-    ax.scatter(time, means, s=2, c='b')
+    ax.scatter(time.tolist(), means, s=2, c='b')
     pmeans = np.array(pmeans)
-    ax.scatter(time[pmeans > 0], pmeans[pmeans > 0], s=2, c='r')
+    ax.scatter(time[pmeans > 0].tolist(), pmeans[pmeans > 0], s=2, c='r')
     if hrs is not None:
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
