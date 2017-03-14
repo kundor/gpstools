@@ -276,9 +276,9 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
     else:
         title = 'VAPR {:%Y-%m-%d}: Mean SNR'.format(doy)
     fig, ax = _gethouraxes((6, 3), title=title, ylabel='Mean SNR (dB-Hz)')
-    ax.scatter(time.tolist(), means, s=2, c='b')
+    ax.scatter(time.tolist(), means, s=2, c='b', edgecolors='face')
     pmeans = np.array(pmeans)
-    ax.scatter(time[pmeans > 0].tolist(), pmeans[pmeans > 0], s=2, c='r')
+    ax.scatter(time[pmeans > 0].tolist(), pmeans[pmeans > 0], s=2, c='r', edgecolors='face',)
     if hrs is not None:
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
