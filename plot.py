@@ -177,8 +177,11 @@ def _thresh(hrs, endtime):
         return endtime - hrs * np.timedelta64(3600, 's'), endtime
     return None, None
 
-def prn_snr(SNR, hrs=4, endtime=None, omit_zero=True):
-    """Plot SNR for each tracked satellite over the time period given."""
+def prn_snr(SNR, rxid=None, hrs=4, endtime=None, omit_zero=True):
+    """Plot SNR for each tracked satellite over the time period given.
+
+    If rxid is given, an image is written out in the current directory, named
+    ALLSNR-RX##-DOY.png. Otherwise the figure is returned."""
     thresh, endtime = _thresh(hrs, endtime)
     SNR = SNR[SNR.time > thresh]
     if omit_zero:
@@ -205,7 +208,11 @@ def prn_snr(SNR, hrs=4, endtime=None, omit_zero=True):
     axes[0].set_ylim(min(SNR.snr) / 10, max(SNR.snr) / 10)
     axes[0].set_xlim(thresh.tolist(), endtime.tolist())
     fig.tight_layout()
-    return fig
+    if rxid:
+        fig.savefig('ALLSNR-RX{:02}-{:%j}.png'.format(rxid, endtime.tolist()))
+        plt.close(fig)
+    else:
+        return fig
 
 def tempvolt(hk, hrs=None, endtime=None):
     """Plot temperature and voltage for each receiver in a recarray of housekeeping records.
