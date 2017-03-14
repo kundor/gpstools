@@ -48,8 +48,8 @@ def _setsnrlim(ax, snrs):
     ax.set_ylim(SNR_MIN, SNR_MAX)
     if min(snrs[snrs > 0]) < SNR_MIN or max(snrs) > SNR_MAX:
         print('Warning: SNRs are off the plot: {} in [{}, {}), {} in ({}, {}]'.format(
-                    np.count_nonzero(snrs[snrs > 0] < SNR_MIN), min(snrs[snrs > 0]), SNR_MIN,
-                    np.count_nonzero(snrs > SNR_MAX), max(snrs), SNR_MAX))
+            np.count_nonzero(snrs[snrs > 0] < SNR_MIN), min(snrs[snrs > 0]), SNR_MIN,
+            np.count_nonzero(snrs > SNR_MAX), max(snrs), SNR_MAX))
 
 def dorises2(snrdata, prn):
     """Plot snr vs. elevation for all periods of rising-then-falling elevation.
@@ -68,8 +68,8 @@ def dorises2(snrdata, prn):
     sow = gpssowgps(snrdata.time)
     riz = rises(eles, sow, prn)
     for beg, peak, end in riz:
-        fig = plt.figure(figsize=(12,4))
-        gs = mp.gridspec.GridSpec(1, 2, width_ratios=[4,1])
+        fig = plt.figure(figsize=(12, 4))
+        gs = mp.gridspec.GridSpec(1, 2, width_ratios=[4, 1])
         ax0 = plt.subplot(gs[0])
         pel = eles[peak]
         twoel = 2*pel
@@ -190,7 +190,7 @@ def prn_snr(SNR, rxid=None, hrs=4, endtime=None, omit_zero=True):
     prns = prns[ct > 1800] # at least a half hour's data
     numsat = len(prns)
     fig = plt.figure(figsize=(10, 2*numsat))
-    gs = mp.gridspec.GridSpec(numsat, 2, width_ratios=[4,1])
+    gs = mp.gridspec.GridSpec(numsat, 2, width_ratios=[4, 1])
     axes = [0]*numsat
     for i, prn in enumerate(prns):
         psnr = SNR[SNR.prn == prn]
@@ -209,10 +209,11 @@ def prn_snr(SNR, rxid=None, hrs=4, endtime=None, omit_zero=True):
     axes[0].set_xlim(thresh.tolist(), endtime.tolist())
     fig.tight_layout()
     if rxid:
-        fig.savefig('ALLSNR-RX{:02}-{:%j}.png'.format(rxid, endtime.tolist()))
+        fname = 'ALLSNR-RX{:02}-{:%j}.png'.format(rxid, endtime.tolist())
+        fig.savefig(fname)
         plt.close(fig)
-    else:
-        return fig
+        return fname
+    return fig
 
 def tempvolt(hk, hrs=None, endtime=None):
     """Plot temperature and voltage for each receiver in a recarray of housekeeping records.
@@ -278,10 +279,11 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
     ax.set_ylim(min(numsats) - 1, max(numsats)+1)
     fig.tight_layout()
     if rxid:
-        fig.savefig('NS-RX{:02}-{:%j}.png'.format(rxid, doy))
+        fname = 'NS-RX{:02}-{:%j}.png'.format(rxid, doy)
+        fig.savefig(fname)
         plt.close(fig)
-    else:
-        return fig
+        return fname
+    return fig
 
 def meansnr(snr, rxid=None, hrs=None, endtime=None):
     """Plot mean snr vs. time from a recarray of SNR records.
@@ -320,10 +322,11 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
     _setsnrlim(ax, pmeans)
     fig.tight_layout()
     if rxid:
-        fig.savefig('AVG-RX{:02}-{:%j}.png'.format(rxid, doy))
+        fname = 'AVG-RX{:02}-{:%j}.png'.format(rxid, doy)
+        fig.savefig(fname)
         plt.close(fig)
-    else:
-        return fig
+        return fname
+    return fig
 
 def add_arrow(line, start_ind=None, direction='right', size=15, color=None):
     """Add an arrow to a line.
@@ -349,16 +352,16 @@ def add_arrow(line, start_ind=None, direction='right', size=15, color=None):
         end_ind = start_ind - 1
 
     line.axes.annotate('',
-        xytext=(xdata[start_ind], ydata[start_ind]),
-        xy=(xdata[end_ind], ydata[end_ind]),
-        arrowprops={'arrowstyle': '->', 'color': color},
-        size=size)
+                       xytext=(xdata[start_ind], ydata[start_ind]),
+                       xy=(xdata[end_ind], ydata[end_ind]),
+                       arrowprops={'arrowstyle': '->', 'color': color},
+                       size=size)
 
 def _getaxis(ax, projection, figsize=None):
     if ax is None:
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(1, 1, 1, projection=projection)
-    return ax
+    return ax'AVG-RX{:02}-{:%j}.png'.format(rxid, doy)
 
 def polarazel(azis, eles, ax=None, label_el=True):
     """Plot azimuth and elevations (in degrees) as a curve on a polar plot.
@@ -367,7 +370,7 @@ def polarazel(azis, eles, ax=None, label_el=True):
     ax = _getaxis(ax, 'polar')
     line = ax.plot((90 - azis)/180 * pi, 90 - eles)
     xloc, _ = plt.xticks()
-    xlab = (90 - xloc * 180 / pi) % 360
+    xlab = (90 - xloc * 180 / pi) % 360'AVG-RX{:02}-{:%j}.png'.format(rxid, doy)
     plt.xticks(xloc, ['{:.0f}°'.format(x) for x in xlab])
     yloc = range(20, 90, 20)
     if label_el:
@@ -464,7 +467,7 @@ def plotradial(base, uaxis, length, radfn, ax=None, **kwargs):
     theta = np.linspace(0, 2 * np.pi, 100)
     t, theta = np.meshgrid(t, theta)
     mouter = np.multiply.outer
-    base = np.array(base).reshape(3,1,1)
+    base = np.array(base).reshape(3, 1, 1)
     XYZ = base + mouter(uaxis, t) + radfn(t, theta) * mouter(n1, np.sin(theta)) + radfn(t, theta) * mouter(n2, np.cos(theta))
     ax.plot_surface(*XYZ, **kwargs)
 
@@ -505,15 +508,15 @@ def draw_plume(gloc, cyl_inf, ax=None, stride=10):
     msl = earthradius(rlat)
     N -= msl
     N /= N.max() # normalize to 0..1
-    ax.plot_surface(gloc[:,:,0], gloc[:,:,1], gloc[:,:,2],
-                           facecolors=mp.cm.terrain(N), rstride=stride, cstride=stride)
+    ax.plot_surface(gloc[:, :, 0], gloc[:, :, 1], gloc[:, :, 2],
+                    facecolors=mp.cm.terrain(N), rstride=stride, cstride=stride)
     vmark = np.array(base) * 1.00005
     ax.scatter(*vmark, marker='^', s=100, c='r')
     # the above draws a triangle at the vent location, but the surface usually obscures it.
     # vmark is multiplied by 1.00005 to lift it above the surface a little,
     # but it still doesn't show up reliably.
     plotcylinder(base, uax, length, radius, ax, color='r')
-    NR = np.array([[gloc[:,:,i].min(), gloc[:,:,i].max()] for i in [0,1,2]])
+    NR = np.array([[gloc[:, :, i].min(), gloc[:, :, i].max()] for i in [0, 1, 2]])
     ax.auto_scale_xyz(*NR)
     ax.set_aspect(lengthlon(rlat * 180 / pi) / lengthlat(rlat * 180 / pi))
 
@@ -528,7 +531,7 @@ def equalize3d(ax, maxi=True):
         maxr = np.min(difr)
     for i in range(3):
         ext = maxr - difr[i]
-        RR[i,0] -= ext/2
-        RR[i,1] += ext/2
+        RR[i, 0] -= ext/2
+        RR[i, 1] += ext/2
     ax.auto_scale_xyz(*RR)
     ax.set_aspect('equal')
