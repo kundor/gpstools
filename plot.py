@@ -5,6 +5,9 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D #analysis:ignore
 from ascii_read import gpssowgps
 
+SNR_MAX = 50 # top of snr range for plots
+# (fixed to enable visual comparison of different plots)
+
 def posneg(arr):
     """Check that input consists of some positive entries followed by negative entries,
     with no mixing. Return index of first negative entry, or None."""
@@ -149,6 +152,23 @@ def _thresh(hrs, endtime):
         return endtime - hrs * np.timedelta64(3600, 's'), endtime
     return None, None
 
+def prn_snr(SNR, hrs=4, endtime=None):
+    """Plot SNR for each tracked satellite over the time period given."""
+    thresh, endtime = _thresh(hrs, endtime)
+    SNR = SNR[SNR.time > thresh]
+    prns, ct = np.unique(SNR.prn, return_counts=True)
+    prns = prns[ct > 1800] # at least a half hour's data
+    numsat = len(prns)
+    fig = plt.figure(figsize=(10, 2*numsat))
+    gs = mp.gridspec.GridSpec(numsat, 2, width_ratios=[4,1])
+    for i, prn in enumerate(prns):
+        psnr = SNR[SNR.prn == prn]
+        ax0 = plt.subplot(gs[i, 0])
+        ax0.scatter(psnr.time.tolist(), psnr.snr) 
+        ax0.ylabel('PRN {:02}'.format(prn))
+        ax0.ylim(0, SNR_MAX)
+
+    
 
 def tempvolt(hk, hrs=None, endtime=None):
     """Plot temperature and voltage for each receiver in a recarray of housekeeping records.
@@ -244,9 +264,9 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
         ax.set_xlim(min(time), max(time))
-    ax.set_ylim(0, 60) # standardize for comparison
-    if max(means) > 60:
-        print('Warning: Mean SNRs off the plot (above 60)')
+    ax.set_ylim(0, SNR_MAX)
+    if max(means) > SNR_MAX:
+        print('Warning: Mean SNRs off the plot (above', SNR_MAX, ')')
     fig.tight_layout()
     if rxid:
         fig.savefig('AVG-RX{:02}-{:%j}.png'.format(rxid, doy))
