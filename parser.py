@@ -103,7 +103,7 @@ def readall(fid):
             if rxid not in rxloc:
                 numnoloc[rxid] += 1
                 continue
-            if numnoloc:
+            if numnoloc[rxid]:
                 info("Skipped", numnoloc[rxid], "records before receiver", rxid, "location was known.")
                 numnoloc[rxid] = 0
             if not cofns or time > end_time:
