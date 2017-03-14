@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D #analysis:ignore
 from ascii_read import gpssowgps
 
-SNR_MAX = 50 # top of snr range for plots
+SNR_MAX = 56 # top of snr range for plots
 # (fixed to enable visual comparison of different plots)
 
 def posneg(arr):
@@ -35,7 +35,7 @@ def dorises(snrdata, prn):
         plt.scatter(el[rb:re+1], snr[rb:re+1], s=1)
         plt.xlim(el[rb], el[re])
         plt.xlabel('Elevation')
-        plt.ylabel('SNR')
+        plt.ylabel('SNR (dB-Hz)')
         plt.title('PRN {}, DoY {}, {:02d}:{:02d}--{:02d}:{:02d}, Az {}--{}'.format(
             prn, snrdata.doy, int(sod[rb]//3600), int(sod[rb] % 3600)//60,
             int(sod[re]//3600), int(sod[re] % 3600)//60,
@@ -71,7 +71,7 @@ def dorises2(snrdata, prn):
         plt.xticks(xt, xlab)
         plt.xlim(floor(eles[beg]), ceil(twoel - eles[end]))
         plt.xlabel('Elevation')
-        plt.ylabel('SNR')
+        plt.ylabel('SNR (dB-Hz)')
         doy = snrdata[beg].time.tolist().strftime('%j')
         daz = np.diff(azis[beg:end+1])
         if (daz >= 0).all():
@@ -275,7 +275,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
         title = 'Rx{:02} {:%Y-%m-%d}: Mean SNR'.format(rxid, doy)
     else:
         title = 'VAPR {:%Y-%m-%d}: Mean SNR'.format(doy)
-    fig, ax = _gethouraxes((6, 3), title=title, ylabel='Mean SNR')
+    fig, ax = _gethouraxes((6, 3), title=title, ylabel='Mean SNR (dB-Hz)')
     ax.scatter(time.tolist(), means, s=2, c='b')
     pmeans = np.array(pmeans)
     ax.scatter(time[pmeans > 0].tolist(), pmeans[pmeans > 0], s=2, c='r')
@@ -285,7 +285,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
         ax.set_xlim(min(time), max(time))
     ax.set_ylim(0, SNR_MAX)
     if max(pmeans) > SNR_MAX:
-        print('Warning: Mean SNRs off the plot (above', SNR_MAX, ')')
+        print('Warning: Mean SNRs off the plot ({} > {})'.format(max(pmeans), SNR_MAX)
     fig.tight_layout()
     if rxid:
         fig.savefig('AVG-RX{:02}-{:%j}.png'.format(rxid, doy))
