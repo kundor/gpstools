@@ -146,7 +146,8 @@ def _thresh(hrs, endtime):
     if endtime is None:
         endtime = np.datetime64('now')
     if hrs is not None:
-        return endtime - hrs * np.timedelta64(3600, 's')
+        return endtime - hrs * np.timedelta64(3600, 's'), endtime
+    return None, None
 
 
 def tempvolt(hk, hrs=None, endtime=None):
@@ -158,7 +159,7 @@ def tempvolt(hk, hrs=None, endtime=None):
     are plotted (otherwise, all data is plotted.)
     """
     plt.ioff()
-    thresh = _thresh(hrs, endtime)
+    thresh, endtime = _thresh(hrs, endtime)
     for rx in np.unique(hk.rxid):
         mask = hk.rxid == rx
         if hrs is not None:
@@ -173,7 +174,10 @@ def tempvolt(hk, hrs=None, endtime=None):
         ax.set_ylabel('Volts', color='b')
         ax2 = ax.twinx()
         ax2.scatter(times, temp, c='r')
-        ax.set_xlim(min(times), max(times))
+        if hrs is not None:
+            ax.set_xlim(thresh.tolist(), endtime.tolist())
+        else:
+            ax.set_xlim(min(times), max(times))
         ax2.set_ylabel('Temperature (°C)', color='r')
         fig.tight_layout()
         fig.savefig('TV-RX{:02}-{:%j}.png'.format(rx, doy))
@@ -186,7 +190,7 @@ def numsats(snr, rxid=None, hrs=None, endtime=None):
     NS-RX##-DOY.png. Otherwise the figure is returned.
     """
     if hrs is not None:
-        thresh = _thresh(hrs, endtime)
+        thresh, endtime = _thresh(hrs, endtime)
         snr = snr[snr.time > thresh]
     time, idx, numsats = np.unique(snr.time, return_index=True, return_counts=True)
     for n, a, b in zip(numsats, idx, np.append(idx[1:], len(snr))):
@@ -201,7 +205,10 @@ def numsats(snr, rxid=None, hrs=None, endtime=None):
         title = 'VAPR {:%Y-%m-%d}: Number of satellites'.format(doy)
     fig, ax = _gethouraxes((6, 3), title=title, ylabel='Tracked satellites')
     ax.plot(time, numsats, '-o', ms=2)
-    ax.set_xlim(min(time), max(time))
+    if hrs is not None:
+        ax.set_xlim(thresh.tolist(), endtime.tolist())
+    else:
+        ax.set_xlim(min(time), max(time))
     ax.set_ylim(min(numsats) - 1, max(numsats)+1)
     fig.tight_layout()
     if rxid:
@@ -217,7 +224,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
     AVG-RX##-DOY.png. Otherwise the figure is returned.
     """
     if hrs is not None:
-        thresh = _thresh(hrs, endtime)
+        thresh, endtime = _thresh(hrs, endtime)
         snr = snr[snr.time > thresh]
     time, idx = np.unique(snr.time.astype('M8[s]'), return_index=True) # round to seconds
     doy = _mode(time.astype('M8[D]')).tolist() # most common day
@@ -233,7 +240,10 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
         title = 'VAPR {:%Y-%m-%d}: Mean SNR'.format(doy)
     fig, ax = _gethouraxes((6, 3), title=title, ylabel='Mean SNR')
     ax.scatter(time, means)
-    ax.set_xlim(min(time), max(time))
+    if hrs is not None:
+        ax.set_xlim(thresh.tolist(), endtime.tolist())
+    else:
+        ax.set_xlim(min(time), max(time))
     fig.tight_layout()
     if rxid:
         fig.savefig('AVG-RX{:02}-{:%j}.png'.format(rxid, doy))
