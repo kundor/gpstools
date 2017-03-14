@@ -240,7 +240,7 @@ def tempvolt(hk, hrs=None, endtime=None):
         fig.savefig('TV-RX{:02}-{:%j}.png'.format(rx, doy))
         plt.close(fig)
 
-def numsats(snr, rxid=None, hrs=None, endtime=None):
+def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
     """Plot number of tracked satellites vs. time from a recarray of SNR records.
 
     If rxid is given, an image is written out in the current directory, named
@@ -249,6 +249,8 @@ def numsats(snr, rxid=None, hrs=None, endtime=None):
     if hrs is not None:
         thresh, endtime = _thresh(hrs, endtime)
         snr = snr[snr.time > thresh]
+    if minelev:
+        snr = snr[snr.el > minelev]
     time, idx, numsats = np.unique(snr.time, return_index=True, return_counts=True)
     for n, a, b in zip(numsats, idx, np.append(idx[1:], len(snr))):
         if len(set(snr[a:b].prn)) != n:
@@ -257,7 +259,7 @@ def numsats(snr, rxid=None, hrs=None, endtime=None):
     time = time.tolist() # get datetime.datetime, which matplotlib can handle
     if rxid:
         plt.ioff()
-        title = 'Rx{:02} {:%Y-%m-%d}: Number of satellites'.format(rxid, doy)
+        title = 'Rx{:02} {:%Y-%m-%d}: Number of satellites over {}°'.format(rxid, doy, minelev)
     else:
         title = 'VAPR {:%Y-%m-%d}: Number of satellites'.format(doy)
     fig, ax = _gethouraxes((6, 3), title=title, ylabel='Tracked satellites')
