@@ -44,6 +44,13 @@ def dorises(snrdata, prn):
             min(az[rb:re+1]), max(az[rb:re+1])))
     plt.tight_layout()
 
+def _setsnrlim(ax, snrs):
+    ax.set_ylim(SNR_MIN, SNR_MAX)
+    if min(snrs[snrs > 0]) < SNR_MIN or max(snrs) > SNR_MAX:
+        print('Warning: SNRs are off the plot: {} in [{}, {}), {} in ({}, {}]'.format(
+                    np.count_nonzero(snrs[snrs > 0] < SNR_MIN), min(snrs[snrs > 0]), SNR_MIN,
+                    np.count_nonzero(snrs > SNR_MAX), max(snrs), SNR_MAX))
+
 def dorises2(snrdata, prn):
     """Plot snr vs. elevation for all periods of rising-then-falling elevation.
 
@@ -73,12 +80,7 @@ def dorises2(snrdata, prn):
         xlab = ['{:.0f}°'.format(x if x <= pel else twoel - x) for x in xt]
         plt.xticks(xt, xlab)
         plt.xlim(floor(eles[beg]), ceil(twoel - eles[end]))
-        plt.ylim(SNR_MIN, SNR_MAX)
-        tsnr = snr[beg:end+1]
-        if min(tsnr[tsnr > 0]) < SNR_MIN or max(tsnr) > SNR_MAX:
-            print('Warning: SNRs are off the plot: {} in [{}, {}), {} in ({}, {}]'.format(
-                    np.count_nonzero(tsnr[tsnr > 0] < SNR_MIN), min(tsnr[tsnr > 0]), SNR_MIN,
-                    np.count_nonzero(tsnr > SNR_MAX), max(tsnr), SNR_MAX))
+        _setsnrlim(ax0, snr[beg:end+1])
         plt.xlabel('Elevation')
         plt.ylabel('SNR (dB-Hz)')
         doy = snrdata[beg].time.tolist().strftime('%j')
@@ -306,10 +308,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
         ax.set_xlim(min(time.tolist()), max(time.tolist()))
-    ax.set_ylim(0, SNR_MAX)
-    if max(pmeans) > SNR_MAX:
-        print('Warning: {} mean SNRs off the plot ({} > {})'.format(
-                np.count_nonzero(pmeans > SNR_MAX), max(pmeans), SNR_MAX))
+    _setsnrlim(ax, pmeans)
     fig.tight_layout()
     if rxid:
         fig.savefig('AVG-RX{:02}-{:%j}.png'.format(rxid, doy))
