@@ -82,7 +82,7 @@ def readall(fid):
     HK = np.recarray((1000,), dtype=HK_REC)
     curh = 0
     cofns = None # compute as soon as we find a good time record
-    numtot = numempty = numearly = numnoloc = [defaultdict(int) for _ in range(4)]
+    numtot, numempty, numearly, numnoloc = [defaultdict(int) for _ in range(4)]
     while True:
         try:
             rid, vals = read_record(fid)
