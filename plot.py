@@ -232,7 +232,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
     idx = np.append(idx, len(snr))
     means = []
     for a, b in zip(idx, idx[1:]):
-        means += [np.mean(snr[a:b].snr)/100]
+        means += [np.mean(snr[a:b].snr)/10]
     if rxid:
         plt.ioff()
         title = 'Rx{:02} {:%Y-%m-%d}: Mean SNR'.format(rxid, doy)
