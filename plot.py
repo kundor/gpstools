@@ -197,7 +197,7 @@ def numsats(snr, rxid=None, hrs=None, endtime=None):
     else:
         title = 'VAPR {:%Y-%m-%d}: Number of satellites'.format(doy)
     fig, ax = _gethouraxes((6, 3), title=title, ylabel='Tracked satellites')
-    ax.plot(time, numsats, '.')
+    ax.plot(time, numsats, '-o', ms=2)
     ax.set_xlim(min(time), max(time))
     ax.set_ylim(min(numsats) - 1, max(numsats)+1)
     fig.tight_layout()
