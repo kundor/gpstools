@@ -90,7 +90,7 @@ def readall(fid):
             break
         if rid == 192:
             rxid, weeksow, snrs = vals
-            if not snrs or weeksow[0] < 1000:
+            if not snrs or weeksow[0] < 1000 or weeksow[0] > 2222:
                 numempty += (not snrs)
                 numearly += (weeksow[0] < 1000)
                 numtot += 1
