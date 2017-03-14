@@ -82,7 +82,7 @@ def readall(fid):
     HK = np.recarray((1000,), dtype=HK_REC)
     curh = 0
     cofns = None # compute as soon as we find a good time record
-    numtot = numempty = numearly = numnoloc = 0
+    numtot = numempty = numearly = numnoloc = [defaultdict(int) for _ in range(4)]
     while True:
         try:
             rid, vals = read_record(fid)
@@ -91,21 +91,21 @@ def readall(fid):
         if rid == 192:
             rxid, weeksow, snrs = vals
             if not snrs or weeksow[0] < 1000 or weeksow[0] > 2222:
-                numempty += (not snrs)
-                numearly += (weeksow[0] < 1000)
-                numtot += 1
+                numempty[rxid] += (not snrs)
+                numearly[rxid] += (weeksow[0] < 1000)
+                numtot[rxid] += 1
                 continue
             time = weeksow_to_np(*weeksow)
-            if numempty or numearly:
+            if numempty[rxid] or numearly[rxid]:
                 info("Skipped {} records ({} empty, {} early) at {:%H:%M:%S}.".format(
-                        numtot, numempty, numearly, time.tolist()))
-                numtot = numempty = numearly = 0
+                        numtot[rxid], numempty[rxid], numearly[rxid], time.tolist()))
+                numtot[rxid] = numempty[rxid] = numearly[rxid] = 0
             if rxid not in rxloc:
-                numnoloc += 1
+                numnoloc[rxid] += 1
                 continue
             if numnoloc:
-                info("Skipped", numnoloc, "records before receiver", rxid, "location was known.")
-                numnoloc = 0
+                info("Skipped", numnoloc[rxid], "records before receiver", rxid, "location was known.")
+                numnoloc[rxid] = 0
             if not cofns or time > end_time:
                 pl, epoch = poslist(time)
                 cofns = satcoeffs(pl, epoch)
@@ -118,7 +118,13 @@ def readall(fid):
             assignrec(HK, curh, vals)
             curh += 1
             if rxid not in rxloc:
+                if vals[1] > np.datetime64('now') + np.timedelta64(1, 'W'):
+                    info('Rx', rxid, ': Not using location from future time', vals[1])
+                    continue
                 lon, lat, alt = vals[3:6]
+                if lon == lat == 0:
+                    info('Rx', rxid, ': Not using location 0,0')
+                    continue
                 lon /= 1e7
                 if lon > 0 and vals[1] < np.datetime64('2017-03-14'):
                     lon *= -1 # All our data before this date is in the western hemisphere,
