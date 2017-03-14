@@ -285,7 +285,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
         ax.set_xlim(min(time), max(time))
     ax.set_ylim(0, SNR_MAX)
     if max(pmeans) > SNR_MAX:
-        print('Warning: Mean SNRs off the plot ({} > {})'.format(max(pmeans), SNR_MAX)
+        print('Warning: Mean SNRs off the plot ({} > {})'.format(max(pmeans), SNR_MAX))
     fig.tight_layout()
     if rxid:
         fig.savefig('AVG-RX{:02}-{:%j}.png'.format(rxid, doy))
