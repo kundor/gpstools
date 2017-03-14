@@ -1,6 +1,6 @@
 from math import floor, ceil, pi
 import os
-from contexlib import suppress
+from contextlib import suppress
 import numpy as np
 import matplotlib as mp
 from matplotlib import pyplot as plt
