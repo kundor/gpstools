@@ -121,10 +121,11 @@ def snr_msg(msg):
     """Read SNR record. Return tuple of RXID, (GPS week, second of week) pair, and
     a list of PRN, SNR pairs."""
     rxid = msg[0]
-    badprns = (rxid == 5) # Incorrect prns were put out in this software version
+    weeksow = binex_to_weeksow(msg[1:7])
+    badprns = (rxid == 5 and weeksow[0] <= 1940 and weeksow[1] < 2*24*60*60) # Incorrect prns were put out in this software version
     snrs = [(bnx_prn(msg[i], badprns), int.from_bytes(msg[i+1:i+3], 'little'))
             for i in range(7, len(msg), 3)]
-    return rxid, binex_to_weeksow(msg[1:7]), snrs
+    return rxid, weeksow, snrs
 
 def hk_msg(msg):
     """Read HK record. Return tuple of RXID, (GPS week, second of week) pair,
