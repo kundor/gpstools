@@ -330,9 +330,11 @@ def polarazel(azis, eles, ax=None, label_el=True):
     xloc, _ = plt.xticks()
     xlab = (90 - xloc * 180 / pi) % 360
     plt.xticks(xloc, ['{:.0f}°'.format(x) for x in xlab])
+    yloc = range(20, 90, 20)
     if label_el:
-        yloc = range(20, 90, 20)
         plt.yticks(yloc, (str(90 - y) for y in yloc))
+    else:
+        plt.yticks(yloc, [])
     add_arrow(line[0])
 
 def snrVSel(snrdata, prn, secstart=0, secend=86400, color=None):
