@@ -239,11 +239,14 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
     else:
         title = 'VAPR {:%Y-%m-%d}: Mean SNR'.format(doy)
     fig, ax = _gethouraxes((6, 3), title=title, ylabel='Mean SNR')
-    ax.scatter(time, means)
+    ax.scatter(time, means, s=2)
     if hrs is not None:
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
         ax.set_xlim(min(time), max(time))
+    ax.set_ylim(0, 60) # standardize for comparison
+    if max(means) > 60:
+        print('Warning: Mean SNRs off the plot (above 60)')
     fig.tight_layout()
     if rxid:
         fig.savefig('AVG-RX{:02}-{:%j}.png'.format(rxid, doy))
