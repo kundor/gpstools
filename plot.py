@@ -285,7 +285,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
     else:
         ax.set_xlim(min(time), max(time))
     ax.set_ylim(0, SNR_MAX)
-    if max(means) > SNR_MAX:
+    if max(pmeans) > SNR_MAX:
         print('Warning: Mean SNRs off the plot (above', SNR_MAX, ')')
     fig.tight_layout()
     if rxid:
