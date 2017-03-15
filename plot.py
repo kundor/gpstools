@@ -69,6 +69,10 @@ def dorises2(snrdata, prn):
     sow = gpssowgps(snrdata.time)
     riz = rises(eles, sow, prn)
     for beg, peak, end in riz:
+        if not np.count_nonzero(snr[beg:end+1]):
+            print('Only 0 snr, PRN {}, {} to {} ({}--{})'.format(
+                prn, beg, end, sowdhrmin(sow[beg]), sowhrmin(sow[end])))
+            continue
         fig = plt.figure(figsize=(12, 4))
         gs = mp.gridspec.GridSpec(1, 2, width_ratios=[4, 1])
         ax0 = plt.subplot(gs[0])
