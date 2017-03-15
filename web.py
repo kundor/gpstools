@@ -42,7 +42,7 @@ def format_stats(rxid, stat, statp):
 def makeplots(SNRs, HK, symlink=True, pdir=PLOTDIR, hours=4, endtime=None):
     old = os.getcwd()
     os.chdir(pdir)
-    plot.allrises(SNRs)
+    #plot.allrises(SNRs) # skip for now
     plot.tempvolt(HK, hours, endtime)
     hkfile = HK[0].time.tolist().strftime('HK_%j.%y.txt')
     with open(hkfile, 'wt') as fid:
