@@ -35,8 +35,8 @@ def format_stats(rxid, stat, statp):
           <td>{:.1f}&ndash;{:.1f}</td>
           <td>{:.2f}</td>
           <td>({:.2f})</td>
-          <td>{:2f}</td>
-          <td>({:2f})</td>
+          <td>{:.2f}</td>
+          <td>({:.2f})</td>
         </tr>""".format(5, statp.min, stat.max, statp.mean, stat.mean, statp.std, stat.std)
 
 def makeplots(SNRs, HK, symlink=True, pdir=PLOTDIR, hours=4, endtime=None):
