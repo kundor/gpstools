@@ -234,6 +234,7 @@ def tempvolt(hk, hrs=None, endtime=None):
     """
     plt.ioff()
     thresh, endtime = _thresh(hrs, endtime)
+    fnames = []
     for rx in np.unique(hk.rxid):
         mask = hk.rxid == rx
         if hrs is not None:
@@ -257,8 +258,10 @@ def tempvolt(hk, hrs=None, endtime=None):
             ax.set_xlim(min(times), max(times))
         ax2.set_ylabel('Temperature (°C)', color='r')
         fig.tight_layout()
-        fig.savefig('TV-RX{:02}-{:%j}.png'.format(rx, doy))
+        fnames += ['TV-RX{:02}-{:%j}.png'.format(rx, doy)]
+        fig.savefig(fnames[-1])
         plt.close(fig)
+    return fnames
 
 def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
     """Plot number of tracked satellites vs. time from a recarray of SNR records.
