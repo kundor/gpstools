@@ -234,6 +234,9 @@ def tempvolt(hk, hrs=None, endtime=None):
         mask = hk.rxid == rx
         if hrs is not None:
             mask = np.logical_and(mask, hk.time > thresh)
+        if not mask.any():
+            info('No records for RX{:02} in the given time period'.format(rx), thresh, 'to', endtime)
+            continue
         times = hk[mask].time.tolist()
         volt = hk[mask].volt / 100
         temp = hk[mask].temp
@@ -264,6 +267,10 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
         snr = snr[snr.time > thresh]
     if minelev:
         snr = snr[snr.el > minelev]
+    if not len(snr):
+        info('No records', 'for RX{:02}'.format(rxid) if rxid else '',
+             'above {}° from'.format(minelev), thresh, 'to', endtime)
+        return
     time, idx, numsats = np.unique(snr.time, return_index=True, return_counts=True)
     for n, a, b in zip(numsats, idx, np.append(idx[1:], len(snr))):
         if len(set(snr[a:b].prn)) != n:
@@ -299,6 +306,10 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
     if hrs is not None:
         thresh, endtime = _thresh(hrs, endtime)
         snr = snr[snr.time > thresh]
+    if not len(snr):
+        info('No records', 'for RX{:02}'.format(rxid) if rxid else '',
+             'in the given time period', thresh, 'to', endtime)
+        return
     time, idx = np.unique(snr.time, return_index=True)
     doy = _mode(time.astype('M8[D]')).tolist() # most common day
     idx = np.append(idx, len(snr))
