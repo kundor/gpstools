@@ -8,6 +8,7 @@ Created on Fri Mar 10 09:04:30 2017
 from collections import defaultdict
 import sys
 import os
+import time
 import numpy as np
 from binex import read_record, info
 from ascii_read import gpstotsecgps, poslist
@@ -22,6 +23,8 @@ HK_REC = np.dtype([('rxid', 'u1'), ('time', 'M8[us]'), ('mac', 'u8'), ('lon', 'i
                    ('msgct', 'u2'), ('err', 'u1')])
 GPSepoch = np.datetime64('1980-01-06', 'us')
 PDIR='/usr/local/adm/config/apache/htdocs/i/vapr/VB001'
+
+PLOT_IVAL = np.timedelta64(5, 'm')
 
 def allcoeffs(poslist, epoch, n=5):
     """Return fitted coefficients for poslist an N*3 numpy array of ECEF locations
@@ -248,6 +251,30 @@ def makeplots(SNRs, HK, symlink=True, pdir=PDIR, hours=4, endtime=None):
     snrtab.close()
     os.chdir(old)
 
+def plotupdate(fname):
+    olen = 0
+    otic = np.datetime64('2000-01-01', 'ms')
+    attempt = 0
+    with open(fname, 'rb') as fid:
+        for SNRs, HK in reader(fid):
+            nlen = sum(len(s) for s in SNRs) + len(HK)
+            tic = np.datetime64('now')
+            if nlen == olen:
+                attempt += 1
+                if attempt > 5:
+                    info('Now new records at', tic, '. Giving up.')
+                    return
+                info('No new records at', tic, '. Sleeping', attempt*5)
+                time.sleep(attempt*5)
+                continue
+            olen = nlen
+            if tic - otic > PLOT_IVAL:
+                info('Starting plotting at', tic)
+                makeplots(SNRs, HK)
+                info('Done at', np.datetime64('now'))
+                otic = tic
+            else:
+                time.sleep(1)
 
 if __name__ == "__main__": # When this file is run as a script
     if len(sys.argv) != 2:
