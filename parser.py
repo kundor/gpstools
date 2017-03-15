@@ -13,6 +13,7 @@ from binex import read_record, info
 from ascii_read import gpstotsecgps, poslist
 from satpos import mvec, myinterp
 from coords import llh2xyz, get_ellipsoid_ht
+from snrstats import calcsnrstat, gensnrnp
 import plot
 
 SNR_REC = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('snr', 'u2')])
@@ -153,7 +154,7 @@ def reader(fid):
 
 def readall(fid):
     """Return all the records currently in fid.
-    
+
     Return a dictionary of rxid to SNR recarrays, and an HK recarray.
     """
     return next(reader(fid))
@@ -210,6 +211,18 @@ def _symlink(src, dest):
         return
     os.symlink(src, dest)
 
+def format_stats(rxid, stat, statp):
+    """Format statistics as from calcsnrstat into an HTML table row."""
+    return """
+        <tr>
+          <td>{:02}</td>
+          <td>{:.1f}&ndash;{:.1f}</td>
+          <td>{:.2f}</td>
+          <td>({:.2f})</td>
+          <td>{:2f}</td>
+          <td>({:2f})</td>
+        </tr>""".format(5, statp.min, stat.max, statp.mean, stat.mean, statp.std, stat.std)
+
 def makeplots(SNRs, HK, symlink=True, pdir=PDIR, hours=4, endtime=None):
     old = os.getcwd()
     os.chdir(pdir)
@@ -220,7 +233,9 @@ def makeplots(SNRs, HK, symlink=True, pdir=PDIR, hours=4, endtime=None):
         hkreport(HK, fid)
     if symlink:
         _symlink(hkfile, 'HK.txt')
+    snrtab = open('snrtab.html', 'wt')
     for rxid, SNR in SNRs.items():
+        snrtab.write(format_stats(rxid, *calcsnrstat(gensnrnp(SNR))))
         allsnr = plot.prn_snr(SNR, rxid, hours, endtime)
         nsx = plot.numsats(SNR, rxid, minelev=10, hrs=hours, endtime=endtime)
         avg = plot.meansnr(SNR, rxid, hours, endtime)
@@ -230,6 +245,7 @@ def makeplots(SNRs, HK, symlink=True, pdir=PDIR, hours=4, endtime=None):
             _symlink(nsx, 'NS' + suf)
             _symlink(avg, 'AVG' + suf)
             _symlink('TV'+avg[3:], 'TV' + suf)
+    snrtab.close()
     os.chdir(old)
 
 
