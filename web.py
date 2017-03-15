@@ -102,13 +102,13 @@ if __name__ == "__main__": # When this file is run as a script
         usage()
     hours = 4
     endtime = np.datetime64('now')
-    if len(sys.argv > 2):
+    if len(sys.argv) > 2:
         try:
             hours = float(sys.argv[2])
         except ValueError:
             print('Hours parameter must be a number')
             usage()
-    if len(sys.argv > 3):
+    if len(sys.argv) > 3:
         try:
             endtime = np.datetime64(sys.argv[3])
         except ValueError:
