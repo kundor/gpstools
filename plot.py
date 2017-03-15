@@ -192,7 +192,7 @@ def prn_snr(SNR, rxid=None, hrs=4, endtime=None, omit_zero=True):
     if omit_zero:
         SNR = SNR[SNR.snr > 0]
     prns, ct = np.unique(SNR.prn, return_counts=True)
-    prns = prns[ct > 1800] # at least a half hour's data
+    prns = prns[ct > 1200] # at least a 20 minutes data
     numsat = len(prns)
     if not numsat:
         print('No records', 'for RX{:02}'.format(rxid) if rxid else '',
