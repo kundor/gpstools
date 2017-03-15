@@ -1,4 +1,5 @@
 from math import sqrt
+from collections import namedtuple
 import re
 
 def gensnrs(lineiter):
@@ -60,7 +61,7 @@ def bestspan(bins):
 def paren(num):
     return '(' + str(num) + ')'
 
-def calcsnrstat(snriter):
+def calcsnrstat(snriter, return_bins=False):
     snrmin = 100.
     snrminp = 100.
     snrmax = 0.
@@ -92,24 +93,28 @@ def calcsnrstat(snriter):
         bins[round(snr*10)] += 1
     snrstd = sqrt(M2 / (num - 1))
     snrstdp = sqrt(M2p / (nump - 1))
-    print('Min:', snrmin, paren(snrminp))
-    print('Max:', snrmax)
-    print('Mean: {:.2f} ({:.2f})'.format(snrmean, snrmeanp))
-    print('Num:', num, paren(nump))
-    print('Std: {:.2f} ({:.2f})'.format(snrstd, snrstdp))
-    return bins
+    if return_bins:
+        print('Min:', snrmin, paren(snrminp))
+        print('Max:', snrmax)
+        print('Mean: {:.2f} ({:.2f})'.format(snrmean, snrmeanp))
+        print('Num:', num, paren(nump))
+        print('Std: {:.2f} ({:.2f})'.format(snrstd, snrstdp))
+        return bins
+    Stat = namedtuple('Stats', ['min', 'max', 'mean', 'num', 'std'])
+    return (Stat(snrmin, snrmax, snrmean, num, snrstd),
+            Stat(snrminp, snrmax, snrmeanp, nump, snrstdp))
 
 """
 with open('/inge/scratch/UART/UART3/uart_cat.txt', 'rb') as fid:
-    bins = calcsnrstat(gensnrs(fid))
+    bins = calcsnrstat(gensnrs(fid), True)
 
 reportspans([36, 38, 40], bins)
 spanstarts = [36.4, 37, 37.6, 37.8, 38.2, 38.6, 39]
 reportspans(spanstarts, bins)
 
 from ascii_read import vfilter
-bins = calcsnrstat(gensnrs(vfilter('uart3.txt')))
+bins = calcsnrstat(gensnrs(vfilter('uart3.txt')), True)
 
 filenames = ['vpr3%d0.16.snr89' % d for d in range(188, 240)]
-bins = calcsnrstat(gensnr89(filenames))
+bins = calcsnrstat(gensnr89(filenames), True)
 """
