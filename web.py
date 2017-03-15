@@ -43,7 +43,10 @@ def makeplots(SNRs, HK, symlink=True, pdir=PLOTDIR, hours=4, endtime=None):
     old = os.getcwd()
     os.chdir(pdir)
     #plot.allrises(SNRs) # skip for now
-    plot.tempvolt(HK, hours, endtime)
+    tvs = plot.tempvolt(HK, hours, endtime)
+    if symlink:
+        for tv in tvs:
+            _symlink(tv, tv[:7] + '.png')
     hkfile = HK[0].time.tolist().strftime('HK_%j.%y.txt')
     with open(hkfile, 'wt') as fid:
         hkreport(HK, fid)
@@ -60,7 +63,6 @@ def makeplots(SNRs, HK, symlink=True, pdir=PLOTDIR, hours=4, endtime=None):
             _symlink(allsnr, 'ALLSNR' + suf)
             _symlink(nsx, 'NS' + suf)
             _symlink(avg, 'AVG' + suf)
-            _symlink('TV'+avg[3:], 'TV' + suf)
     snrtab.close()
     os.chdir(old)
 
