@@ -191,6 +191,10 @@ def prn_snr(SNR, rxid=None, hrs=4, endtime=None, omit_zero=True):
     SNR = SNR[SNR.time > thresh]
     if omit_zero:
         SNR = SNR[SNR.snr > 0]
+    if not len(SNR):
+        print('No records', 'for RX{:02}'.format(rxid) if rxid else '',
+             'in the given time period', thresh, 'to', endtime)
+        return
     prns, ct = np.unique(SNR.prn, return_counts=True)
     prns = prns[ct > 1800] # at least a half hour's data
     numsat = len(prns)
