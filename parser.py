@@ -207,6 +207,8 @@ def translate(fid):
 # translate(open(0, 'rb'))
 
 def _symlink(src, dest):
+    if src is None:
+        return
     if os.path.islink(dest):
         os.remove(dest)
     elif os.path.exists(dest):
