@@ -257,7 +257,7 @@ def plotupdate(fname):
     attempt = 0
     with open(fname, 'rb') as fid:
         for SNRs, HK in reader(fid):
-            nlen = sum(len(s) for s in SNRs) + len(HK)
+            nlen = sum(len(s) for s in SNRs.values()) + len(HK)
             tic = np.datetime64('now')
             if nlen == olen:
                 attempt += 1
