@@ -77,7 +77,12 @@ def addrecords(SNR, time, snrs, curi, cofns, rxloc, trans):
         curi += 1
     return curi
 
-def readall(fid):
+def reader(fid):
+    """A generator that yields all the available records from fid whenever the stream ends.
+
+    After resuming, the next values are the arrays enlarged by subsequently received
+    records (the entire arrays are returned each time, not just the new records).
+    """
     SNRs = defaultdict(lambda: np.recarray((1000,), dtype=SNR_REC))
     curind = defaultdict(int) # how far we've filled the corresponding SNR array
     rxloc = {} # for each rxid, its location, filled in when we get a HK record
@@ -90,7 +95,7 @@ def readall(fid):
         try:
             rid, vals = read_record(fid)
         except EOFError:
-            break
+            yield {rxid: SNR[:curind[rxid]] for rxid, SNR in SNRs.items()}, HK[:curh]
         if rid == 192:
             rxid, weeksow, snrs = vals
             if not snrs or weeksow[0] < 1000 or weeksow[0] > 2222:
@@ -145,11 +150,13 @@ def readall(fid):
                 lat *= np.pi / 180
                 rxloc[rxid] = llh2xyz(lat, lon, alt)
                 trans[rxid] = enutrans(lat, lon)
-    HK.resize((curh,))
-    for rxid in curind:
-        SNRs[rxid].resize((curind[rxid],))
-    return SNRs, HK
 
+def readall(fid):
+    """Return all the records currently in fid.
+    
+    Return a dictionary of rxid to SNR recarrays, and an HK recarray.
+    """
+    return next(reader(fid))
 
 def out_snr88(SNR, filename):
     """Output the records in the numpy array SNR to filename in snr88 format."""
@@ -187,8 +194,7 @@ def translate(fid):
     """
     SNRs, HK = readall(fid)
     write_all_snr88(SNRs)
-    epoch = HK[0].time
-    hkfile = epoch.tolist().strftime('HK_%j.%y.txt') # we need a site identifier!
+    hkfile = HK[0].time.tolist().strftime('HK_%j.%y.txt') # we need a site identifier!
     info('Writing', hkfile, '...')
     with open(hkfile, 'wt') as fid:
         hkreport(HK, fid)
@@ -201,6 +207,11 @@ def makeplots(SNRs, HK, symlink=True, pdir=PDIR, hours=4, endtime=None):
     os.chdir(pdir)
     plot.allrises(SNRs)
     plot.tempvolt(HK, hours, endtime)
+    hkfile = HK[0].time.tolist().strftime('HK_%j.%y.txt')
+    with open(hkfile, 'wt') as fid:
+        hkreport(HK, fid)
+    if symlink:
+        os.symlink(hkfile, 'HK.txt')
     for rxid, SNR in SNRs.items():
         allsnr = plot.prn_snr(SNR, rxid, hours, endtime)
         nsx = plot.numsats(SNR, rxid, minelev=10, hrs=hours, endtime=endtime)
