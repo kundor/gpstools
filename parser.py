@@ -7,24 +7,17 @@ Created on Fri Mar 10 09:04:30 2017
 """
 from collections import defaultdict
 import sys
-import os
-import time
 import numpy as np
 from binex import read_record, info
 from ascii_read import gpstotsecgps, poslist
 from satpos import mvec, myinterp
 from coords import llh2xyz, get_ellipsoid_ht
-from snrstats import calcsnrstat, gensnrnp
-import plot
 
 SNR_REC = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('snr', 'u2')])
 HK_REC = np.dtype([('rxid', 'u1'), ('time', 'M8[us]'), ('mac', 'u8'), ('lon', 'i4'),
                    ('lat', 'i4'), ('alt', 'i4'), ('volt', 'u2'), ('temp', 'i2'),
                    ('msgct', 'u2'), ('err', 'u1')])
 GPSepoch = np.datetime64('1980-01-06', 'us')
-PDIR='/usr/local/adm/config/apache/htdocs/i/vapr/VB001'
-
-PLOT_IVAL = np.timedelta64(5, 'm')
 
 def allcoeffs(poslist, epoch, n=5):
     """Return fitted coefficients for poslist an N*3 numpy array of ECEF locations
@@ -206,78 +199,6 @@ def translate(fid):
 
 # To read from stdin:
 # translate(open(0, 'rb'))
-
-def _symlink(src, dest):
-    if src is None:
-        return
-    if os.path.islink(dest):
-        os.remove(dest)
-    elif os.path.exists(dest):
-        info('Could not create symlink', dest, '->', src, 'because', dest, 'exists.')
-        return
-    os.symlink(src, dest)
-
-def format_stats(rxid, stat, statp):
-    """Format statistics as from calcsnrstat into an HTML table row."""
-    return """
-        <tr>
-          <td>{:02}</td>
-          <td>{:.1f}&ndash;{:.1f}</td>
-          <td>{:.2f}</td>
-          <td>({:.2f})</td>
-          <td>{:2f}</td>
-          <td>({:2f})</td>
-        </tr>""".format(5, statp.min, stat.max, statp.mean, stat.mean, statp.std, stat.std)
-
-def makeplots(SNRs, HK, symlink=True, pdir=PDIR, hours=4, endtime=None):
-    old = os.getcwd()
-    os.chdir(pdir)
-    plot.allrises(SNRs)
-    plot.tempvolt(HK, hours, endtime)
-    hkfile = HK[0].time.tolist().strftime('HK_%j.%y.txt')
-    with open(hkfile, 'wt') as fid:
-        hkreport(HK, fid)
-    if symlink:
-        _symlink(hkfile, 'HK.txt')
-    snrtab = open('snrtab.html', 'wt')
-    for rxid, SNR in SNRs.items():
-        snrtab.write(format_stats(rxid, *calcsnrstat(gensnrnp(SNR))))
-        allsnr = plot.prn_snr(SNR, rxid, hours, endtime)
-        nsx = plot.numsats(SNR, rxid, minelev=10, hrs=hours, endtime=endtime)
-        avg = plot.meansnr(SNR, rxid, hours, endtime)
-        if symlink:
-            suf = '-RX{:02}.png'.format(rxid)
-            _symlink(allsnr, 'ALLSNR' + suf)
-            _symlink(nsx, 'NS' + suf)
-            _symlink(avg, 'AVG' + suf)
-            _symlink('TV'+avg[3:], 'TV' + suf)
-    snrtab.close()
-    os.chdir(old)
-
-def plotupdate(fname):
-    olen = 0
-    otic = np.datetime64('2000-01-01', 'ms')
-    attempt = 0
-    with open(fname, 'rb') as fid:
-        for SNRs, HK in reader(fid):
-            nlen = sum(len(s) for s in SNRs.values()) + len(HK)
-            tic = np.datetime64('now')
-            if nlen == olen:
-                attempt += 1
-                if attempt > 5:
-                    info('Now new records at', tic, '. Giving up.')
-                    return
-                info('No new records at', tic, '. Sleeping', attempt*5)
-                time.sleep(attempt*5)
-                continue
-            olen = nlen
-            if tic - otic > PLOT_IVAL:
-                info('Starting plotting at', tic)
-                makeplots(SNRs, HK)
-                info('Done at', np.datetime64('now'))
-                otic = tic
-            else:
-                time.sleep(1)
 
 if __name__ == "__main__": # When this file is run as a script
     if len(sys.argv) != 2:
