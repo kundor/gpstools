@@ -80,6 +80,7 @@ def plotupdate(fname):
                 info('No new records at', tic, '. Sleeping', attempt*5)
                 time.sleep(attempt*5)
                 continue
+            attempt = 0
             olen = nlen
             if tic - otic > PLOT_IVAL:
                 info('Starting plotting at', tic)
@@ -87,7 +88,7 @@ def plotupdate(fname):
                 info('Done at', np.datetime64('now'))
                 otic = tic
             else:
-                time.sleep(1)
+                time.sleep(2)
 
 def usage():
     print("Usage:", sys.argv[0], "<file> [hours] [endtime]\n"
