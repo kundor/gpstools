@@ -94,3 +94,6 @@ ENV/
 tai-utc.dat
 *.0[0-9][ODd]
 *.pkl
+
+test/*.txt
+test/*.snr88
