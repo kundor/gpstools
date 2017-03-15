@@ -184,7 +184,7 @@ def macformat(mac):
 def hkreport(HK, file=None):
     """Print out the contents of housekeeping messages in the array HK."""
     for rec in HK:
-        print('Rx{0.rxid:02} {1:%x %X}  {2}  {3:.4f}ºE {4:.4f}ºN {5:.3f}m  {6:.2f}V {0.temp:2}ºC msgct:{0.msgct:5}  flags: {0.err:02X}'.format(rec, rec.time.tolist(), macformat(rec.mac), rec.lon/1e7, rec.lat/1e7, rec.alt/1000, rec.volt/100), file=file)
+        print('Rx{0.rxid:02} {1:%x %X}  {2}  {3:10.5f}ºE {9:.5f}ºN {5:8.3f}m  {6:.2f}V {0.temp:2}ºC msgct:{0.msgct:5}  flags: {0.err:02X}'.format(rec, rec.time.tolist(), macformat(rec.mac), rec.lon/1e7, rec.lat/1e7, rec.alt/1000, rec.volt/100), file=file)
 
 def translate(fid):
     """Translate BINEX data to ASCII formats.
