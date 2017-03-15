@@ -100,6 +100,7 @@ def reader(fid):
             rid, vals = read_record(fid)
         except EOFError:
             yield {rxid: SNR[:curind[rxid]] for rxid, SNR in SNRs.items()}, HK[:curh]
+            continue
         if rid == 192:
             rxid, weeksow, snrs = vals
             if not snrs or weeksow[0] < 1000 or weeksow[0] > 2222:
