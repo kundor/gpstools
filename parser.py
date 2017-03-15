@@ -202,6 +202,14 @@ def translate(fid):
 # To read from stdin:
 # translate(open(0, 'rb'))
 
+def _symlink(src, dest):
+    if os.path.islink(dest):
+        os.remove(dest)
+    elif os.path.exists(dest):
+        info('Could not create symlink', dest, '->', src, 'because', dest, 'exists.')
+        return
+    os.symlink(src, dest)
+
 def makeplots(SNRs, HK, symlink=True, pdir=PDIR, hours=4, endtime=None):
     old = os.getcwd()
     os.chdir(pdir)
@@ -211,17 +219,17 @@ def makeplots(SNRs, HK, symlink=True, pdir=PDIR, hours=4, endtime=None):
     with open(hkfile, 'wt') as fid:
         hkreport(HK, fid)
     if symlink:
-        os.symlink(hkfile, 'HK.txt')
+        _symlink(hkfile, 'HK.txt')
     for rxid, SNR in SNRs.items():
         allsnr = plot.prn_snr(SNR, rxid, hours, endtime)
         nsx = plot.numsats(SNR, rxid, minelev=10, hrs=hours, endtime=endtime)
         avg = plot.meansnr(SNR, rxid, hours, endtime)
         if symlink:
             suf = '-RX{:02}.png'.format(rxid)
-            os.symlink(allsnr, 'ALLSNR' + suf)
-            os.symlink(nsx, 'NS' + suf)
-            os.symlink(avg, 'AVG' + suf)
-            os.symlink('TV'+avg[3:], 'TV' + suf)
+            _symlink(allsnr, 'ALLSNR' + suf)
+            _symlink(nsx, 'NS' + suf)
+            _symlink(avg, 'AVG' + suf)
+            _symlink('TV'+avg[3:], 'TV' + suf)
     os.chdir(old)
 
 
