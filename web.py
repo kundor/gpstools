@@ -8,10 +8,12 @@ Created on Wed Mar 15 11:54:05 2017
 import os
 import time
 import sys
+from collections import defaultdict
 import numpy as np
 from snrstats import calcsnrstat, gensnrnp
 import plot
-from parser import reader, readall, hkreport, info
+from parser import reader, readall, hkreport
+from utility import info, debug
 
 PLOTDIR='/usr/local/adm/config/apache/htdocs/i/vapr/VB001'
 
@@ -67,14 +69,14 @@ def makeplots(SNRs, HK, symlink=True, pdir=PLOTDIR, hours=4, endtime=None):
     os.chdir(old)
 
 def plotupdate(fname):
-    olen = 0
+    olens = defaultdict(int)
     otic = np.datetime64('2000-01-01', 'ms')
     attempt = 0
     with open(fname, 'rb') as fid:
         for SNRs, HK in reader(fid):
-            nlen = sum(len(s) for s in SNRs.values()) + len(HK)
+            nlens = defaultdict(int, {rx: len(SNRs[rx]) for rx in SNRs}, hk=len(HK))
             tic = np.datetime64('now')
-            if nlen == olen:
+            if nlens == olens:
                 attempt += 1
                 if attempt > 5:
                     info('Now new records at', tic, '. Giving up.')
@@ -83,7 +85,10 @@ def plotupdate(fname):
                 time.sleep(attempt*5)
                 continue
             attempt = 0
-            olen = nlen
+            olens = nlens
+            debug('{:2} new records {} at'.format(sum(nlens.values()) - sum(olens.values()),
+                                                 [nlens(rx) - olens[rx] for rx in nlens]),
+                  tic, 'timestamped', max(max(s[-1].time for s in SNRs.values()), HK[-1].time))
             if tic - otic > PLOT_IVAL:
                 info('Starting plotting at', tic)
                 makeplots(SNRs, HK)
