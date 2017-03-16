@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 
-LOGILE = sys.stderr
+LOGFILE = sys.stderr
 DEBUG = True
 
 SNR_MIN = 20
