@@ -7,7 +7,7 @@ mp.use('Agg') # non-interactive backend, allows importing without crashing X-les
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D #analysis:ignore
 from ascii_read import gpssowgps
-from utility import info
+from utility import info, debug
 import config
 
 def posneg(arr):
@@ -181,12 +181,20 @@ def _thresh(hrs, endtime):
         return endtime - hrs * np.timedelta64(3600, 's'), endtime
     return None, None
 
-def prn_snr(SNR, rxid=None, hrs=config.PLOT_HOURS, endtime=None, omit_zero=True):
+def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True):
     """Plot SNR for each tracked satellite over the time period given.
 
     If rxid is given, an image is written out in the current directory, named
-    ALLSNR-RX##-DOY.png. Otherwise the figure is returned."""
-    thresh, endtime = _thresh(hrs, endtime)
+    ALLSNR-RX##-DOY.png. Otherwise the figure is returned.
+    If hrs is set to 'all', then all data in the provided array are plotted.
+    If hrs is not given, then config.PLOT_SNR_HOURS is used.
+    """
+    if hrs is None:
+        hrs = config.PLOT_SNR_HOURS
+    if hrs == 'all':
+        thresh = None
+    else:
+        thresh, endtime = _thresh(hrs, endtime)
     if thresh:
         SNR = SNR[SNR.time > thresh]
     if omit_zero:
@@ -198,7 +206,7 @@ def prn_snr(SNR, rxid=None, hrs=config.PLOT_HOURS, endtime=None, omit_zero=True)
         info('No records', 'for RX{:02}'.format(rxid) if rxid else '',
              'in the given time period', thresh, 'to', endtime)
         return
-    fig = plt.figure(figsize=(10, 2*numsat))
+    fig = plt.figure(figsize=(12, 2*numsat))
     gs = mp.gridspec.GridSpec(numsat, 2, width_ratios=[4, 1])
     axes = [0]*numsat
     for i, prn in enumerate(prns):
@@ -250,7 +258,7 @@ def tempvolt(hk, hrs=None, endtime=None):
         temp = hk[mask].temp
         doy = _mode(hk[mask].time.astype('M8[D]')).tolist()
         title = 'Rx{:02} {:%Y-%m-%d}: Voltage and Temperature'.format(rx, doy)
-        fig, ax = _gethouraxes((6, 3), title=title)
+        fig, ax = _gethouraxes((10, 3), title=title)
         ax.scatter(times, volt, c='b')
         ax.set_ylabel('Volts', color='b')
         ax2 = ax.twinx()
@@ -285,6 +293,7 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
     for n, a, b in zip(numsats, idx, np.append(idx[1:], len(snr))):
         if len(set(snr[a:b].prn)) != n:
             info('Same PRN in multiple records?')
+            debug(snr[a:b])
     doy = _mode(time.astype('M8[D]')).tolist() # most common day
     time = time.tolist() # get datetime.datetime, which matplotlib can handle
     if rxid:
@@ -292,7 +301,7 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
         title = 'Rx{:02} {:%Y-%m-%d}: Number of satellites over {}°'.format(rxid, doy, minelev)
     else:
         title = 'VAPR {:%Y-%m-%d}: Number of satellites'.format(doy)
-    fig, ax = _gethouraxes((6, 3), title=title, ylabel='Tracked satellites')
+    fig, ax = _gethouraxes((10, 3), title=title, ylabel='Tracked satellites')
     ax.plot(time, numsats, '-o', ms=2)
     if hrs is not None:
         ax.set_xlim(thresh.tolist(), endtime.tolist())
@@ -337,7 +346,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
         title = 'Rx{:02} {:%Y-%m-%d}: Mean SNR'.format(rxid, doy)
     else:
         title = 'VAPR {:%Y-%m-%d}: Mean SNR'.format(doy)
-    fig, ax = _gethouraxes((6, 3), title=title, ylabel='Mean SNR (dB-Hz)')
+    fig, ax = _gethouraxes((10, 3), title=title, ylabel='Mean SNR (dB-Hz)')
     ax.scatter(time.tolist(), means, s=2, c='b', edgecolors='face')
     pmeans = np.array(pmeans)
     ax.scatter(time[pmeans > 0].tolist(), pmeans[pmeans > 0], s=2, c='r', edgecolors='face',)

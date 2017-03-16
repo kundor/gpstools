@@ -38,15 +38,17 @@ def format_stats(rxid, stat, statp):
           <td>({:.2f})</td>
         </tr>""".format(rxid, statp.min, stat.max, statp.mean, stat.mean, statp.std, stat.std)
 
-def makeplots(SNRs, HK, symlink=True, pdir=None, hours=None, endtime=None):
+def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours = None, endtime=None):
     if pdir is None:
         pdir = config.PLOTDIR
-    if hours is None:
-        hours = config.PLOT_HOURS
+    if snrhours is None:
+        snrhours = config.PLOT_SNR_HOURS
+    if hkhours is None:
+        hkhours = config.PLOT_HK_HOURS
     old = os.getcwd()
     os.chdir(pdir)
     #plot.allrises(SNRs) # skip for now
-    tvs = plot.tempvolt(HK, hours, endtime)
+    tvs = plot.tempvolt(HK, hkhours, endtime)
     if symlink:
         for tv in tvs:
             _symlink(tv, tv[:7] + '.png')
@@ -58,9 +60,9 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, hours=None, endtime=None):
     snrtab = open('snrtab-new.html', 'wt')
     for rxid, SNR in SNRs.items():
         snrtab.write(format_stats(rxid, *calcsnrstat(gensnrnp(SNR))))
-        allsnr = plot.prn_snr(SNR, rxid, hours, endtime)
-        nsx = plot.numsats(SNR, rxid, minelev=10, hrs=hours, endtime=endtime)
-        avg = plot.meansnr(SNR, rxid, hours, endtime)
+        allsnr = plot.prn_snr(SNR, rxid, snrhours, endtime)
+        nsx = plot.numsats(SNR, rxid, minelev=10, hrs=hkhours, endtime=endtime)
+        avg = plot.meansnr(SNR, rxid, hkhours, endtime)
         if symlink:
             suf = '-RX{:02}.png'.format(rxid)
             _symlink(allsnr, 'ALLSNR' + suf)
@@ -100,30 +102,38 @@ def plotupdate(fname):
                 time.sleep(2)
 
 def usage():
-    print("Usage:", sys.argv[0], "<file> [hours] [endtime]\n"
+    print("Usage:", sys.argv[0], "<file> [snr_hours] [hk_hours] [endtime]\n"
           "  <file> should be the path to VAPR BINEX data. \n"
-          "  hours (optional): how many hours to plot, default", config.PLOT_HOURS, "\n"
+          "  snr_hours (optional): how many hours to plot SNR values, default", config.PLOT_SNR_HOURS, "\n"
+          "  hk_hours (optional): how many hours to plot housekeeping values, default", config.PLOT_HK_HOURS, "\n"
           "  endtime (optional): plots are made preceding this time (default now)\n"
           "                      Format 2017-03-15T17:06:59\n")
     sys.exit(1)
 
 if __name__ == "__main__": # When this file is run as a script
-    if len(sys.argv) < 2 or len(sys.argv) > 4:
+    if len(sys.argv) < 2 or len(sys.argv) > 5:
         usage()
-    hours = config.PLOT_HOURS
+    snrhours = config.PLOT_SNR_HOURS
+    hkhours = config.PLOT_HK_HOURS
     endtime = np.datetime64('now')
     if len(sys.argv) > 2:
         try:
-            hours = float(sys.argv[2])
+            snrhours = float(sys.argv[2])
         except ValueError:
             print('Hours parameter must be a number')
             usage()
     if len(sys.argv) > 3:
         try:
-            endtime = np.datetime64(sys.argv[3])
+            hkhours = float(sys.argv[3])
+        except ValueError:
+            print('Hours parameter must be a number')
+            usage()
+    if len(sys.argv) > 4:
+        try:
+            endtime = np.datetime64(sys.argv[4])
         except ValueError:
             print('Endtime must be given in the format YYYY-MM-DDTHH:MM:SS')
             usage()
     with open(sys.argv[1], 'rb') as fid:
         SNRs, HK = readall(fid)
-    makeplots(SNRs, HK, hours=hours, endtime=endtime)
+    makeplots(SNRs, HK, snrhours=snrhours, hkhours=hkhours, endtime=endtime)
