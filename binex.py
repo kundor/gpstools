@@ -2,6 +2,7 @@
 Functions to process little-endian, forward-readable, regular-CRC BINEX files.
 See http://binex.unavco.org/ for more information.
 """
+import time
 from functools import reduce
 from operator import xor
 from hashlib import md5
@@ -20,7 +21,7 @@ def readsync(strm):
         read += r
         r = strm.read(1)
     if read:
-        info("Skipped", len(read), "bytes before SYNC:", read)
+        info("Skipped", len(read), "bytes before SYNC:", read.hex())
 
 
 def read_ubnxi(strm):
@@ -161,7 +162,15 @@ def read_record(strm):
             debug('Correcting SNR message length from', msglen, 'to', corlen)
             msglen = corlen
     msg = strm.read(msglen)
-    assert len(msg) == msglen
+    tries = 0
+    while len(msg) < msglen:
+        tries += 1
+        if tries > 5:
+            break
+        time.sleep(.1)
+        msg += strm.read(msglen - len(msg))
+    if len(msg) != msglen:
+        raise ValueError('Could not read full message (received {} bytes out of {})'.format(len(msg), msglen))
     verify(strm, idbytes + lenbytes + msg)
     # When verification fails, we could try advancing to the next sync byte
     # within the already-read message, and attempt to read a record there.
