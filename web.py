@@ -88,7 +88,7 @@ def plotupdate(fname):
             attempt = 0
             olens = nlens
             debug('{:2} new records {} at'.format(sum(nlens.values()) - sum(olens.values()),
-                                                 [nlens(rx) - olens[rx] for rx in nlens]),
+                                                 [nlens[rx] - olens[rx] for rx in nlens]),
                   tic, 'timestamped', max(max(s[-1].time for s in SNRs.values()), HK[-1].time))
             if tic - otic > PLOT_IVAL:
                 info('Starting plotting at', tic)
