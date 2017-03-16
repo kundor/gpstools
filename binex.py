@@ -149,6 +149,11 @@ def read_record(strm):
     readsync(strm)
     idbytes, recid = read_ubnxi(strm)
     lenbytes, msglen = read_ubnxi(strm)
+    if msglen > 128:
+        # We have no messages so long. Probably this is corrupted.
+        # Instead of reading further, raise a ValueError, so the enclosing
+        # loop can try for the next sync byte
+        raise ValueError('Message too long (id {}, length {})'.format(recid, msglen))
     # FIXME: KLUDGE: currently length is wrong in the stream for SNR records
     if recid == 192:
         corlen = round(msglen/3)*3 + 1 # should always be 1 mod 3
