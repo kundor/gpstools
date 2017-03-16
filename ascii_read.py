@@ -35,6 +35,7 @@ from coords import xyz2llh
 from gpstime import leapseconds
 from gpsazel import satcoeffs, mvec
 from fetchnav import getsp3file
+from utility import info
 
 #%% Stuff to configure
 udir = '/inge/scratch/UART/UART3'
@@ -123,7 +124,7 @@ def bigjump(file, curtime):
     """Return true if the time difference between the next line of file and curtime is big."""
     jump = nexttime(file) - curtime
     if jump > thresh:
-        print('Jump of', jump.astype('m8[m]'), 'seen in file', file.name)
+        info('Jump of', jump.astype('m8[m]'), 'seen in file', file.name)
         return True
     return False
 
@@ -141,10 +142,10 @@ def readhk(file):
     """Read housekeeping (HK) line. Check for proper format, then discard."""
     hk = file.read(50)
     if not hk:
-        print("Housekeeping line expected; instead found end of file?", file.name)
+        info("Housekeeping line expected; instead found end of file?", file.name)
         return
     if not hkline.fullmatch(hk):
-        print('The 50 characters following a blank line do not match expected HK format:\n', hk.decode())
+        info('The 50 characters following a blank line do not match expected HK format:\n', hk.decode())
         #raise OSError('Gave up parsing the files')
 
 def windpastshortlines(file):
@@ -159,13 +160,13 @@ def windpastshortlines(file):
 
 def checkline(line, name):
     if b'HK' in line:
-        print('HK found in line not following a blank line in', name, '-- What?')
+        info('HK found in line not following a blank line in', name, '-- What?')
         #raise OSError('Gave up parsing these files')
         return False
     elif len(line) < 20:
         return False
     elif not goodline.fullmatch(line):
-        print('Bad line in', name, line.decode().strip())
+        info('Bad line in', name, line.decode().strip())
         return False
     elif int(line[15:17]) >= 70:
         return False
@@ -173,7 +174,7 @@ def checkline(line, name):
 
 def closewhenempty(file):
     if endfile(file):
-        print('Closing file', file.name)
+        info('Closing file', file.name)
         file.close()
         return True
     return False
@@ -183,7 +184,7 @@ def getnewtime(line, curtime, name):
     if curtime is not None:
         thegap = thetime - curtime
         if thegap > gapthresh:
-            print('Gap of', thegap.astype('m8[m]'), 'in file', name)
+            info('Gap of', thegap.astype('m8[m]'), 'in file', name)
     return thetime
 
 def nextfilenum(i, files, curtime):
@@ -200,9 +201,9 @@ def nextfilenum(i, files, curtime):
 
 def checkallclosed(files):
     if all(f.closed for f in files):
-        print('All files closed')
+        info('All files closed')
     else:
-        print('Not all files closed?!?')
+        info('Not all files closed?!?')
 
 def prepfiles(filenames):
     files = [open(f, 'rb') for f in filenames]
@@ -283,7 +284,7 @@ def poslist(time):
         pl0, epoch0 = readsp3(getsp3file((week, sow - 60*60*12)))
 # note: negative seconds of week will work fine
         if epoch != epoch0 + len(pl0)*min15:
-            print("Difference between sp3 files is not 900 seconds.")
+            info("Difference between sp3 files is not 900 seconds.")
 # TODO: when dealing with ultrarapid files, we may have problems with this
         pl = np.concatenate((pl0, pl))
         epoch = epoch0
@@ -313,7 +314,7 @@ def addrecords(SNR, line, curi, leaps, cofns):
             SNR[curi] = (prn, time, el, az, snr)
         except IndexError:
             newlen = int(len(SNR)*1.2)
-            print('Resizing SNR to', newlen)
+            info('Resizing SNR to', newlen)
             SNR.resize((newlen,))
             SNR[curi] = (prn, time, el, az, snr)
         curi += 1

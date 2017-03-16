@@ -46,12 +46,12 @@ def decompress(filename, move=False):
         try:
             subprocess.run(cmd, check=True)
         except (OSError, subprocess.CalledProcessError):
-            print("Command '", ' '.join(cmd), "' failed. Trying another...")
+            info("Command '", ' '.join(cmd), "' failed. Trying another...")
             continue
         if os.path.isfile(defile):
             return defile
         else:
-            print("Command '", ' '.join(cmd), "' succeeded, but did not produce the output file?!")
+            info("Command '", ' '.join(cmd), "' succeeded, but did not produce the output file?!")
     raise RuntimeError('Could not get an external program to decompress the file ' + filename)
 
 class ProfileThis:

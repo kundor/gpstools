@@ -7,6 +7,7 @@ mp.use('Agg') # non-interactive backend, allows importing without crashing X-les
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D #analysis:ignore
 from ascii_read import gpssowgps
+from utility import info
 
 SNR_MIN = 20
 SNR_MAX = 56 # range to use for snr plots, to enable visual comparison between plots
@@ -21,7 +22,7 @@ def posneg(arr):
             ind = i
             neg = True
         if neg and k > 0:
-            print("{} (entry {}) is positive, after negative entry at {}!".format(k, i, ind))
+            info("{} (entry {}) is positive, after negative entry at {}!".format(k, i, ind))
             return ind
     return ind
 
@@ -48,7 +49,7 @@ def dorises(snrdata, prn):
 def _setsnrlim(ax, snrs):
     ax.set_ylim(SNR_MIN, SNR_MAX)
     if min(snrs[snrs > 0]) < SNR_MIN or max(snrs) > SNR_MAX:
-        print('Warning: SNRs are off the plot: {} in [{}, {}), {} in ({}, {}]'.format(
+        info('Warning: SNRs are off the plot: {} in [{}, {}), {} in ({}, {}]'.format(
             np.count_nonzero(snrs[snrs > 0] < SNR_MIN), min(snrs[snrs > 0]), SNR_MIN,
             np.count_nonzero(snrs > SNR_MAX), max(snrs), SNR_MAX))
 
@@ -63,14 +64,14 @@ def dorises2(snrdata, prn):
     plt.ioff()
     snrdata = snrdata[snrdata.prn == prn]
     if not snrdata.size:
-        print('PRN {} not found'.format(prn))
+        info('PRN {} not found'.format(prn))
         return
     eles, azis, snr = snrdata.el, snrdata.az, snrdata.snr / 10
     sow = gpssowgps(snrdata.time)
     riz = rises(eles, sow, prn)
     for beg, peak, end in riz:
         if not np.count_nonzero(snr[beg:end+1]):
-            print('Only 0 snr, PRN {}, {} to {} ({}--{})'.format(
+            info('Only 0 snr, PRN {}, {} to {} ({}--{})'.format(
                 prn, beg, end, sowdhrmin(sow[beg]), sowhrmin(sow[end])))
             continue
         fig = plt.figure(figsize=(12, 4))
@@ -99,7 +100,7 @@ def dorises2(snrdata, prn):
         elif np.count_nonzero(daz > 0) == 1 and daz[daz > 0] > 350:
             azinc = r'$\downarrow$'
         else:
-            print('Azimuths are not monotone.')
+            info('Azimuths are not monotone.')
             azinc = ''
         plt.title('PRN {}, DoY {}, {}--{}, Az {:.0f}--{:.0f} {}'.format(
             prn, doy, sowhrmin(sow[beg]), sowhrmin(sow[peak]), azis[beg], azis[end], azinc))
@@ -142,12 +143,12 @@ def rises(el, sod, prn=None):
     riz = []
     for beg, end in zip(starts, starts[1:]):
         if sod[end] - sod[beg+1] < 600: # less than 10 minute arc
-            print('Less than 10 minutes, PRN {}, {} to {} ({}--{})'.format(
+            info('Less than 10 minutes, PRN {}, {} to {} ({}--{})'.format(
                 prn, beg+1, end, sowdhrmin(sod[beg+1]), sowhrmin(sod[end])))
             continue
         peak = posneg(difel[beg+1:end])
         if peak == 0: # only falling elevations I guess
-            print('Only falling elevations? PRN {}, {} to {} ({}--{})'.format(
+            info('Only falling elevations? PRN {}, {} to {} ({}--{})'.format(
                 prn, beg+1, end, sowdhrmin(sod[beg+1]), sowhrmin(sod[end])))
             continue
         if peak is not None:
@@ -155,7 +156,7 @@ def rises(el, sod, prn=None):
         else:
             peak = end
         if el[peak] < 20:
-            print('Max elevation {}, PRN {}, {} to {} ({}--{})'.format(
+            info('Max elevation {}, PRN {}, {} to {} ({}--{})'.format(
                 el[peak], prn, beg+1, end, sowdhrmin(sod[beg+1]), sowhrmin(sod[end])))
             continue
         riz.append([beg+1, peak, end])
@@ -196,7 +197,7 @@ def prn_snr(SNR, rxid=None, hrs=4, endtime=None, omit_zero=True):
     prns = prns[ct > 1200] # at least a 20 minutes data
     numsat = len(prns)
     if not numsat:
-        print('No records', 'for RX{:02}'.format(rxid) if rxid else '',
+        info('No records', 'for RX{:02}'.format(rxid) if rxid else '',
              'in the given time period', thresh, 'to', endtime)
         return
     fig = plt.figure(figsize=(10, 2*numsat))
@@ -244,7 +245,7 @@ def tempvolt(hk, hrs=None, endtime=None):
         if hrs is not None:
             mask = np.logical_and(mask, hk.time > thresh)
         if not mask.any():
-            print('No records for RX{:02} in the given time period'.format(rx), thresh, 'to', endtime)
+            info('No records for RX{:02} in the given time period'.format(rx), thresh, 'to', endtime)
             continue
         times = hk[mask].time.tolist()
         volt = hk[mask].volt / 100
@@ -279,13 +280,13 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
     if minelev:
         snr = snr[snr.el > minelev]
     if not len(snr):
-        print('No records', 'for RX{:02}'.format(rxid) if rxid else '',
+        info('No records', 'for RX{:02}'.format(rxid) if rxid else '',
              'above {}° from'.format(minelev), thresh, 'to', endtime)
         return
     time, idx, numsats = np.unique(snr.time, return_index=True, return_counts=True)
     for n, a, b in zip(numsats, idx, np.append(idx[1:], len(snr))):
         if len(set(snr[a:b].prn)) != n:
-            print('Same PRN in multiple records?')
+            info('Same PRN in multiple records?')
     doy = _mode(time.astype('M8[D]')).tolist() # most common day
     time = time.tolist() # get datetime.datetime, which matplotlib can handle
     if rxid:
@@ -318,7 +319,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
         thresh, endtime = _thresh(hrs, endtime)
         snr = snr[snr.time > thresh]
     if not len(snr):
-        print('No records', 'for RX{:02}'.format(rxid) if rxid else '',
+        info('No records', 'for RX{:02}'.format(rxid) if rxid else '',
              'in the given time period', thresh, 'to', endtime)
         return
     time, idx = np.unique(snr.time, return_index=True)

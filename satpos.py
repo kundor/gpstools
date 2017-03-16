@@ -1,7 +1,7 @@
 import re
 from math import cos, sin, pi
 import numpy as np
-from utility import fileread
+from utility import fileread, info
 from gpstime import gpsdatetime
 
 __all__ = ['readsp3', 'satpos', 'mvec', 'coef_fn']
@@ -86,8 +86,8 @@ def readsp3(filename):
             elif line[0] == 'P':
                 _addpos(poslist[-1], line)
             else:
-                print('Unrecognized line in sp3 file ' + filename + ':\n' + line
-                      + '\nIgnoring...')
+                info('Unrecognized line in sp3 file ' + filename + ':\n' + line
+                    + '\nIgnoring...')
         return poslist
 
 def satpos(poslist, prn, sec):

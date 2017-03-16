@@ -2,7 +2,7 @@ from ftplib import FTP
 from urllib.request import urlretrieve
 import os
 from gpstime import getutctime, gpsweek, gpsdow, dhours
-from utility import decompress
+from utility import decompress, info
 
 sp3dir = '/scratch/sp3'
 
@@ -126,11 +126,11 @@ def getsp3file(dt=None):
         try:
             remotelist = ftplist(site, fdir, flist[2][3:7], flist[-1][3:7])
         except Exception:
-            print(site + ' failed; trying another...')
+            info(site + ' failed; trying another...')
             continue
         ftpfound = [f + '.Z' in remotelist for f in flist]
         if True not in ftpfound:
-            print('No files found on ' + site + '; trying another...')
+            info('No files found on ' + site + '; trying another...')
             continue
         ftpnum = ftpfound.index(True)
         if fsnum is not None and fsnum <= ftpnum:

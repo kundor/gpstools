@@ -1,6 +1,7 @@
 from math import sqrt
 from collections import namedtuple
 import re
+from utility import info
 
 def gensnrs(lineiter):
     """Get the SNR values from each line in VAPR ASCII format.
@@ -25,7 +26,7 @@ def gensnr89(filenames, minelev=None):
             for line in fid:
                 mch = int89line.fullmatch(line)
                 if not mch:
-                    print('Bad line', line.strip())
+                    info('Bad line', line.strip())
                     continue
                 if minelev and float(mch.group(2)) < minelev:
                     continue

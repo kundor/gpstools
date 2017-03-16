@@ -2,7 +2,7 @@ import os
 from collections import namedtuple, UserList
 import time
 from datetime import datetime, timedelta, timezone
-from utility import fileread, stdouttofile
+from utility import fileread, stdouttofile, info
 from gpsazel import gpsazel, poslist, satcoeffs
 from gpstime import gpsweek, gpsdow, gpsleapsecsutc
 
@@ -101,14 +101,14 @@ class snr89(UserList):
         try:
             self.rxloc = sitelocs[self.site]
         except KeyError:
-            print('First four characters of filename, ' + self.site
-                  + ', are not a recognized site name. Receiver location unknown.')
+            info('First four characters of filename, ' + self.site
+                + ', are not a recognized site name. Receiver location unknown.')
         with fileread(os.path.join(dir, filename)) as fid:
             for l in fid:
                 try:
                     rec = parser(l)
                 except ValueError as e:
-                    print(e, end=' on line ' + str(fid.lineno) + '\n')
+                    info(e, end=' on line ' + str(fid.lineno) + '\n')
                     continue
                 if elmin is not None and rec.el < elmin:
                     continue
@@ -190,7 +190,7 @@ def rewriteall(odir=vdir, ndir=ndir):
         file = os.path.basename(path)
         nfile = os.path.join(ndir, file)
         if os.path.isfile(nfile):
-            print(file + ' already present in ' + ndir + '. Skipping...')
+            info(file + ' already present in ' + ndir + '. Skipping...')
             continue
         rewrite(odir, ndir, file)
 

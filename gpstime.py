@@ -31,6 +31,7 @@ import time
 from warnings import warn
 from collections.abc import Sequence
 from numbers import Number
+from utility import info
 
 
 URL1 = 'http://maia.usno.navy.mil/ser7/tai-utc.dat'
@@ -48,7 +49,7 @@ def dhours(hrs):
 
 def getutctime(dt=None, dtclass=datetime, tz=timezone.utc):
     """Convert time to a UTC-aware datetime object.
-    
+
     Accepts datetime, struct_time, tuple (Y,M,D,[H,M,S,μS]), tuple (GPS week,
     GPS second of week) or POSIX timestamp.
     Input is assumed to already be UTC unless the timezone is included (aware
@@ -84,21 +85,21 @@ def _dow(dt):
 def gpsdow(dt):
     """Given aware datetime, return GPS day of week."""
     return _dow(dt.astimezone(gpstz))
-    
+
 def _sod(dt):
     return (dt.hour*60 + dt.minute)*60 + dt.second + dt.microsecond/1000000
 
 def gpssod(dt):
     """Given aware datetime, return GPS second of day."""
     return _sod(dt.astimezone(gpstz))
-   
+
 def _sow(dt):
     return _dow(dt)*86400 + _sod(dt)
-    
+
 def gpssow(dt):
     """Given aware datetime, return GPS second of week."""
     return _sow(dt.astimezone(gpstz))
-    
+
 class LeapSeconds(dict):
     """A dictionary of datetimes : leap second adjustment.
 
@@ -130,7 +131,7 @@ class LeapSeconds(dict):
     @classmethod
     def timetoupdate(cls):
         """Attempt to verify whether January 1 or July 1 has passed since last update.
-        
+
         Otherwise, don't bother updating (new leap seconds only occur on those dates.)
         """
         now = datetime.utcnow()
@@ -162,7 +163,7 @@ class LeapSeconds(dict):
     def update(cls):
         """Download and parse new leap second information from reliable web sources."""
         if not cls.timetoupdate():
-            print('No potential leap second has occurred since last update.')
+            info('No potential leap second has occurred since last update.')
             return False
         if not os.access(path.dirname(cls.infofile), os.W_OK):
             raise IOError('Leap second data file cannot be written.')
@@ -205,7 +206,7 @@ leapseconds = LeapSeconds()
 
 def leapsecs(dt, cmp):
     """# of leapseconds at datetime dt.
-    
+
     Whether dt exceeds the UTC time in the leapseconds dict is determined by
     the provided function cmp.
     """
@@ -285,7 +286,7 @@ def getgpstime(dt=None, tz=gpstz):
     if isinstance(dt, datetime) and not isinstance(dt, gpsdatetime):
         return gpsdatetime.copydt(dt, tz)
     return getutctime(dt, gpsdatetime, tz)
-    
+
 def taioffset(dt):
     if isinstance(dt.tzinfo, TAIOffset):
         return dt.tzinfo.offset
@@ -318,7 +319,7 @@ class gpsdatetime(datetime):
 
     def utcoffset(self):
         """Return self.tzinfo.utcoffset(self)
-        
+
         Should be identical to datetime.utcoffset() besides allowing
         tzinfo.utcoffset() to not be in whole minutes.
         """
@@ -348,7 +349,7 @@ class gpsdatetime(datetime):
     def __sub__(self, other):
         """Subtract other gpsdatetime or datetime to produce timedelta,
         or subtract timedelta to produce gpsdatetime.
-        
+
         If one or both timezones are TAIOffset, leap seconds are included
         in the difference. Otherwise they're not.
         """
@@ -356,10 +357,10 @@ class gpsdatetime(datetime):
             if isinstance(other, timedelta):
                 return self.__add__(-other)
             return NotImplemented
-            
+
         if isnaive(self) != isnaive(other):
             raise TypeError('Cannot mix naive and timezone-aware datetimes')
-        
+
         if isnaive(self) or (not isinstance(self.tzinfo, TAIOffset)
                              and not isinstance(other.tzinfo, TAIOffset)):
             return datetime.__sub__(self, other)
@@ -367,7 +368,7 @@ class gpsdatetime(datetime):
         off = datetime.__sub__(self.replace(tzinfo=None), other.replace(tzinfo=None))
         off += taioffset(other) - taioffset(self)
         return off
-        
+
     def __rsub__(self, other):
         """Subtract self from a non-gps datetime object"""
         if not isinstance(other, datetime):
