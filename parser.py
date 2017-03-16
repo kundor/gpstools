@@ -148,6 +148,9 @@ def reader(fid):
                 lat *= np.pi / 180
                 rxloc[rxid] = llh2xyz(lat, lon, alt)
                 trans[rxid] = enutrans(lat, lon)
+        else:
+            info('Unknown record {}:'.format(rid), vals)
+
 
 def readall(fid):
     """Return all the records currently in fid.

@@ -6,7 +6,7 @@ from functools import reduce
 from operator import xor
 from hashlib import md5
 from binascii import crc32, crc_hqx
-from utility import info
+from utility import info, debug
 
 SYNC = b'\xC2'
 
@@ -148,16 +148,20 @@ RECS = {192 : snr_msg,
 def read_record(strm):
     readsync(strm)
     idbytes, recid = read_ubnxi(strm)
-    if recid not in RECS:
-        info('Record ID', recid, 'unknown')
     lenbytes, msglen = read_ubnxi(strm)
     # FIXME: KLUDGE: currently length is wrong in the stream for SNR records
     if recid == 192:
-        msglen = round(msglen/3)*3 + 1 # should always be 1 mod 3
+        corlen = round(msglen/3)*3 + 1 # should always be 1 mod 3
+        if corlen != msglen:
+            debug('Correcting SNR message length from', msglen, 'to', corlen)
+            msglen = corlen
     msg = strm.read(msglen)
     assert len(msg) == msglen
     verify(strm, idbytes + lenbytes + msg)
     # When verification fails, we could try advancing to the next sync byte
     # within the already-read message, and attempt to read a record there.
     # (Currently, we start trying after the end of all data previously read.)
+    if recid not in RECS:
+        info('Record ID', recid, 'unknown')
+        return recid, msg
     return recid, RECS[recid](msg)
