@@ -54,7 +54,7 @@ def makeplots(SNRs, HK, symlink=True, pdir=PLOTDIR, hours=4, endtime=None):
         hkreport(HK, fid)
     if symlink:
         _symlink(hkfile, 'HK.txt')
-    snrtab = open('snrtab.html', 'wt')
+    snrtab = open('snrtab-new.html', 'wt')
     for rxid, SNR in SNRs.items():
         snrtab.write(format_stats(rxid, *calcsnrstat(gensnrnp(SNR))))
         allsnr = plot.prn_snr(SNR, rxid, hours, endtime)
@@ -66,6 +66,7 @@ def makeplots(SNRs, HK, symlink=True, pdir=PLOTDIR, hours=4, endtime=None):
             _symlink(nsx, 'NS' + suf)
             _symlink(avg, 'AVG' + suf)
     snrtab.close()
+    os.replace('snrtab-new.html', 'snrtab.html')
     os.chdir(old)
 
 def plotupdate(fname):
