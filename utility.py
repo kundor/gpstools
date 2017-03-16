@@ -5,6 +5,13 @@ These are not very specific in usage, however, and could be useful anywhere.
 from contextlib import suppress, redirect_stdout, contextmanager
 import subprocess
 import os
+import sys
+
+def info(*args, logfile=sys.stderr):
+    print(*args, file=logfile, flush=True)
+
+def debug(*args, logfile=sys.stderr):
+    pass
 
 @contextmanager
 def stdouttofile(file):

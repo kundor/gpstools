@@ -6,12 +6,9 @@ from functools import reduce
 from operator import xor
 from hashlib import md5
 from binascii import crc32, crc_hqx
-import sys
+from utility import info
 
 SYNC = b'\xC2'
-
-def info(*args, logfile=sys.stderr):
-    print(*args, file=logfile, flush=True)
 
 def readsync(strm):
     """Read a sync byte from the stream. If we don't see one, scan forward for it."""
