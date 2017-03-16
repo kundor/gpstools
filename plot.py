@@ -188,7 +188,8 @@ def prn_snr(SNR, rxid=None, hrs=4, endtime=None, omit_zero=True):
     If rxid is given, an image is written out in the current directory, named
     ALLSNR-RX##-DOY.png. Otherwise the figure is returned."""
     thresh, endtime = _thresh(hrs, endtime)
-    SNR = SNR[SNR.time > thresh]
+    if thresh:
+        SNR = SNR[SNR.time > thresh]
     if omit_zero:
         SNR = SNR[SNR.snr > 0]
     prns, ct = np.unique(SNR.prn, return_counts=True)
@@ -215,7 +216,10 @@ def prn_snr(SNR, rxid=None, hrs=4, endtime=None, omit_zero=True):
         polarazel(psnr.az, psnr.el, ax1, label_el=False)
     axes[-1].set_xlabel('Time (UTC)')
     axes[0].set_ylim(min(SNR.snr) / 10, max(SNR.snr) / 10)
-    axes[0].set_xlim(thresh.tolist(), endtime.tolist())
+    if thresh:
+        axes[0].set_xlim(thresh.tolist(), endtime.tolist())
+    else:
+        axes[0].set_xlim(min(SNR.time.tolist()), max(SNR.time.tolist()))
     fig.tight_layout()
     if rxid:
         fname = 'ALLSNR-RX{:02}-{:%j}.png'.format(rxid, endtime.tolist())
