@@ -91,7 +91,11 @@ def calcsnrstat(snriter, return_bins=False):
             M2p += delta * delta2
             if snr < snrminp:
                 snrminp = snr
-        bins[round(snr*10)] += 1
+        if return_bins:
+            bi = round(snr*10)
+            if bi >= len(bins):
+                bins += [0] * (bi - len(bins) + 1)
+            bins[bi] += 1
     snrstd = sqrt(M2 / (num - 1))
     snrstdp = sqrt(M2p / (nump - 1))
     if return_bins:
