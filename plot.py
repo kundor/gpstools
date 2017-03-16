@@ -8,9 +8,7 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D #analysis:ignore
 from ascii_read import gpssowgps
 from utility import info
-
-SNR_MIN = 20
-SNR_MAX = 56 # range to use for snr plots, to enable visual comparison between plots
+import config
 
 def posneg(arr):
     """Check that input consists of some positive entries followed by negative entries,
@@ -47,11 +45,11 @@ def dorises(snrdata, prn):
     plt.tight_layout()
 
 def _setsnrlim(ax, snrs):
-    ax.set_ylim(SNR_MIN, SNR_MAX)
-    if min(snrs[snrs > 0]) < SNR_MIN or max(snrs) > SNR_MAX:
+    ax.set_ylim(config.SNR_MIN, config.SNR_MAX)
+    if min(snrs[snrs > 0]) < config.SNR_MIN or max(snrs) > config.SNR_MAX:
         info('Warning: SNRs are off the plot: {} in [{}, {}), {} in ({}, {}]'.format(
-            np.count_nonzero(snrs[snrs > 0] < SNR_MIN), min(snrs[snrs > 0]), SNR_MIN,
-            np.count_nonzero(snrs > SNR_MAX), max(snrs), SNR_MAX))
+            np.count_nonzero(snrs[snrs > 0] < config.SNR_MIN), min(snrs[snrs > 0]), config.SNR_MIN,
+            np.count_nonzero(snrs > config.SNR_MAX), max(snrs), config.SNR_MAX))
 
 def dorises2(snrdata, prn):
     """Plot snr vs. elevation for all periods of rising-then-falling elevation.
@@ -183,7 +181,7 @@ def _thresh(hrs, endtime):
         return endtime - hrs * np.timedelta64(3600, 's'), endtime
     return None, None
 
-def prn_snr(SNR, rxid=None, hrs=4, endtime=None, omit_zero=True):
+def prn_snr(SNR, rxid=None, hrs=config.PLOT_HOURS, endtime=None, omit_zero=True):
     """Plot SNR for each tracked satellite over the time period given.
 
     If rxid is given, an image is written out in the current directory, named

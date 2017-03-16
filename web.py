@@ -14,10 +14,7 @@ from snrstats import calcsnrstat, gensnrnp
 import plot
 from parser import reader, readall, hkreport
 from utility import info, debug
-
-PLOTDIR='/usr/local/adm/config/apache/htdocs/i/vapr/VB001'
-
-PLOT_IVAL = np.timedelta64(5, 'm')
+import config
 
 def _symlink(src, dest):
     if src is None:
@@ -41,7 +38,11 @@ def format_stats(rxid, stat, statp):
           <td>({:.2f})</td>
         </tr>""".format(rxid, statp.min, stat.max, statp.mean, stat.mean, statp.std, stat.std)
 
-def makeplots(SNRs, HK, symlink=True, pdir=PLOTDIR, hours=4, endtime=None):
+def makeplots(SNRs, HK, symlink=True, pdir=None, hours=None, endtime=None):
+    if pdir is None:
+        pdir = config.PLOTDIR
+    if hours is None:
+        hours = config.PLOT_HOURS
     old = os.getcwd()
     os.chdir(pdir)
     #plot.allrises(SNRs) # skip for now
@@ -90,7 +91,7 @@ def plotupdate(fname):
             debug('{:2} new records {} at'.format(sum(nlens.values()) - sum(olens.values()),
                                                  [nlens[rx] - olens[rx] for rx in nlens]),
                   tic, 'timestamped', max(max(s[-1].time for s in SNRs.values()), HK[-1].time))
-            if tic - otic > PLOT_IVAL:
+            if tic - otic > config.PLOT_IVAL:
                 info('Starting plotting at', tic)
                 makeplots(SNRs, HK)
                 info('Done at', np.datetime64('now'))
@@ -101,7 +102,7 @@ def plotupdate(fname):
 def usage():
     print("Usage:", sys.argv[0], "<file> [hours] [endtime]\n"
           "  <file> should be the path to VAPR BINEX data. \n"
-          "  hours (optional): how many hours to plot, default 4\n"
+          "  hours (optional): how many hours to plot, default", config.PLOT_HOURS, "\n"
           "  endtime (optional): plots are made preceding this time (default now)\n"
           "                      Format 2017-03-15T17:06:59\n")
     sys.exit(1)
@@ -109,7 +110,7 @@ def usage():
 if __name__ == "__main__": # When this file is run as a script
     if len(sys.argv) < 2 or len(sys.argv) > 4:
         usage()
-    hours = 4
+    hours = config.PLOT_HOURS
     endtime = np.datetime64('now')
     if len(sys.argv) > 2:
         try:
