@@ -9,7 +9,7 @@ from collections import defaultdict
 import sys
 import numpy as np
 from binex import read_record, info
-from ascii_read import gpstotsecgps, poslist
+from ascii_read import gpstotsecgps, poslist, gpsweekgps
 from satpos import mvec, myinterp
 from coords import llh2xyz, get_ellipsoid_ht
 
@@ -88,6 +88,7 @@ def reader(fid):
     curh = 0
     cofns = None # compute as soon as we find a good time record
     numtot, numempty, numearly, numnoloc = [defaultdict(int) for _ in range(4)]
+    thisweek = gpsweekgps(np.datetime64('now'))
     while True:
         try:
             rid, vals = read_record(fid)
@@ -96,7 +97,7 @@ def reader(fid):
             continue
         if rid == 192:
             rxid, weeksow, snrs = vals
-            if not snrs or weeksow[0] < 1000 or weeksow[0] > 2222:
+            if not snrs or weeksow[0] < 1000 or weeksow[0] > thisweek + 1:
                 numempty[rxid] += (not snrs)
                 numearly[rxid] += (weeksow[0] < 1000)
                 numtot[rxid] += 1
@@ -149,7 +150,7 @@ def reader(fid):
                 rxloc[rxid] = llh2xyz(lat, lon, alt)
                 trans[rxid] = enutrans(lat, lon)
         else:
-            info('Unknown record {}:'.format(rid), vals)
+            info('Unknown record {}:'.format(rid), vals.hex())
 
 
 def readall(fid):
