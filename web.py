@@ -78,7 +78,7 @@ def plotupdate(fname):
                 attempt += 1
                 if attempt > 5:
                     info('Now new records at', tic, '. Giving up.')
-                    return
+                    break
                 info('No new records at', tic, '. Sleeping', attempt*5)
                 time.sleep(attempt*5)
                 continue
