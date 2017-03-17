@@ -103,9 +103,7 @@ def verify(strm, msg):
     readcrc = strm.read(len(compcrc))
     assert len(readcrc) == len(compcrc)
     if compcrc != readcrc:
-        info('Bad checksum! Computed', compcrc.hex(), '\n'
-             '              Found   ', readcrc.hex())
-        raise ValueError('Bad checksum')
+        raise ValueError('Bad checksum! Computed {}, found {}'.format(compcrc.hex(), readcrc.hex()))
 
 def binex_to_weeksow(msg):
     """Convert 6-byte (millisecond) binex timestamp to a pair: GPS week, second of week.

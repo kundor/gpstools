@@ -52,6 +52,7 @@ def _setsnrlim(ax, snrs, restrict=False):
         y1 = min(y1, s1)
     ax.set_ylim(y0, y1)
     if s0 < y0 or s1 > y1:
+        s0, s1, y0, y1 = [round(x, 1) for x in (s0, s1, y0, y1)]
         info('Warning: SNRs are off the plot: {} in [{}, {}), {} in ({}, {}]'.format(
             np.count_nonzero(snrs[snrs > 0] < y0), s0, y0,
             np.count_nonzero(snrs > y1), s1, y1))
