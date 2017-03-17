@@ -5,13 +5,17 @@ These are not very specific in usage, however, and could be useful anywhere.
 from contextlib import suppress, redirect_stdout, contextmanager
 import subprocess
 import os
-import config
+import inspect
 import numpy as np
+import config
+
+def stacknames():
+    return ':'.join(f.function for f in reversed(inspect.stack()[2:]) if 'gpstools' in f.filename)
 
 def info(*args, logfile=None):
     if logfile is None:
         logfile = config.LOGFILE
-    print(*args, file=logfile, flush=True)
+    print(stacknames() + ':', *args, file=logfile, flush=True)
 
 def debug(*args, **kwargs):
     if config.DEBUG:
