@@ -297,6 +297,7 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
              'above {}° from'.format(minelev), thresh, 'to', endtime)
         return
     time, idx = np.unique(snr.time, return_index=True)
+    idx.sort() # if the times aren't in order for some reason
     numsats = [len(set(snr[a:b].prn)) for a, b in zip(idx, np.append(idx[1:], len(snr)))]
 #   time, idx, numsats = np.unique(snr.time, return_index=True, return_counts=True)
 #    for n, a, b in zip(numsats, idx, np.append(idx[1:], len(snr))):
@@ -304,7 +305,7 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
 #            info('Same PRN in multiple records?')
 #            debug(snr[a:b])
     doy = mode(time.astype('M8[D]')).tolist() # most common day
-    time = time.tolist() # get datetime.datetime, which matplotlib can handle
+    time = snr.time[idx].tolist() # get datetime.datetime, which matplotlib can handle
     if rxid:
         plt.ioff()
         title = 'Rx{:02} {:%Y-%m-%d}: Number of satellites over {}°'.format(rxid, doy, minelev)
