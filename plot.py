@@ -167,6 +167,7 @@ def _gethouraxes(figsize, **kwargs):
     ax.xaxis_date()
     ax.xaxis.set_major_formatter(mp.dates.DateFormatter('%H:%M'))
     #ax.set_xlabel('Time (UTC)') # To save space on stacked plots: we'll only label the bottom x-axis
+    ax.set_position([0.07, 0.13, 0.88, 0.74]) # ensure the plots line up with eachother
     return fig, ax
 
 def _thresh(hrs, endtime):
@@ -248,7 +249,6 @@ def tempvolt(hk):
     ax2.plot(times, temp, c='r')
     ax.set_xlim(min(times), max(times))
     ax2.set_ylabel('Temperature (°C)', color='r')
-    fig.tight_layout()
     return fig, ax
 
 def tempvolts(hk, hrs=None, endtime=None):
@@ -318,7 +318,6 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
     ax.yaxis.set_major_locator(mp.ticker.MaxNLocator(integer=True))
     ax.set_ylim(min(numsats) - 1, max(numsats)+1)
     ax.tick_params(axis='y', labelleft='on', labelright='on')
-    fig.tight_layout()
     if rxid:
         fname = 'NS-RX{:02}-{:%j}.png'.format(rxid, doy)
         fig.savefig(fname)
@@ -364,8 +363,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
         ax.set_xlim(min(time.tolist()), max(time.tolist()))
-    #_setsnrlim(ax, pmeans)
-    fig.tight_layout()
+    _setsnrlim(ax, pmeans)
     if rxid:
         fname = 'AVG-RX{:02}-{:%j}.png'.format(rxid, doy)
         fig.savefig(fname)
