@@ -73,34 +73,58 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours = None, 
     os.replace('snrtab-new.html', 'snrtab.html')
     os.chdir(old)
 
-def plotupdate(fname):
+def current_binex():
+    return np.datetime64('now').tolist().strftime(config.BINEX_FILES)
+
+def after_midnight():
+    """True if current time is within 15 minutes after UTC midnight."""
+    now = np.datetime64('now')
+    return np.timedelta64(0) < (now - now.astype('M8[D]')) < np.timedelta64(15, 'm')
+
+def plotupdate(fname=None):
+    """Follow stream and update web plot periodically.
+
+    If fname is given, follow that file, updating plots until it's exhausted.
+    Otherwise, use the current file and attempt handover at UTC midnight.
+    """
+    if fname is None:
+        fid = open(current_binex(), 'rb')
+    else:
+        fid = open(fname, 'rb')
     olens = defaultdict(int)
     otic = np.datetime64('2000-01-01', 'ms')
     attempt = 0
-    with open(fname, 'rb') as fid:
-        for SNRs, HK in reader(fid):
-            nlens = defaultdict(int, {rx: len(SNRs[rx]) for rx in SNRs}, hk=len(HK))
-            tic = np.datetime64('now')
-            if nlens == olens:
-                attempt += 1
-                if attempt > 5:
-                    info('Now new records at', tic, '. Giving up.')
-                    break
-                info('No new records at', tic, '. Sleeping', attempt*5)
-                time.sleep(attempt*5)
-                continue
-            attempt = 0
-            debug('{:2} new records {} at'.format(sum(nlens.values()) - sum(olens.values()),
-                                                 [nlens[rx] - olens[rx] for rx in nlens]),
-                  tic, 'timestamped', max(max(s[-1].time for s in SNRs.values()), HK[-1].time))
-            olens = nlens
-            if tic - otic > config.PLOT_IVAL:
-                info('Starting plotting at', tic)
-                makeplots(SNRs, HK)
-                info('Done at', np.datetime64('now'))
-                otic = tic
-            else:
-                time.sleep(2)
+    recgen = reader(fid)
+    for SNRs, HK in recgen:
+        nlens = defaultdict(int, {rx: len(SNRs[rx]) for rx in SNRs}, hk=len(HK))
+        tic = np.datetime64('now')
+        if nlens == olens:
+            attempt += 1
+            if attempt > 6:
+                if fname is None and after_midnight():
+                    info('No new records at', tic, '. Attempting handover.')
+                    fid.close()
+                    fid = open(current_binex(), 'rb')
+                    recgen.send(fid)
+                    continue
+                info('No new records at', tic, '. Giving up.')
+                break
+            info('No new records at', tic, '. Sleeping', attempt*5)
+            time.sleep(attempt*5)
+            continue
+        attempt = 0
+        debug('{:2} new records {} at'.format(sum(nlens.values()) - sum(olens.values()),
+                                             [nlens[rx] - olens[rx] for rx in nlens]),
+              tic, 'timestamped', max(max(s[-1].time for s in SNRs.values()), HK[-1].time))
+        olens = nlens
+        if tic - otic > config.PLOT_IVAL:
+            info('Starting plotting at', tic)
+            makeplots(SNRs, HK)
+            info('Done at', np.datetime64('now'))
+            otic = tic
+        else:
+            time.sleep(2)
+    fid.close()
 
 def usage():
     print("Usage:", sys.argv[0], "<file> [snr_hours] [hk_hours] [endtime]\n"
