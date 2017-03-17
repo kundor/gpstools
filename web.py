@@ -8,6 +8,7 @@ Created on Wed Mar 15 11:54:05 2017
 import os
 import time
 import sys
+import time
 from collections import defaultdict
 import numpy as np
 from snrstats import calcsnrstat, gensnrnp
@@ -71,6 +72,9 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours = None, 
             _symlink(avg, 'AVG' + suf)
     snrtab.close()
     os.replace('snrtab-new.html', 'snrtab.html')
+    updstr = time.strftime('%b %d %Y %H:%M:%S UTC', time.gmtime()) + time.strftime(' (%H:%M:%S %Z)')
+    with open('updatetime.txt', 'wt') as fid:
+        fid.write(updstr)
     os.chdir(old)
 
 def current_binex():
