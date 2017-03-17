@@ -133,8 +133,8 @@ def reader(fid):
                     info('Rx', rxid, ': Not using location from future time', vals[1])
                     continue
                 lon, lat, alt = vals[3:6]
-                if lon == lat == 0:
-                    info('Rx', rxid, ': Not using location 0,0')
+                if lon == 0 or lat == 0:
+                    info('Rx', rxid, ': Not using location with 0')
                     continue
                 lon /= 1e7
                 if lon > 0 and vals[1] < np.datetime64('2017-03-14'):
