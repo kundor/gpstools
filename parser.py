@@ -142,6 +142,9 @@ def reader(fid):
                     info('Forcing longitude to western hemisphere, to correct '
                          'bad data before 2017-03-14')
                 lat /= 1e7
+                if not (-90 <= lat <= 90 and -180 <= lon <= 360):
+                    info('Not using bad location {}°E, {}°N'.format(lon, lat))
+                    continue
                 if alt:
                     alt /= 1000
                 else:
