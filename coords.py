@@ -12,6 +12,7 @@ import json
 import re
 import scipy.integrate
 import numpy as np
+from utility import info
 
 class WGS84:
     """Parameters defining the WGS84 ellipsoid."""
@@ -64,12 +65,19 @@ def jsonfetch(url, **kwargs):
         enc = resp.info().get_content_charset('utf-8')
         return json.loads(resp.read().decode(enc))
 
-def google_ht(lat, lon):
-    """Fetch height above the geoid (m) from Google Maps at the given coordinates (decimal degrees.)"""
+def google_ht(lat, lon, bestguess=0):
+    """Fetch height above the geoid (m) from Google Maps at the given coordinates (decimal degrees.)
+
+    Falls back to third parameter bestguess (default 0) if the HTTP request fails.
+    """
     gkey = 'AIzaSyAH97PQ2KdkgQzjdkYX6YLDOADncFygY8g'
     gurl = 'https://maps.googleapis.com/maps/api/elevation/json'
-    resp = jsonfetch(gurl, key=gkey, locations='{},{}'.format(lat, lon))
-    return resp['results'][0]['elevation']
+    try:
+        resp = jsonfetch(gurl, key=gkey, locations='{},{}'.format(lat, lon))
+        return resp['results'][0]['elevation']
+    except (urllib.error.HTTPError, KeyError, IndexError) as e:
+        info(e)
+        return bestguess
 
 def orthometric_ht(lat, lon):
     """Fetch ellipsoid height - geoid height from online UNAVCO calculator.
@@ -79,9 +87,13 @@ def orthometric_ht(lat, lon):
     """
     url = 'http://jules.unavco.org/Geoid/Geoid'
     dat = urllib.parse.urlencode(dict(lat=lat, lon=lon, gpsheight=0)).encode('ascii')
-    with urllib.request.urlopen(url, dat) as resp:
-        enc = resp.info().get_content_charset('utf-8')
-        text = resp.read().decode(enc)
+    try:
+        with urllib.request.urlopen(url, dat) as resp:
+            enc = resp.info().get_content_charset('utf-8')
+            text = resp.read().decode(enc)
+    except urllib.error.HTTPError as e:
+        info(e)
+        return None
     mch = re.search(r'Orthometric height [^0-9]* EGM96 [^0-9]* (-?[0-9]+\.[0-9]+)', text)
     if not mch:
         return None
