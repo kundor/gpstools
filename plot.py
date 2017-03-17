@@ -166,7 +166,7 @@ def _gethouraxes(figsize, **kwargs):
     ax = fig.add_subplot(1, 1, 1, **kwargs)
     ax.xaxis_date()
     ax.xaxis.set_major_formatter(mp.dates.DateFormatter('%H:%M'))
-    ax.set_xlabel('Time (UTC)')
+    #ax.set_xlabel('Time (UTC)') # To save space on stacked plots: we'll only label the bottom x-axis
     return fig, ax
 
 def _thresh(hrs, endtime):
@@ -284,11 +284,13 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
         info('No records', 'for RX{:02}'.format(rxid) if rxid else '',
              'above {}° from'.format(minelev), thresh, 'to', endtime)
         return
-    time, idx, numsats = np.unique(snr.time, return_index=True, return_counts=True)
-    for n, a, b in zip(numsats, idx, np.append(idx[1:], len(snr))):
-        if len(set(snr[a:b].prn)) != n:
-            info('Same PRN in multiple records?')
-            debug(snr[a:b])
+    time, idx = np.unique(snr.time, return_index=True)
+    numsats = [len(set(snr[a:b].prn)) for a, b in zip(idx, np.append(idx[1:], len(snr)))]
+#   time, idx, numsats = np.unique(snr.time, return_index=True, return_counts=True)
+#    for n, a, b in zip(numsats, idx, np.append(idx[1:], len(snr))):
+#        if len(set(snr[a:b].prn)) != n:
+#            info('Same PRN in multiple records?')
+#            debug(snr[a:b])
     doy = mode(time.astype('M8[D]')).tolist() # most common day
     time = time.tolist() # get datetime.datetime, which matplotlib can handle
     if rxid:
