@@ -7,7 +7,7 @@ mp.use('Agg') # non-interactive backend, allows importing without crashing X-les
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D #analysis:ignore
 from ascii_read import gpssowgps
-from utility import info, debug
+from utility import info, debug, mode
 import config
 
 def posneg(arr):
@@ -160,11 +160,6 @@ def rises(el, sod, prn=None):
         riz.append([beg+1, peak, end])
     return riz
 
-def _mode(arr):
-    """Return the value occuring most often in arr."""
-    vals, ct = np.unique(arr, return_counts=True)
-    return vals[np.argmax(ct)]
-
 def _gethouraxes(figsize, **kwargs):
     """Return figure and axes set up for plotting against time, labeled HH:MM."""
     fig = plt.figure(figsize=figsize)
@@ -256,7 +251,7 @@ def tempvolt(hk, hrs=None, endtime=None):
         times = hk[mask].time.tolist()
         volt = hk[mask].volt / 100
         temp = hk[mask].temp
-        doy = _mode(hk[mask].time.astype('M8[D]')).tolist()
+        doy = mode(hk[mask].time.astype('M8[D]')).tolist()
         title = 'Rx{:02} {:%Y-%m-%d}: Voltage and Temperature'.format(rx, doy)
         fig, ax = _gethouraxes((10, 3), title=title)
         ax.scatter(times, volt, c='b')
@@ -294,7 +289,7 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
         if len(set(snr[a:b].prn)) != n:
             info('Same PRN in multiple records?')
             debug(snr[a:b])
-    doy = _mode(time.astype('M8[D]')).tolist() # most common day
+    doy = mode(time.astype('M8[D]')).tolist() # most common day
     time = time.tolist() # get datetime.datetime, which matplotlib can handle
     if rxid:
         plt.ioff()
@@ -330,7 +325,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
              'in the given time period', thresh, 'to', endtime)
         return
     time, idx = np.unique(snr.time, return_index=True)
-    doy = _mode(time.astype('M8[D]')).tolist() # most common day
+    doy = mode(time.astype('M8[D]')).tolist() # most common day
     idx = np.append(idx, len(snr))
     means = []
     pmeans = []

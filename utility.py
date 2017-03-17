@@ -6,6 +6,7 @@ from contextlib import suppress, redirect_stdout, contextmanager
 import subprocess
 import os
 import config
+import numpy as np
 
 def info(*args, logfile=None):
     if logfile is None:
@@ -15,6 +16,13 @@ def info(*args, logfile=None):
 def debug(*args, **kwargs):
     if config.DEBUG:
         info(*args, **kwargs)
+
+def mode(arr):
+    """Return the value occuring most often in numpy array arr.
+
+    In case of a tie, returns the least value."""
+    vals, ct = np.unique(arr, return_counts=True)
+    return vals[np.argmax(ct)]
 
 @contextmanager
 def stdouttofile(file):
