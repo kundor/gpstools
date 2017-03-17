@@ -44,12 +44,17 @@ def dorises(snrdata, prn):
             min(az[rb:re+1]), max(az[rb:re+1])))
     plt.tight_layout()
 
-def _setsnrlim(ax, snrs):
-    ax.set_ylim(config.SNR_MIN, config.SNR_MAX)
-    if min(snrs[snrs > 0]) < config.SNR_MIN or max(snrs) > config.SNR_MAX:
+def _setsnrlim(ax, snrs, restrict=False):
+    y0, y1 = config.SNR_MIN, config.SNR_MAX
+    s0, s1 = min(snrs[snrs > 0]), max(snrs)
+    if restrict:
+        y0 = max(y0, s0)
+        y1 = min(y1, s1)
+    ax.set_ylim(y0, y1)
+    if s0 < y0 or s1 > y1:
         info('Warning: SNRs are off the plot: {} in [{}, {}), {} in ({}, {}]'.format(
-            np.count_nonzero(snrs[snrs > 0] < config.SNR_MIN), min(snrs[snrs > 0]), config.SNR_MIN,
-            np.count_nonzero(snrs > config.SNR_MAX), max(snrs), config.SNR_MAX))
+            np.count_nonzero(snrs[snrs > 0] < y0), s0, y0,
+            np.count_nonzero(snrs > y1), s1, y1))
 
 def dorises2(snrdata, prn):
     """Plot snr vs. elevation for all periods of rising-then-falling elevation.
@@ -365,8 +370,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
         ax.set_xlim(min(time.tolist()), max(time.tolist()))
-    _setsnrlim(ax, pmeans)
-    ax.set_ylim(config.SNR_MIN, max(pmeans))
+    _setsnrlim(ax, pmeans, True)
     if rxid:
         fname = 'AVG-RX{:02}-{:%j}.png'.format(rxid, doy)
         fig.savefig(fname)
