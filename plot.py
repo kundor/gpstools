@@ -230,7 +230,26 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True):
         return fname
     return fig
 
-def tempvolt(hk, hrs=None, endtime=None):
+def tempvolt(hk):
+    """Plot temperature and voltage from the recarray of HK records.
+
+    Return a figure.
+    """
+    times = hk.time.tolist()
+    volt = hk.volt / 100
+    temp = hk.temp
+    fig, ax = _gethouraxes((10, 3))
+    ax.scatter(times, volt, c='b')
+    ax.set_ylabel('Volts', color='b')
+    ax.yaxis.set_major_formatter(mp.ticker.FormatStrFormatter('%.1f'))
+    ax2 = ax.twinx()
+    ax2.plot(times, temp, c='r')
+    ax.set_xlim(min(times), max(times))
+    ax2.set_ylabel('Temperature (°C)', color='r')
+    fig.tight_layout()
+    return fig, ax
+
+def tempvolts(hk, hrs=None, endtime=None):
     """Plot temperature and voltage for each receiver in a recarray of housekeeping records.
 
     The two plots are on the same axes, against time. One image per receiver is
@@ -248,22 +267,12 @@ def tempvolt(hk, hrs=None, endtime=None):
         if not mask.any():
             info('No records for RX{:02} in the given time period'.format(rx), thresh, 'to', endtime)
             continue
-        times = hk[mask].time.tolist()
-        volt = hk[mask].volt / 100
-        temp = hk[mask].temp
+        fig, ax = tempvolt(hk[mask])
         doy = mode(hk[mask].time.astype('M8[D]')).tolist()
         title = 'Rx{:02} {:%Y-%m-%d}: Voltage and Temperature'.format(rx, doy)
-        fig, ax = _gethouraxes((10, 3), title=title)
-        ax.scatter(times, volt, c='b')
-        ax.set_ylabel('Volts', color='b')
-        ax2 = ax.twinx()
-        ax2.plot(times, temp, c='r')
+        ax.set_title(title)
         if hrs is not None:
             ax.set_xlim(thresh.tolist(), endtime.tolist())
-        else:
-            ax.set_xlim(min(times), max(times))
-        ax2.set_ylabel('Temperature (°C)', color='r')
-        fig.tight_layout()
         fnames += ['TV-RX{:02}-{:%j}.png'.format(rx, doy)]
         fig.savefig(fnames[-1])
         plt.close(fig)

@@ -48,7 +48,7 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours = None, 
     old = os.getcwd()
     os.chdir(pdir)
     #plot.allrises(SNRs) # skip for now
-    tvs = plot.tempvolt(cleanhk(HK), hkhours, endtime)
+    tvs = plot.tempvolts(cleanhk(HK), hkhours, endtime)
     if symlink:
         for tv in tvs:
             _symlink(tv, tv[:7] + '.png')
