@@ -83,7 +83,7 @@ def bnx_prn(byt, badprns):
             raise ValueError('   Impossible satsys! Greater than 5 reserved.')
     # FIXME: KLUDGE: currently GPS PRNs are not being subtraced by 1 at the source
     #  (first value below should be 1)
-    corrections = [1 - badprns, 65, 120, 33, 201, 193, 0, 0]
+    corrections = [1 - badprns, 65, 120, 33, 201, 193]
     # GPS, add 1 for PRN
     # GLONASS, add 1 for slot #, return 64 + slot #
     # SBAS, add 120 for PRN
@@ -103,8 +103,9 @@ def verify(strm, msg):
     readcrc = strm.read(len(compcrc))
     assert len(readcrc) == len(compcrc)
     if compcrc != readcrc:
-        info('Bad checksum! Computed', compcrc, '\n'
-             '              Found   ', readcrc)
+        info('Bad checksum! Computed', compcrc.hex(), '\n'
+             '              Found   ', readcrc.hex())
+        raise ValueError('Bad checksum')
 
 def binex_to_weeksow(msg):
     """Convert 6-byte (millisecond) binex timestamp to a pair: GPS week, second of week.
