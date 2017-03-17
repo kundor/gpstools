@@ -205,10 +205,23 @@ def macformat(mac):
     hs = '{:016X}'.format(mac)
     return ':'.join(hs[i:i+4] for i in range(0, len(hs), 4))
 
-def hkreport(HK, file=None):
+def hkreport(HK, file=sys.stdout):
     """Print out the contents of housekeeping messages in the array HK."""
     for rec in HK:
-        print('Rx{0.rxid:02} {1:%x %X}  {2}  {3:10.5f}°E {4:9.5f}°N {5:8.3f}m  {6:.2f}V {0.temp:2}°C msgct:{0.msgct:5}  flags: {0.err:02X}'.format(rec, rec.time.tolist(), macformat(rec.mac), rec.lon/1e7, rec.lat/1e7, rec.alt/1000, rec.volt/100), file=file)
+        file.write('Rx{:02} '.format(rec.rxid))
+        try:
+            file.write('{:%x %X}'.format(rec.time.tolist()))
+        except ValueError:
+            file.write('{}'.format(rec.time))
+        file.write('  {}  {:10.5f}°E {:9.5f}°N {:8.3f}m  {:.2f}V {:2}°C msgct:{:5}  '
+                   'flags: {:02X}\n'.format(macformat(rec.mac),
+                                            rec.lon/1e7,
+                                            rec.lat/1e7,
+                                            rec.alt/1000,
+                                            rec.volt/100,
+                                            rec.temp,
+                                            rec.msgct,
+                                            rec.flags))
 
 def translate(fid):
     """Translate BINEX data to ASCII formats.
