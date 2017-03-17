@@ -12,7 +12,7 @@ from collections import defaultdict
 import numpy as np
 from snrstats import calcsnrstat, gensnrnp
 import plot
-from parser import reader, readall, hkreport
+from parser import reader, readall, hkreport, cleanhk
 from utility import info, debug
 import config
 
@@ -48,7 +48,7 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours = None, 
     old = os.getcwd()
     os.chdir(pdir)
     #plot.allrises(SNRs) # skip for now
-    tvs = plot.tempvolt(HK, hkhours, endtime)
+    tvs = plot.tempvolt(cleanhk(HK), hkhours, endtime)
     if symlink:
         for tv in tvs:
             _symlink(tv, tv[:7] + '.png')

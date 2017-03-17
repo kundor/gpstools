@@ -8,10 +8,11 @@ Created on Fri Mar 10 09:04:30 2017
 from collections import defaultdict
 import sys
 import numpy as np
-from binex import read_record, info
+from binex import read_record
 from ascii_read import gpstotsecgps, poslist, gpsweekgps
 from satpos import mvec, myinterp
 from coords import llh2xyz, get_ellipsoid_ht
+from utility import info, mode
 
 SNR_REC = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('snr', 'u2')])
 HK_REC = np.dtype([('rxid', 'u1'), ('time', 'M8[us]'), ('mac', 'u8'), ('lon', 'i4'),
@@ -128,7 +129,7 @@ def reader(fid):
             assignrec(HK, curh, vals)
             curh += 1
             if rxid not in rxloc:
-                if vals[1] > np.datetime64('now') + np.timedelta64(1, 'W'):
+                if vals[1] > np.datetime64('now') + np.timedelta64(1, 'h'):
                     info('Rx', rxid, ': Not using location from future time', vals[1])
                     continue
                 lon, lat, alt = vals[3:6]
@@ -158,6 +159,21 @@ def reader(fid):
         else:
             info('Unknown record {}:'.format(rid), vals.hex())
 
+def cleanhk(HK):
+    """Return HK masked to only sensible entries."""
+    macs = {}
+    for rx in np.unique(HK.rxid):
+        macs[rx] = mode(HK[HK.rxid == rx].mac)
+    macmask = np.array([h.mac == macs[h.rxid] for h in HK])
+    return HK[np.logical_and.reduce((0 <= HK.rxid, HK.rxid < 64,
+        np.datetime64('2001-01-01') <  HK.time, HK.time < np.datetime64('now') + np.timedelta64(1, 'h'),
+        macmask,
+        -180e7 <= HK.lon, HK.lon <= 360e7,
+        -90e7 <= HK.lat, HK.lat <= 90e7,
+        -1e6 < HK.alt, HK.alt < 9e6, # Highest ellipsoidal altitude on surface is Everest, 8850 m
+        0 < HK.volt, HK.volt < 500,
+        -90 < HK.temp, HK.temp < 60, # lowest/highest temperatures recorded
+        ))]
 
 def readall(fid):
     """Return all the records currently in fid.
