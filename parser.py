@@ -221,7 +221,7 @@ def hkreport(HK, file=sys.stdout):
                                             rec.volt/100,
                                             rec.temp,
                                             rec.msgct,
-                                            rec.flags))
+                                            rec.err))
 
 def translate(fid):
     """Translate BINEX data to ASCII formats.
