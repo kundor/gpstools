@@ -94,7 +94,8 @@ def reader(fid):
         try:
             rid, vals = read_record(fid)
         except EOFError:
-            yield {rxid: SNR[:curind[rxid]] for rxid, SNR in SNRs.items()}, HK[:curh]
+            sliced = {rxid: SNR[:curind[rxid]] for rxid, SNR in SNRs.items()}, HK[:curh]
+            fid = (yield sliced) or fid
             continue
         except ValueError as e:
             info(e)
