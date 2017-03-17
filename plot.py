@@ -308,14 +308,16 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
         plt.ioff()
         title = 'Rx{:02} {:%Y-%m-%d}: Number of satellites over {}°'.format(rxid, doy, minelev)
     else:
-        title = 'VAPR {:%Y-%m-%d}: Number of satellites'.format(doy)
+        title = 'VAPR {:%Y-%m-%d}: Number of satellites over {}°'.format(doy, minelev)
     fig, ax = _gethouraxes((10, 3), title=title, ylabel='Tracked satellites')
     ax.plot(time, numsats, '-o', ms=2)
     if hrs is not None:
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
         ax.set_xlim(min(time), max(time))
+    ax.yaxis.set_major_locator(mp.ticker.MaxNLocator(integer=True))
     ax.set_ylim(min(numsats) - 1, max(numsats)+1)
+    ax.tick_params(axis='y', labelleft='on', labelright='on')
     fig.tight_layout()
     if rxid:
         fname = 'NS-RX{:02}-{:%j}.png'.format(rxid, doy)
@@ -362,7 +364,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
         ax.set_xlim(min(time.tolist()), max(time.tolist()))
-    _setsnrlim(ax, pmeans)
+    #_setsnrlim(ax, pmeans)
     fig.tight_layout()
     if rxid:
         fname = 'AVG-RX{:02}-{:%j}.png'.format(rxid, doy)
