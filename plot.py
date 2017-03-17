@@ -346,6 +346,8 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
              'in the given time period', thresh, 'to', endtime)
         return
     time, idx = np.unique(snr.time, return_index=True)
+    idx.sort() # if the times aren't in order for some reason
+    time = snr.time[idx]
     doy = mode(time.astype('M8[D]')).tolist() # most common day
     idx = np.append(idx, len(snr))
     means = []
