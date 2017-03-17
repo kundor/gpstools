@@ -10,7 +10,12 @@ import numpy as np
 import config
 
 def stacknames():
-    return ':'.join(f.function for f in reversed(inspect.stack()[2:]) if 'gpstools' in f.filename)
+    istk = inspect.stack()
+    try:
+        end = ['<' in f.filename or '<' in f.function for f in istk].index(True)
+    except ValueError:
+        end = min(len(istk), 5)
+    return ':'.join(f.function for f in reversed(istk[2:end]))
 
 def info(*args, logfile=None):
     if logfile is None:
