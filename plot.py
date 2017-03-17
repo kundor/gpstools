@@ -246,6 +246,7 @@ def tempvolt(hk):
     if min(np.diff(ax.yaxis.get_major_locator()())) < 0.1:
         ax.yaxis.set_major_locator(mp.ticker.MultipleLocator(0.1))
     ax2 = ax.twinx()
+    ax2.set_position(ax.get_position()) # You'd think this would be automatic
     ax2.plot(times, temp, c='r')
     ax.set_xlim(min(times), max(times))
     ax2.set_ylabel('Temperature (°C)', color='r')
@@ -364,6 +365,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
     else:
         ax.set_xlim(min(time.tolist()), max(time.tolist()))
     _setsnrlim(ax, pmeans)
+    ax.set_ylim(config.SNR_MIN, max(pmeans))
     if rxid:
         fname = 'AVG-RX{:02}-{:%j}.png'.format(rxid, doy)
         fig.savefig(fname)
