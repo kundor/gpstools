@@ -84,9 +84,21 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours = None, 
         with open('rxlist.html', 'wt') as fid:
             for rxid in SNRs:
                 fid.write(rxline(rxid, HK))
-        updstr = time.strftime('%b %d %Y %H:%M:%S UTC', time.gmtime()) + time.strftime(' (%H:%M:%S %Z)')
-        with open('updatetime.txt', 'wt') as fid:
-            fid.write(updstr)
+        updatetime()
+
+
+def updatetime(append=''):
+    updstr = time.strftime('%b %d %Y %H:%M:%S UTC', time.gmtime()) + time.strftime(' (%H:%M:%S %Z)')
+    with open('updatetime.txt', 'wt') as fid:
+        fid.write(updstr + append)
+
+def report_failure(rectic, dattic, pdir=None):
+    """Record data failure in updatetime.txt"""
+    if pdir is None:
+        pdir = config.PLOTDIR
+    failstr = ' (No data received since {}, timestamped {})'.format(rectic, dattic)
+    with pushdir(pdir):
+        updatetime(failstr)
 
 def current_binex():
     return np.datetime64('now').tolist().strftime(config.BINEX_FILES)
@@ -110,7 +122,7 @@ def plotupdate(fname=None, handover=None):
     else:
         fid = open(fname, 'rb')
     olens = defaultdict(int)
-    otic = np.datetime64('2000-01-01', 'ms')
+    oldtic = rectic = dattic = np.datetime64('2000-01-01', 'ms')
     attempt = 0
     recgen = reader(fid)
     for SNRs, HK in recgen:
@@ -126,21 +138,24 @@ def plotupdate(fname=None, handover=None):
                     recgen.send(fid)
                     attempt = 0
                     continue
-                info('No new records at', tic, '. Giving up.')
-                break
+                info('No new records at', tic, '. Reporting.')
+                report_failure(rectic, dattic)
+                time.sleep(config.PLOT_IVAL / np.timedelta64(1, 's'))
             info('No new records at', tic, '. Sleeping', attempt*5)
             time.sleep(attempt*5)
             continue
         attempt = 0
+        rectic = tic
+        dattic = max(max(s[-1].time for s in SNRs.values()), HK[-1].time)
         debug('{:2} new records {} at'.format(sum(nlens.values()) - sum(olens.values()),
                                              [nlens[rx] - olens[rx] for rx in nlens]),
-              tic, 'timestamped', max(max(s[-1].time for s in SNRs.values()), HK[-1].time))
+              tic, 'timestamped', dattic)
         olens = nlens
-        if tic - otic > config.PLOT_IVAL:
+        if tic - oldtic > config.PLOT_IVAL:
             info('Starting plotting at', tic)
             makeplots(SNRs, HK)
             info('Done at', np.datetime64('now'))
-            otic = tic
+            oldtic = tic
         else:
             time.sleep(2)
     fid.close()
