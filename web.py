@@ -39,6 +39,16 @@ def format_stats(rxid, stat, statp):
           <td>({:.2f})</td>
         </tr>""".format(rxid, statp.min, stat.max, statp.mean, stat.mean, statp.std, stat.std)
 
+def rxline(rxid, HK):
+    """A list entry for the web page for the given receiver."""
+    lon = np.median(HK[HK.rxid == rxid].lon) / 1e7
+    lat = np.median(HK[HK.rxid == rxid].lat) / 1e7
+    alt = np.median(HK[HK.rxid == rxid].alt) / 1000
+    return """    <li>
+        RX{0:02}: <a href="#RX{0:02}-HK">HK</a> <a href="#RX{0:02}-SNR">SNR</a>
+        {1:.5f}&deg;W, {2:.5f}&deg;N, {3:.3f}m.
+        </li>""".format(rxid, lon, lat, alt)
+
 def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours = None, endtime=None):
     if pdir is None:
         pdir = config.PLOTDIR
@@ -72,6 +82,9 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours = None, 
             _symlink(avg, 'AVG' + suf)
     snrtab.close()
     os.replace('snrtab-new.html', 'snrtab.html')
+    with open('rxlist.html', 'wt') as fid:
+        for rxid in SNRs:
+            fid.write(rxline(rxid, HK))
     updstr = time.strftime('%b %d %Y %H:%M:%S UTC', time.gmtime()) + time.strftime(' (%H:%M:%S %Z)')
     with open('updatetime.txt', 'wt') as fid:
         fid.write(updstr)
