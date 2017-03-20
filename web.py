@@ -98,11 +98,14 @@ def after_midnight():
     now = np.datetime64('now')
     return np.timedelta64(0) < (now - now.astype('M8[D]')) < np.timedelta64(15, 'm')
 
-def plotupdate(fname=None):
+def plotupdate(fname=None, handover=None):
     """Follow stream and update web plot periodically.
 
-    If fname is given, follow that file, updating plots until it's exhausted.
-    Otherwise, use the current file and attempt handover at UTC midnight.
+    With no arguments, follow the current file and attempt handover at UTC midnight.
+    With handover=False, stop when the file is exhausted.
+    If fname is given, follow that file, updating plots until it's exhausted;
+    if handover=True, then attempt to switch to the current file (this only makes
+    sense if fname is yesterday's data.)
     """
     if fname is None:
         fid = open(current_binex(), 'rb')
@@ -118,11 +121,12 @@ def plotupdate(fname=None):
         if nlens == olens:
             attempt += 1
             if attempt > 6:
-                if fname is None and after_midnight():
+                if handover or (fname is None and handover is not False and after_midnight()):
                     info('No new records at', tic, '. Attempting handover.')
                     fid.close()
                     fid = open(current_binex(), 'rb')
                     recgen.send(fid)
+                    attempt = 0
                     continue
                 info('No new records at', tic, '. Giving up.')
                 break
