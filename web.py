@@ -8,7 +8,6 @@ Created on Wed Mar 15 11:54:05 2017
 import os
 import time
 import sys
-import time
 from collections import defaultdict
 import numpy as np
 from snrstats import calcsnrstat, gensnrnp
@@ -121,6 +120,7 @@ def plotupdate(fname=None, handover=None):
         fid = open(current_binex(), 'rb')
     else:
         fid = open(fname, 'rb')
+    ofile = os.path.abspath(fid.name)
     olens = defaultdict(int)
     oldtic = rectic = dattic = np.datetime64('2000-01-01', 'ms')
     attempt = 0
@@ -132,12 +132,13 @@ def plotupdate(fname=None, handover=None):
             attempt += 1
             if attempt > 6:
                 if handover or (fname is None and handover is not False and after_midnight()):
-                    info('No new records at', tic, '. Attempting handover.')
-                    fid.close()
-                    fid = open(current_binex(), 'rb')
-                    recgen.send(fid)
-                    attempt = 0
-                    continue
+                    if ofile != os.path.abspath(current_binex()):
+                        info('No new records at', tic, '. Attempting handover.')
+                        fid.close()
+                        fid = open(current_binex(), 'rb')
+                        recgen.send(fid)
+                        attempt = 0
+                        continue
                 info('No new records at', tic, '. Reporting.')
                 report_failure(rectic, dattic)
                 time.sleep(config.PLOT_IVAL / np.timedelta64(1, 's'))
