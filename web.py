@@ -136,6 +136,7 @@ def plotupdate(fname=None, handover=None):
                         info('No new records at', tic, '. Attempting handover.')
                         fid.close()
                         fid = open(current_binex(), 'rb')
+                        ofile = os.path.abspath(current_binex())
                         recgen.send(fid)
                         attempt = 0
                         continue
