@@ -14,7 +14,7 @@ import numpy as np
 from snrstats import calcsnrstat, gensnrnp
 import plot
 from parser import reader, readall, hkreport, cleanhk
-from utility import info, debug, mode
+from utility import info, debug, mode, pushdir
 import config
 
 def _symlink(src, dest):
@@ -56,39 +56,37 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours = None, 
         snrhours = config.PLOT_SNR_HOURS
     if hkhours is None:
         hkhours = config.PLOT_HK_HOURS
-    old = os.getcwd()
-    os.chdir(pdir)
-    #plot.allrises(SNRs) # skip for now
-    tvs = plot.tempvolts(cleanhk(HK), hkhours, endtime)
-    if symlink:
-        for tv in tvs:
-            _symlink(tv, tv[:7] + '.png')
-    day = mode(HK.time.astype('M8[D]'))
-    hkfile = day.tolist().strftime('HK_%j.%y.txt')
-    with open(hkfile, 'wt') as fid:
-        hkreport(HK, fid)
-    if symlink:
-        _symlink(hkfile, 'HK.txt')
-    snrtab = open('snrtab-new.html', 'wt')
-    for rxid, SNR in SNRs.items():
-        snrtab.write(format_stats(rxid, *calcsnrstat(gensnrnp(SNR))))
-        allsnr = plot.prn_snr(SNR, rxid, snrhours, endtime)
-        nsx = plot.numsats(SNR, rxid, minelev=10, hrs=hkhours, endtime=endtime)
-        avg = plot.meansnr(SNR, rxid, hkhours, endtime)
+    with pushdir(pdir):
+        #plot.allrises(SNRs) # skip for now
+        tvs = plot.tempvolts(cleanhk(HK), hkhours, endtime)
         if symlink:
-            suf = '-RX{:02}.png'.format(rxid)
-            _symlink(allsnr, 'ALLSNR' + suf)
-            _symlink(nsx, 'NS' + suf)
-            _symlink(avg, 'AVG' + suf)
-    snrtab.close()
-    os.replace('snrtab-new.html', 'snrtab.html')
-    with open('rxlist.html', 'wt') as fid:
-        for rxid in SNRs:
-            fid.write(rxline(rxid, HK))
-    updstr = time.strftime('%b %d %Y %H:%M:%S UTC', time.gmtime()) + time.strftime(' (%H:%M:%S %Z)')
-    with open('updatetime.txt', 'wt') as fid:
-        fid.write(updstr)
-    os.chdir(old)
+            for tv in tvs:
+                _symlink(tv, tv[:7] + '.png')
+        day = mode(HK.time.astype('M8[D]'))
+        hkfile = day.tolist().strftime('HK_%j.%y.txt')
+        with open(hkfile, 'wt') as fid:
+            hkreport(HK, fid)
+        if symlink:
+            _symlink(hkfile, 'HK.txt')
+        snrtab = open('snrtab-new.html', 'wt')
+        for rxid, SNR in SNRs.items():
+            snrtab.write(format_stats(rxid, *calcsnrstat(gensnrnp(SNR))))
+            allsnr = plot.prn_snr(SNR, rxid, snrhours, endtime)
+            nsx = plot.numsats(SNR, rxid, minelev=10, hrs=hkhours, endtime=endtime)
+            avg = plot.meansnr(SNR, rxid, hkhours, endtime)
+            if symlink:
+                suf = '-RX{:02}.png'.format(rxid)
+                _symlink(allsnr, 'ALLSNR' + suf)
+                _symlink(nsx, 'NS' + suf)
+                _symlink(avg, 'AVG' + suf)
+        snrtab.close()
+        os.replace('snrtab-new.html', 'snrtab.html')
+        with open('rxlist.html', 'wt') as fid:
+            for rxid in SNRs:
+                fid.write(rxline(rxid, HK))
+        updstr = time.strftime('%b %d %Y %H:%M:%S UTC', time.gmtime()) + time.strftime(' (%H:%M:%S %Z)')
+        with open('updatetime.txt', 'wt') as fid:
+            fid.write(updstr)
 
 def current_binex():
     return np.datetime64('now').tolist().strftime(config.BINEX_FILES)

@@ -34,6 +34,16 @@ def mode(arr):
     return vals[np.argmax(ct)]
 
 @contextmanager
+def pushdir(ndir):
+    """A context manager to change to the given directory, then change back when done."""
+    old = os.getcwd()
+    os.chdir(ndir)
+    try:
+        yield
+    finally:
+        os.chdir(old)
+
+@contextmanager
 def stdouttofile(file):
     """A decorator to redirect stdout within a function to the given filename."""
     with open(file, 'a') as f, redirect_stdout(f):
