@@ -373,7 +373,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
         ax.set_xlim(min(time.tolist()), max(time.tolist()))
-    _setsnrlim(ax, pmeans, True)
+    _setsnrlim(ax, pmeans) # add argument True to restrict y-range to observed values
     if rxid:
         fname = 'AVG-RX{:02}-{:%j}.png'.format(rxid, doy)
         fig.savefig(fname)
