@@ -2,7 +2,7 @@ import sys
 import numpy as np
 
 LOGFILE = sys.stderr
-DEBUG = True
+DEBUG = False
 
 BINEX_FILES="/data/VAPR/VB001/%Y/%j/data.bin"
 """Location of BINEX streams, in strftime format."""
