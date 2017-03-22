@@ -248,6 +248,11 @@ def _expandlim(minmax, ax):
         return
     ax.set_ylim(min(a0, y0), max(a1, y1))
 
+def _utclocallabel(ax):
+    """Put two-line labels in UTC and local time at x tick locations."""
+    times = [np.datetime64(t.replace(tzinfo=None)) for t in mp.dates.num2date(ax.get_xticks())]
+    ax.set_xticklabels(str(t)[11:16] + '\n' + np.datetime_as_string(t, timezone='local')[11:16]
+            for t in times)
 
 def tempvolt(hk, shareax=None):
     """Plot temperature and voltage from the recarray of HK records.
@@ -269,6 +274,7 @@ def tempvolt(hk, shareax=None):
     ax2.set_position(ax.get_position()) # You'd think this would be automatic
     ax2.plot(times, temp, c='r')
     ax.set_xlim(min(times), max(times))
+    _utclocallabel(ax)
     ax2.set_ylabel('Temperature (°C)', color='r')
     ax2.tick_params('y', colors='r')
     _expandlim(config.TEMP_RANGE, ax2)
@@ -340,9 +346,11 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
         ax.set_xlim(min(time), max(time))
+    _utclocallabel(ax)
     ax.yaxis.set_major_locator(mp.ticker.MaxNLocator(integer=True))
     ax.set_ylim(min(numsats) - 1, max(numsats)+1)
     ax.tick_params(axis='y', labelleft='on', labelright='on')
+    ax.grid(True)
     if rxid:
         fname = 'NS-RX{:02}-{:%j}.png'.format(rxid, doy)
         fig.savefig(fname)
@@ -390,7 +398,9 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
         ax.set_xlim(min(time.tolist()), max(time.tolist()))
+    _utclocallabel(ax)
     _setsnrlim(ax, pmeans) # add argument True to restrict y-range to observed values
+    ax.tick_params(axis='y', labelleft='on', labelright='on')
     if rxid:
         fname = 'AVG-RX{:02}-{:%j}.png'.format(rxid, doy)
         fig.savefig(fname)
