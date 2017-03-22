@@ -48,7 +48,7 @@ def rxline(rxid, HK):
         {1:.5f}&deg;W, {2:.5f}&deg;N, {3:.3f}m.
         </li>""".format(rxid, lon, lat, alt)
 
-def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours = None, endtime=None):
+def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, endtime=None):
     if pdir is None:
         pdir = config.PLOTDIR
     if snrhours is None:
@@ -175,7 +175,7 @@ def plotupdate(fname=None, handover=None, oldstate=None):
             olens = nlens
             if tic - oldtic > config.PLOT_IVAL:
                 info('Starting plotting at', tic)
-                makeplots(SNRs, HK)
+                makeplots(SNRs, HK, endtime=tic)
                 info('Done at', np.datetime64('now'))
                 oldtic = tic
             else:
