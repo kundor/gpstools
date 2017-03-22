@@ -262,9 +262,9 @@ def tempvolt(hk, shareax=None):
     ax.set_ylabel('Volts', color='b')
     ax.tick_params('y', colors='b')
     ax.yaxis.set_major_formatter(mp.ticker.FormatStrFormatter('%.1f'))
+    _expandlim(config.VOLT_RANGE, ax)
     if min(np.diff(ax.yaxis.get_major_locator()())) < 0.1:
         ax.yaxis.set_major_locator(mp.ticker.MultipleLocator(0.1))
-    _expandlim(config.VOLT_RANGE, ax)
     ax2 = ax.twinx()
     ax2.set_position(ax.get_position()) # You'd think this would be automatic
     ax2.plot(times, temp, c='r')
