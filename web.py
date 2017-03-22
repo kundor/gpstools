@@ -133,50 +133,54 @@ def plotupdate(fname=None, handover=None):
     oldtic = rectic = dattic = np.datetime64('2000-01-01', 'ms')
     attempt = 0
     recgen = reader(fid)
-    for SNRs, HK in recgen:
-        if yesterday:
-            info("Done prepopulating. Switching to today's file.")
-            fid.close()
-            fid = open(current_binex(), 'rb')
-            ofile = os.path.abspath(current_binex())
-            recgen.send(fid)
-            yesterday = False
-            continue
-        nlens = defaultdict(int, {rx: len(SNRs[rx]) for rx in SNRs}, hk=len(HK))
-        tic = np.datetime64('now')
-        if nlens == olens:
-            attempt += 1
-            if attempt > 6:
-                if handover or (fname is None and handover is not False and after_midnight()):
-                    if ofile != os.path.abspath(current_binex()):
-                        info('No new records at', tic, '. Attempting handover.')
-                        fid.close()
-                        fid = open(current_binex(), 'rb')
-                        ofile = os.path.abspath(current_binex())
-                        recgen.send(fid)
-                        attempt = 0
-                        continue
-                info('No new records at', tic, '. Reporting.')
-                report_failure(rectic, dattic)
-                time.sleep(config.PLOT_IVAL / np.timedelta64(1, 's'))
-            info('No new records at', tic, '. Sleeping', attempt*5)
-            time.sleep(attempt*5)
-            continue
-        attempt = 0
-        rectic = tic
-        dattic = max(max(s[-1].time for s in SNRs.values()), HK[-1].time)
-        debug('{:2} new records {} at'.format(sum(nlens.values()) - sum(olens.values()),
-                                             [nlens[rx] - olens[rx] for rx in nlens]),
-              tic, 'timestamped', dattic)
-        olens = nlens
-        if tic - oldtic > config.PLOT_IVAL:
-            info('Starting plotting at', tic)
-            makeplots(SNRs, HK)
-            info('Done at', np.datetime64('now'))
-            oldtic = tic
-        else:
-            time.sleep(2)
-    fid.close()
+    try:
+        for SNRs, HK in recgen:
+            if yesterday:
+                info("Done prepopulating. Switching to today's file.")
+                fid.close()
+                fid = open(current_binex(), 'rb')
+                ofile = os.path.abspath(current_binex())
+                recgen.send(fid)
+                yesterday = False
+                continue
+            nlens = defaultdict(int, {rx: len(SNRs[rx]) for rx in SNRs}, hk=len(HK))
+            tic = np.datetime64('now')
+            if nlens == olens:
+                attempt += 1
+                if attempt > 6:
+                    if handover or (fname is None and handover is not False and after_midnight()):
+                        if ofile != os.path.abspath(current_binex()):
+                            info('No new records at', tic, '. Attempting handover.')
+                            fid.close()
+                            fid = open(current_binex(), 'rb')
+                            ofile = os.path.abspath(current_binex())
+                            recgen.send(fid)
+                            attempt = 0
+                            continue
+                    info('No new records at', tic, '. Reporting.')
+                    report_failure(rectic, dattic)
+                    time.sleep(config.PLOT_IVAL / np.timedelta64(1, 's'))
+                info('No new records at', tic, '. Sleeping', attempt*5)
+                time.sleep(attempt*5)
+                continue
+            attempt = 0
+            rectic = tic
+            dattic = max(max(s[-1].time for s in SNRs.values()), HK[-1].time)
+            debug('{:2} new records {} at'.format(sum(nlens.values()) - sum(olens.values()),
+                                                 [nlens[rx] - olens[rx] for rx in nlens]),
+                  tic, 'timestamped', dattic)
+            olens = nlens
+            if tic - oldtic > config.PLOT_IVAL:
+                info('Starting plotting at', tic)
+                makeplots(SNRs, HK)
+                info('Done at', np.datetime64('now'))
+                oldtic = tic
+            else:
+                time.sleep(2)
+    except KeyboardInterrupt:
+        return SNRs, HK
+    finally:
+        fid.close()
 
 def usage():
     print("Usage:", sys.argv[0], "<file> [snr_hours] [hk_hours] [endtime]\n"
