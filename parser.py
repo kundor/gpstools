@@ -160,21 +160,32 @@ def reader(fid):
         else:
             info('Unknown record {}:'.format(rid), vals.hex())
 
+HK_RANGE = ((0, 63), # rxid
+            [np.datetime64('2001-01-01'), np.datetime64('now') + np.timedelta64(1, 'W')], # time
+            (0, 2**64 - 1), # mac
+            (-180e7, 360e7), # longitude * 1e7
+            (-90e7, 90e7), # latitude * 1e7
+            (-1e6, 9e6), # altitude (mm)
+            (0, 500), # voltage * 100
+            (-90, 60), # temp (°C)
+            (0, 2**16 - 1), # msgct
+            (0, 255)) # err
+
 def cleanhk(HK):
     """Return HK masked to only sensible entries."""
     macs = {}
     for rx in np.unique(HK.rxid):
         macs[rx] = mode(HK[HK.rxid == rx].mac)
     macmask = np.array([h.mac == macs[h.rxid] for h in HK])
-    return HK[np.logical_and.reduce((0 <= HK.rxid, HK.rxid < 64,
-        np.datetime64('2001-01-01') <  HK.time, HK.time < np.datetime64('now') + np.timedelta64(1, 'h'),
-        macmask,
-        -180e7 <= HK.lon, HK.lon <= 360e7,
-        -90e7 <= HK.lat, HK.lat <= 90e7,
-        -1e6 < HK.alt, HK.alt < 9e6, # Highest ellipsoidal altitude on surface is Everest, 8850 m
-        0 < HK.volt, HK.volt < 500,
-        -90 < HK.temp, HK.temp < 60, # lowest/highest temperatures recorded
-        ))]
+    HK_RANGE[1][1] = np.datetime64('now') + np.timedelta64(1, 'h')
+    return HK[np.logical_and.reduce([a <= HK[f] for (a, b), f in zip(HK_RANGE, HK_REC.names)]
+                                  + [HK[f] <= b for (a, b), f in zip(HK_RANGE, HK_REC.names)]
+                                  + [macmask])]
+
+def validhk(hkr):
+    """Is the given HK record good?"""
+    HK_RANGE[1][1] = np.datetime64('now') + np.timedelta64(1, 'h')
+    return all(a <= h <= b for (a, b), h in zip(HK_RANGE, hkr))
 
 def readall(fid):
     """Return all the records currently in fid.
