@@ -56,8 +56,8 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours = None, 
     if hkhours is None:
         hkhours = config.PLOT_HK_HOURS
     with pushdir(pdir):
-         with open('updatetime.txt', 'at') as fid:
-             fid.write('. Updating...')
+        with open('updatetime.txt', 'at') as fid:
+            fid.write('. Updating...')
         #plot.allrises(SNRs) # skip for now
         tvs = plot.tempvolts(cleanhk(HK), hkhours, endtime)
         if symlink:
