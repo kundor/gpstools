@@ -75,18 +75,54 @@ def addrecords(SNR, time, snrs, curi, cofns, rxloc, trans):
         curi += 1
     return curi
 
-def reader(fid):
+def rx_locations(HK):
+    """Return a dictionary of receiver locations determined from the housekeeping messages."""
+    HK = cleanhk(HK)
+    HK = HK[HK.lon != 0]
+    HK = HK[HK.lat != 0]
+    rxloc = {}
+    trans = {}
+    for rx in np.unique(HK.rxid):
+        lon = np.median(HK[HK.rxid == rx].lon) / 1e7
+        lat = np.median(HK[HK.rxid == rx].lat) / 1e7
+        alt = np.median(HK[HK.rxid == rx].alt) / 1000
+        if alt == 0:
+            info('Obtaining terrain altitude for RX{:02} from Google and Unavco.'.format(rx))
+            alt = get_ellipsoid_ht(lat, lon)
+        info("RX{:02} found at {}°E, {}°N, {} m.".format(rx, lon, lat, alt))
+        rxloc[rx] = llh2xyz(lat * np.pi / 180, lon * np.pi / 180, alt)
+        trans[rx] = enutrans(lat, lon)
+    return rxloc, trans
+
+def reader(fid, preSNRs=None, preHK=None):
     """A generator that yields all the available records from fid whenever the stream ends.
 
     After resuming, the next values are the arrays enlarged by subsequently received
     records (the entire arrays are returned each time, not just the new records).
     """
-    SNRs = defaultdict(lambda: np.recarray((1000,), dtype=SNR_REC))
+    snralloc = 10**6
+    hkalloc = 1000
+    SNRs = defaultdict(lambda: np.recarray((snralloc,), dtype=SNR_REC))
     curind = defaultdict(int) # how far we've filled the corresponding SNR array
-    rxloc = {} # for each rxid, its location, filled in when we get a HK record
-    trans = {} # for each rxid, a ENU translation matrix, filled in when location known
-    HK = np.recarray((1000,), dtype=HK_REC)
-    curh = 0
+    if preSNRs:
+        for rx, SNR in preSNRs.items():
+            rxlen = len(SNR)
+            if rxlen > snralloc:
+                newlen = int(rxlen*1.2)
+                SNRs[rx] = np.recarray((newlen,), dtype=SNR_REC)
+            SNRs[rx][:rxlen] = SNR
+            curind[rx] = rxlen
+    if preHK is None:
+        HK = np.recarray((hkalloc,), dtype=HK_REC)
+        curh = 0
+        rxloc = {} # for each rxid, its location, filled in when we get a HK record
+        trans = {} # for each rxid, a ENU translation matrix, filled in when location known
+    else:
+        curh = len(preHK)
+        rxloc, trans = rx_locations(preHK)
+        newlen = max(hkalloc, int(curh*1.2))
+        HK = np.recarray((newlen,), dtype=HK_REC)
+        HK[:curh] = preHK # copy so that we own the memory (we'll resize it)
     cofns = None # compute as soon as we find a good time record
     numtot, numempty, numearly, numnoloc = [defaultdict(int) for _ in range(4)]
     thisweek = gpsweekgps(np.datetime64('now'))
