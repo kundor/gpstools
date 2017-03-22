@@ -7,8 +7,9 @@ DEBUG = False
 BINEX_FILES="/data/VAPR/VB001/%Y/%j/data.bin"
 """Location of BINEX streams, in strftime format."""
 
-SNR_MIN = 20
-SNR_MAX = 56 # range to use for snr plots, to enable visual comparison between plots
+SNR_RANGE = (20, 56) # range to use for snr plots, to enable visual comparison between plots
+VOLT_RANGE = (3.0, 4.5) # range to use for voltage plots
+TEMP_RANGE = (-5, 35) # ... and temperature plots
 
 PLOTDIR='/usr/local/adm/config/apache/htdocs/i/vapr/VB001'
 PLOT_IVAL = np.timedelta64(5, 'm')

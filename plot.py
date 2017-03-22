@@ -45,7 +45,7 @@ def dorises(snrdata, prn):
     plt.tight_layout()
 
 def _setsnrlim(ax, snrs, restrict=False):
-    y0, y1 = config.SNR_MIN, config.SNR_MAX
+    y0, y1 = config.SNR_RANGE
     s0, s1 = min(snrs[snrs > 0]), max(snrs)
     if restrict:
         y0 = max(y0, s0)
@@ -166,12 +166,15 @@ def rises(el, sod, prn=None):
         riz.append([beg+1, peak, end])
     return riz
 
-def _gethouraxes(figsize, **kwargs):
+def _gethouraxes(figsize, shareax=None, **kwargs):
     """Return figure and axes set up for plotting against time, labeled HH:MM."""
     fig = plt.figure(figsize=figsize)
-    ax = fig.add_subplot(1, 1, 1, **kwargs)
-    ax.xaxis_date()
-    ax.xaxis.set_major_formatter(mp.dates.DateFormatter('%H:%M'))
+    if shareax is None:
+        ax = fig.add_subplot(1, 1, 1, **kwargs)
+        ax.xaxis_date()
+        ax.xaxis.set_major_formatter(mp.dates.DateFormatter('%H:%M'))
+    else:
+        ax = fig.add_subplot(1, 1, 1, sharex=shareax, sharey=shareax, **kwargs)
     #ax.set_xlabel('Time (UTC)') # To save space on stacked plots: we'll only label the bottom x-axis
     ax.set_position([0.07, 0.13, 0.88, 0.74]) # ensure the plots line up with eachother
     return fig, ax
@@ -237,7 +240,16 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True):
         return fname
     return fig
 
-def tempvolt(hk):
+def _expandlim(minmax, ax):
+    """Expand y-range to the given (y0, y1) (but don't shrink it.)"""
+    y0, y1 = minmax
+    a0, a1 = ax.get_ylim()
+    if a0 <= y0 and a1 >= y1:
+        return
+    ax.set_ylim(min(a0, y0), max(a1, y1))
+
+
+def tempvolt(hk, shareax=None):
     """Plot temperature and voltage from the recarray of HK records.
 
     Return a figure.
@@ -245,19 +257,21 @@ def tempvolt(hk):
     times = hk.time.tolist()
     volt = hk.volt / 100
     temp = hk.temp
-    fig, ax = _gethouraxes((10, 3))
+    fig, ax = _gethouraxes((10, 3), shareax)
     ax.scatter(times, volt, c='b')
     ax.set_ylabel('Volts', color='b')
     ax.tick_params('y', colors='b')
     ax.yaxis.set_major_formatter(mp.ticker.FormatStrFormatter('%.1f'))
     if min(np.diff(ax.yaxis.get_major_locator()())) < 0.1:
         ax.yaxis.set_major_locator(mp.ticker.MultipleLocator(0.1))
+    _expandlim(config.VOLT_RANGE, ax)
     ax2 = ax.twinx()
     ax2.set_position(ax.get_position()) # You'd think this would be automatic
     ax2.plot(times, temp, c='r')
     ax.set_xlim(min(times), max(times))
     ax2.set_ylabel('Temperature (°C)', color='r')
     ax2.tick_params('y', colors='r')
+    _expandlim(config.TEMP_RANGE, ax2)
     return fig, ax
 
 def tempvolts(hk, hrs=None, endtime=None):
@@ -271,6 +285,7 @@ def tempvolts(hk, hrs=None, endtime=None):
     plt.ioff()
     thresh, endtime = _thresh(hrs, endtime)
     fnames = []
+    ax = None
     for rx in np.unique(hk.rxid):
         mask = hk.rxid == rx
         if hrs is not None:
@@ -278,7 +293,7 @@ def tempvolts(hk, hrs=None, endtime=None):
         if not mask.any():
             info('No records for RX{:02} in the given time period'.format(rx), thresh, 'to', endtime)
             continue
-        fig, ax = tempvolt(hk[mask])
+        fig, ax = tempvolt(hk[mask], ax)
         doy = mode(hk[mask].time.astype('M8[D]')).tolist()
         title = 'Rx{:02} {:%Y-%m-%d}: Voltage and Temperature'.format(rx, doy)
         ax.set_title(title)
