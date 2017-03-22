@@ -258,6 +258,25 @@ def _utclocallabel(ax):
     xlabs[-1] = lastutc + ' (UTC)\n' + lastlocal + time.strftime(' (%Z)')
     ax.set_xticklabels(xlabs)
 
+def _localmidnight(ax):
+    """Put a line at local midnight on the x-axis.
+
+    X-axis should be labeled with matplotlib-style UTC dates, and is assumed
+    to span about 24 hours."""
+    x0, x1 = ax.get_xlim()
+    utc_hr = -(time.localtime().tm_gmtoff / 60 / 60) # local midnight in UTC hours
+    dfrac = utc_hr / 24 # fractional day when local midnight occurs
+    if dfrac > (x0 % 1):
+        midnt = floor(x0) + dfrac
+    elif dfrac < (x1 % 1):
+        midnt = floor(x1) + dfrac
+    elif floor(x1) - floor(x0) > 1:
+        midnt = floor(x0) + 1 + dfrac
+    else:
+        info('Local midnight did not occur in axis')
+        return
+    ax.axvline(midnt)
+
 def tempvolt(hk, shareax=None):
     """Plot temperature and voltage from the recarray of HK records.
 
@@ -279,6 +298,7 @@ def tempvolt(hk, shareax=None):
     ax2.plot(times, temp, c='r')
     ax.set_xlim(min(times), max(times))
     _utclocallabel(ax)
+    _localmidnight(ax)
     ax2.set_ylabel('Temperature (°C)', color='r')
     ax2.tick_params('y', colors='r')
     _expandlim(config.TEMP_RANGE, ax2)
