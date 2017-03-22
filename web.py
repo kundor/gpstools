@@ -111,7 +111,7 @@ def after_midnight():
     now = np.datetime64('now')
     return np.timedelta64(0) < (now - now.astype('M8[D]')) < np.timedelta64(15, 'm')
 
-def plotupdate(fname=None, handover=None, oldvals=None):
+def plotupdate(fname=None, handover=None, oldstate=None):
     """Follow stream and update web plot periodically.
 
     With no arguments, follow the current file and attempt handover at UTC midnight.
@@ -121,7 +121,9 @@ def plotupdate(fname=None, handover=None, oldvals=None):
     sense if fname is yesterday's data.)
     """
     yesterday = False
-    if fname is None and oldvals is None and handover is not False:
+    if oldstate:
+        recgen, fid = oldstate
+    elif fname is None and handover is not False:
         yesterday = np.datetime64('now') - np.timedelta64(1, 'D')
         fid = open(current_binex(yesterday), 'rb')
     elif fname is None:
@@ -132,9 +134,7 @@ def plotupdate(fname=None, handover=None, oldvals=None):
     olens = defaultdict(int)
     oldtic = rectic = dattic = np.datetime64('2000-01-01', 'ms')
     attempt = 0
-    if oldvals:
-        recgen = reader(fid, *oldvals)
-    else:
+    if oldstate is None:
         recgen = reader(fid)
     try:
         for SNRs, HK in recgen:
@@ -181,9 +181,7 @@ def plotupdate(fname=None, handover=None, oldvals=None):
             else:
                 time.sleep(2)
     except KeyboardInterrupt:
-        return SNRs, HK
-    finally:
-        fid.close()
+        return recgen, fid
 
 def usage():
     print("Usage:", sys.argv[0], "<file> [snr_hours] [hk_hours] [endtime]\n"
