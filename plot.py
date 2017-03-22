@@ -176,7 +176,7 @@ def _gethouraxes(figsize, shareax=None, **kwargs):
     else:
         ax = fig.add_subplot(1, 1, 1, sharex=shareax, sharey=shareax, **kwargs)
     #ax.set_xlabel('Time (UTC)') # To save space on stacked plots: we'll only label the bottom x-axis
-    ax.set_position([0.07, 0.13, 0.88, 0.74]) # ensure the plots line up with eachother
+    ax.set_position([0.06, 0.14, 0.89, 0.75]) # ensure the plots line up with eachother
     return fig, ax
 
 def _thresh(hrs, endtime):
