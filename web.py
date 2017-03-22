@@ -99,8 +99,10 @@ def report_failure(rectic, dattic, pdir=None):
     with pushdir(pdir):
         updatetime(failstr)
 
-def current_binex():
-    return np.datetime64('now').tolist().strftime(config.BINEX_FILES)
+def current_binex(time=None):
+    if time is None:
+        time = np.datetime64('now')
+    return time.tolist().strftime(config.BINEX_FILES)
 
 def after_midnight():
     """True if current time is within 15 minutes after UTC midnight."""
@@ -116,7 +118,11 @@ def plotupdate(fname=None, handover=None):
     if handover=True, then attempt to switch to the current file (this only makes
     sense if fname is yesterday's data.)
     """
-    if fname is None:
+    yesterday = False
+    if fname is None and handover is not False:
+        yesterday = np.datetime64('now') - np.timedelta64(1, 'D')
+        fid = open(current_binex(yesterday), 'rb')
+    elif fname is None:
         fid = open(current_binex(), 'rb')
     else:
         fid = open(fname, 'rb')
@@ -126,6 +132,14 @@ def plotupdate(fname=None, handover=None):
     attempt = 0
     recgen = reader(fid)
     for SNRs, HK in recgen:
+        if yesterday:
+            info("Done prepopulating. Switching to today's file.")
+            fid.close()
+            fid = open(current_binex(), 'rb')
+            ofile = os.path.abspath(current_binex())
+            recgen.send(fid)
+            yesterday = False
+            continue
         nlens = defaultdict(int, {rx: len(SNRs[rx]) for rx in SNRs}, hk=len(HK))
         tic = np.datetime64('now')
         if nlens == olens:
