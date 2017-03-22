@@ -1,6 +1,7 @@
 from math import floor, ceil, pi
 import os
 from contextlib import suppress
+import time
 import numpy as np
 import matplotlib as mp
 mp.use('Agg') # non-interactive backend, allows importing without crashing X-less ipython
@@ -251,8 +252,11 @@ def _expandlim(minmax, ax):
 def _utclocallabel(ax):
     """Put two-line labels in UTC and local time at x tick locations."""
     times = [np.datetime64(t.replace(tzinfo=None)) for t in mp.dates.num2date(ax.get_xticks())]
-    ax.set_xticklabels(str(t)[11:16] + '\n' + np.datetime_as_string(t, timezone='local')[11:16]
-            for t in times)
+    xlabs = [str(t)[11:16] + '\n' + np.datetime_as_string(t, timezone='local')[11:16]
+            for t in times]
+    lastutc, lastlocal = xlabs[-1].splitlines()
+    xlabs[-1] = lastutc + ' (UTC)\n' + lastlocal + time.strftime(' (%Z)')
+    ax.set_xticklabels(xlabs)
 
 def tempvolt(hk, shareax=None):
     """Plot temperature and voltage from the recarray of HK records.
