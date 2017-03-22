@@ -248,6 +248,7 @@ def tempvolt(hk):
     fig, ax = _gethouraxes((10, 3))
     ax.scatter(times, volt, c='b')
     ax.set_ylabel('Volts', color='b')
+    ax.tick_params('y', colors='b')
     ax.yaxis.set_major_formatter(mp.ticker.FormatStrFormatter('%.1f'))
     if min(np.diff(ax.yaxis.get_major_locator()())) < 0.1:
         ax.yaxis.set_major_locator(mp.ticker.MultipleLocator(0.1))
@@ -256,6 +257,7 @@ def tempvolt(hk):
     ax2.plot(times, temp, c='r')
     ax.set_xlim(min(times), max(times))
     ax2.set_ylabel('Temperature (°C)', color='r')
+    ax2.tick_params('y', colors='r')
     return fig, ax
 
 def tempvolts(hk, hrs=None, endtime=None):
