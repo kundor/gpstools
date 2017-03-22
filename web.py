@@ -111,7 +111,7 @@ def after_midnight():
     now = np.datetime64('now')
     return np.timedelta64(0) < (now - now.astype('M8[D]')) < np.timedelta64(15, 'm')
 
-def plotupdate(fname=None, handover=None):
+def plotupdate(fname=None, handover=None, oldvals=None):
     """Follow stream and update web plot periodically.
 
     With no arguments, follow the current file and attempt handover at UTC midnight.
@@ -121,7 +121,7 @@ def plotupdate(fname=None, handover=None):
     sense if fname is yesterday's data.)
     """
     yesterday = False
-    if fname is None and handover is not False:
+    if fname is None and oldvals is None and handover is not False:
         yesterday = np.datetime64('now') - np.timedelta64(1, 'D')
         fid = open(current_binex(yesterday), 'rb')
     elif fname is None:
@@ -132,7 +132,10 @@ def plotupdate(fname=None, handover=None):
     olens = defaultdict(int)
     oldtic = rectic = dattic = np.datetime64('2000-01-01', 'ms')
     attempt = 0
-    recgen = reader(fid)
+    if oldvals:
+        recgen = reader(fid, *oldvals)
+    else:
+        recgen = reader(fid)
     try:
         for SNRs, HK in recgen:
             if yesterday:
