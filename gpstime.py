@@ -31,6 +31,7 @@ import time
 from warnings import warn
 from collections.abc import Sequence
 from numbers import Number
+import numpy as np
 from utility import info
 
 
@@ -47,31 +48,43 @@ def dhours(hrs):
     """Convenience function: returns timedelta of given # of hours."""
     return timedelta(hours=hrs)
 
-def getutctime(dt=None, dtclass=datetime, tz=timezone.utc):
-    """Convert time to a UTC-aware datetime object.
+def getutctime(dt=None, tz=timezone.utc):
+    """Convert time to a UTC-aware datetime object, or naive if tz=None.
 
     Accepts datetime, struct_time, tuple (Y,M,D,[H,M,S,μS]), tuple (GPS week,
-    GPS second of week) or POSIX timestamp.
-    Input is assumed to already be UTC unless the timezone is included (aware
+    GPS second of week), numpy datetime64, or POSIX timestamp.
+    Input is assumed to already be in desired timezone unless the timezone is included (aware
     datetime objects and struct_times).
     """
-    if dt is None:
-        return dtclass.now(tz)
+    if dt is None and tz:
+        return datetime.now(tz)
+    elif dt is None:
+        return datetime.utcnow()
+    elif isinstance(dt, np.datetime64):
+        return dt.tolist().replace(tzinfo=tz)
     elif isinstance(dt, time.struct_time):
-        return dtclass.fromtimestamp(time.mktime(dt), tz)
+        nt = datetime(*dt[:6])
+        if dt.tm_gmtoff is not None:
+            nt -= timedelta(seconds=dt.tm_gmtoff)
+        if tz:
+            return nt.replace(tzinfo=timezone.utc).astimezone(tz)
+        return nt
     elif isinstance(dt, Sequence) and len(dt) == 2: # list or tuple: GPS Week, GPS second of week
-        gt = gpsdatetime() + timedelta(weeks=dt[0], seconds=dt[1])
-        return gt.astimezone(tz)
+        gt = GPSepoch + timedelta(weeks=dt[0], seconds=dt[1])
+        if tz:
+            return gt.astimezone(tz)
+        return gt.replace(tzinfo=None)
     elif isinstance(dt, Sequence): # list or tuple: Year, Month, Day, H, M, S, μS
-        return dtclass(*dt, tzinfo=tz)
+        return datetime(*dt, tzinfo=tz)
     elif isinstance(dt, Number):
-        return dtclass.fromtimestamp(dt, tz)
+        return datetime.fromtimestamp(dt, tz)
     elif isnaive(dt):
         return dt.replace(tzinfo=tz)
-    elif isinstance(dt, dtclass):
+    elif isinstance(dt, datetime) and tz:
         return dt.astimezone(tz)
+    elif isinstance(dt, datetime):
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
     raise ValueError("Don't know how to interpret this as time")
-
 
 def gpsweek(dt):
     """Given aware datetime, return GPS week number."""
@@ -281,11 +294,6 @@ class TAIOffset(UTCOffset):
 
 taitz = TAIOffset()
 gpstz = TAIOffset(timedelta(seconds=-19), 'GPS')
-
-def getgpstime(dt=None, tz=gpstz):
-    if isinstance(dt, datetime) and not isinstance(dt, gpsdatetime):
-        return gpsdatetime.copydt(dt, tz)
-    return getutctime(dt, gpsdatetime, tz)
 
 def taioffset(dt):
     if isinstance(dt.tzinfo, TAIOffset):
