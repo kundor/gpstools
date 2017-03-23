@@ -316,6 +316,7 @@ def tempvolts(hk, hrs=None, endtime=None):
     plt.ioff()
     thresh, endtime = _thresh(hrs, endtime)
     fnames = []
+    figs = []
     ax = None
     for rx in np.unique(hk.rxid):
         mask = hk.rxid == rx
@@ -330,8 +331,11 @@ def tempvolts(hk, hrs=None, endtime=None):
         ax.set_title(title)
         if hrs is not None:
             ax.set_xlim(thresh.tolist(), endtime.tolist())
+        figs += [fig]
         fnames += ['TV-RX{:02}-{:%j}.png'.format(rx, doy)]
-        fig.savefig(fnames[-1])
+    # Wait to save them, in case the shared axes are resized
+    for fig, fname in zip(figs, fnames):
+        fig.savefig(fname)
         plt.close(fig)
     return fnames
 
