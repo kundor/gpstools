@@ -417,6 +417,8 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None):
         title = 'Rx{:02} {:%Y-%m-%d}: Mean SNR'.format(rxid, doy)
     else:
         title = 'VAPR {:%Y-%m-%d}: Mean SNR'.format(doy)
+    if minelev:
+        title += ' over {}°'.format(minelev)
     fig, ax = _gethouraxes((10, 3), title=title, ylabel='Mean SNR (dB-Hz)')
     ax.scatter(time.tolist(), means, s=2, c='b', edgecolors='face')
     pmeans = np.array(pmeans)
