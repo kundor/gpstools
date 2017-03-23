@@ -383,7 +383,7 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
         return fname
     return fig
 
-def meansnr(snr, rxid=None, hrs=None, endtime=None):
+def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None):
     """Plot mean snr vs. time from a recarray of SNR records.
 
     If rxid is given, an image is written out in the current directory, named
@@ -392,6 +392,8 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None):
     if hrs is not None:
         thresh, endtime = _thresh(hrs, endtime)
         snr = snr[snr.time > thresh]
+    if minelev:
+        snr = snr[snr.el > minelev]
     if not len(snr):
         info('No records', 'for RX{:02}'.format(rxid) if rxid else '',
              'in the given time period', thresh, 'to', endtime)

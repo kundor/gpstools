@@ -74,7 +74,7 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, en
             snrtab.write(format_stats(rxid, *calcsnrstat(gensnrnp(SNR))))
             allsnr = plot.prn_snr(SNR, rxid, snrhours, endtime)
             nsx = plot.numsats(SNR, rxid, minelev=10, hrs=hkhours, endtime=endtime)
-            avg = plot.meansnr(SNR, rxid, hkhours, endtime)
+            avg = plot.meansnr(SNR, rxid, hkhours, endtime, minelev=10)
             if symlink:
                 suf = '-RX{:02}.png'.format(rxid)
                 _symlink(allsnr, 'ALLSNR' + suf)
