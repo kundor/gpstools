@@ -1,8 +1,9 @@
 import re
 from math import cos, sin, pi
+from datetime import datetime, timezone
 import numpy as np
 from utility import fileread, info
-from gpstime import gpsdatetime
+from gpstime import GPSepoch
 
 __all__ = ['readsp3', 'satpos', 'mvec', 'coef_fn']
 
@@ -57,8 +58,9 @@ def _gps_second(epline):
 
     The value is a Python float, which has a resolution of roughly one microsecond
     when the value is around a billion (ca. 2016)"""
-    dt = gpsdatetime.strptime(epline[:29], "*  %Y %m %d %H %M %S.%f")
-    return (dt - gpsdatetime()).total_seconds()
+    dt = datetime.strptime(epline[:29], "*  %Y %m %d %H %M %S.%f")
+    dt = dt.replace(tzinfo=timezone.utc)
+    return (dt - GPSepoch).total_seconds()
 
 def _addpos(rec, pline):
     prn = pline[1:4]
