@@ -145,7 +145,7 @@ def reader(fid, preSNRs=None, preHK=None):
                 continue
             time = weeksow_to_np(*weeksow)
             if numempty[rxid] or numearly[rxid]:
-                info("Skipped {} records ({} empty, {} early) at {:%H:%M:%S}.".format(
+                info("Skipped {:2} records ({:2} empty, {:2} early) at {:%H:%M:%S}.".format(
                         numtot[rxid], numempty[rxid], numearly[rxid], time.tolist()))
                 numtot[rxid] = numempty[rxid] = numearly[rxid] = 0
             if rxid not in rxloc:
