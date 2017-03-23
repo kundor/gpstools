@@ -1,10 +1,6 @@
 # Created by Nick Matteo <kundor@kundor.org> June 9, 2009
-"""Timezones (tzinfo inheritors) and utility functions useful for GPS work.
+"""Utility time functions useful for GPS work.
 
-UTCOffset(timedelta offset) is a time zone at a constant offset from UTC.
-`utctz' is an instantiation of UTCOffset with no offset.
-TAIOffset(timedelta offset) is a time zone at a constant offset from TAI.
-`gpstz' is an instantation of TAIOffset with offset = 19 s.
 LeapSeconds is a class providing a dictionary of UTC datetimes and
 corresponding leapsecond offsets from TAI.
 LeapSeconds.update() is a class method to update the leap seconds information.
@@ -26,7 +22,7 @@ import os
 from os import path
 from urllib.request import urlopen
 from urllib.error import URLError
-from datetime import datetime, timedelta, timezone, tzinfo as TZInfo
+from datetime import datetime, timedelta, timezone
 import time
 from warnings import warn
 from collections.abc import Sequence
@@ -38,7 +34,28 @@ from utility import info
 URL1 = 'http://maia.usno.navy.mil/ser7/tai-utc.dat'
 URL2 = 'http://hpiers.obspm.fr/iers/bul/bulc/UTC-TAI.history'
 
-GPSepoch = datetime(1980, 1, 6, 0, 0, 0, 0, timezone.utc)
+GPSepoch = np.datetime64('1980-01-06', 'us')
+GPSepochdt = datetime(1980, 1, 6, 0, 0, 0, 0, timezone.utc)
+
+def gpsweekgps(ndt):
+    """GPS week number of a numpy datetime64 in GPS time."""
+    return int((ndt - GPSepoch) / np.timedelta64(1, 'W'))
+
+def gpsweekutc(ndt):
+    """Compute GPS week number of a numpy datetime64 in UTC time."""
+    return gpsweekgps(ndt + leapsecs(ndt))
+
+def gpstotsecgps(ndt):
+    """GPS seconds since epoch for a numpy datetime64 in GPS time."""
+    return (ndt - GPSepoch) / np.timedelta64(1, 's')
+
+def gpssowgps(ndt):
+    """GPS second of week of a numpy datetime64 in GPS time."""
+    return gpstotsecgps(ndt) % (60*60*24*7)
+
+def gpssowutc(ndt):
+    """GPS second of week of a numpy datetime64 in UTC time."""
+    return gpssowgps(ndt + leapsecs(ndt))
 
 def isnaive(dt):
     """Return true if input is a naive datetime."""
@@ -70,7 +87,7 @@ def getutctime(dt=None, tz=timezone.utc):
             return nt.replace(tzinfo=timezone.utc).astimezone(tz)
         return nt
     elif isinstance(dt, Sequence) and len(dt) == 2: # list or tuple: GPS Week, GPS second of week
-        gt = GPSepoch + timedelta(weeks=dt[0], seconds=dt[1])
+        gt = GPSepochdt + timedelta(weeks=dt[0], seconds=dt[1])
         if tz:
             return gt.astimezone(tz)
         return gt.replace(tzinfo=None)
@@ -90,7 +107,7 @@ def gpsweek(dt):
     """Given aware datetime, return GPS week number."""
     if not isinstance(dt.tzinfo, TAIOffset):
         dt += timedelta(seconds=gpsleapsecsutc(dt))
-    return int((dt - GPSepoch) / timedelta(weeks=1))
+    return int((dt - GPSepochdt) / timedelta(weeks=1))
 
 def _dow(dt):
     return dt.isoweekday() % 7
@@ -243,53 +260,10 @@ def leapsecstai(tai):
     """# of TAI-UTC leapseconds at TAI datetime."""
     return leapsecs(tai, lambda l, dt : leapseconds[l] <= (dt - l).total_seconds())
 
-class UTCOffset(TZInfo):
-    """UTC: Coordinated Universal Time; with optional constant offset"""
+def leapsecsnp(ndt):
+    """GPS leap seconds at a numpy datetime64 in UTC time, as timedelta64.
 
-    def __init__(self, offset=timedelta(0), name=None):
-        self.offset = offset
-        if name is None:
-            end = 1
-            if offset.seconds % 60:  # not an even minute
-                end = 3
-            elif offset.seconds % 3600:  # not an even hour
-                end = 2
-            if offset > timedelta(0):
-                name = 'UTC + ' + str(offset).split(':')[0:end].join(':')
-            elif offset < timedelta(0):
-                name = 'UTC - ' + str(-offset).split(':')[0:end].join(':')
-            else:
-                name = 'UTC'
-        self.name = name
-
-    def utcoffset(self, dt):
-        return self.offset
-    def dst(self, dt):
-        return timedelta(0)
-    def tzname(self, dt):
-        return self.name
-    def __str__(self):
-        return self.name + ' (datetime.tzinfo timezone)'
-
-utctz = UTCOffset()
-
-class TAIOffset(UTCOffset):
-    """TAI: International Atomic Time.  utcoffset() is number of leap seconds."""
-    # For GPS we deal with TAI(USNO) and UTC(USNO).
-
-    def __init__(self, offset=timedelta(0), name='TAI'):
-        self.offset = offset
-        self.name = name
-
-    def utcoffset(self, dt):
-        if dt.tzinfo in (utctz, timezone.utc):
-            off = leapsecsutc(dt)
-        else:
-            off = leapsecstai(dt - self.offset)
-        return timedelta(seconds=off) + self.offset
-
-    def fromutc(self, dt):
-        """Given `dt' in UTC, return the same time in this timezone."""
-        return dt + self.utcoffset(dt.replace(tzinfo=utctz))
-
-gpstz = TAIOffset(timedelta(seconds=-19), 'GPS')
+    Doesn't work for dates before 1972.
+    """
+    ls = leapseconds[max(l for l in leapseconds if l <= ndt)] - 19
+    return np.timedelta64(int(ls), 's')

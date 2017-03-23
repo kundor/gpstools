@@ -9,7 +9,8 @@ from collections import defaultdict
 import sys
 import numpy as np
 from binex import read_record
-from ascii_read import gpstotsecgps, poslist, gpsweekgps
+from ascii_read import poslist
+from gpstime import gpstotsecgps, gpsweekgps
 from satpos import mvec, myinterp
 from coords import llh2xyz, get_ellipsoid_ht
 from utility import info, mode

@@ -7,8 +7,8 @@ import matplotlib as mp
 mp.use('Agg') # non-interactive backend, allows importing without crashing X-less ipython
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D #analysis:ignore
-from ascii_read import gpssowgps
-from utility import info, debug, mode
+from gpstime import gpssowgps
+from utility import info, mode
 import config
 
 def posneg(arr):

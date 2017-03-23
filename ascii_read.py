@@ -32,7 +32,7 @@ from numpy import sin, cos
 #import glob
 import re
 from coords import xyz2llh
-from gpstime import leapseconds
+from gpstime import leapsecsnp, gpstotsecgps
 from gpsazel import satcoeffs, mvec
 from fetchnav import getsp3file
 from utility import info
@@ -74,36 +74,6 @@ trans = np.array([[-sin(lon), -sin(lat)*cos(lon), cos(lat)*cos(lon)],
                   [ 0,         cos(lat),          sin(lat)]])
 
 #%% Time stuff
-GPSepoch = np.datetime64('1980-01-06', 'us')
-
-def leapsecs(ndt):
-    """GPS leap seconds at a numpy datetime64 in UTC time, as timedelta64.
-
-    Doesn't work for dates before 1972.
-    """
-    ls = leapseconds[max(l for l in leapseconds if l <= ndt)] - 19
-    return np.timedelta64(int(ls), 's')
-
-def gpsweekgps(ndt):
-    """GPS week number of a numpy datetime64 in GPS time."""
-    return int((ndt - GPSepoch) / np.timedelta64(1, 'W'))
-
-def gpsweekutc(ndt):
-    """Compute GPS week number of a numpy datetime64 in UTC time."""
-    return gpsweekgps(ndt + leapsecs(ndt))
-
-def gpstotsecgps(ndt):
-    """GPS seconds since epoch for a numpy datetime64 in GPS time."""
-    return (ndt - GPSepoch) / np.timedelta64(1, 's')
-
-def gpssowgps(ndt):
-    """GPS second of week of a numpy datetime64 in GPS time."""
-    return gpstotsecgps(ndt) % (60*60*24*7)
-
-def gpssowutc(ndt):
-    """GPS second of week of a numpy datetime64 in UTC time."""
-    return gpssowgps(ndt + leapsecs(ndt))
-
 def nptime(lin):
     """Convert first two fields into a numpy datetime64[us]
 
@@ -335,7 +305,7 @@ def makearray(lineiter):
     SNR = np.empty(approxnumrec, dtype=rec) # an estimate of the number of records...
     line = next(lineiter)
     time0 = nptime(line)
-    leaps = leapsecs(time0)
+    leaps = leapsecsnp(time0)
     pl, epoch = poslist(time0 + leaps)
     cofns = satcoeffs(pl)
     curi = addrecords(SNR, line, 0, leaps, cofns)
