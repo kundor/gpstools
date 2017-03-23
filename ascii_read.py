@@ -272,17 +272,14 @@ def readsp3(sp3file):
 def poslist(time):
     """Return an array of sp3 satellite positions for the day(s) around the given time."""
     min15 = np.timedelta64(15, 'm')
-    week = gpsweekgps(time)
-    sow = gpssowgps(time)
-    pl, epoch = readsp3(getsp3file((week, sow)))
+    pl, epoch = readsp3(getsp3file(time))
     endtime = epoch + min15*len(pl)
     if endtime - time < np.timedelta64(2, 'h'):
         gtime = min(endtime + np.timedelta64(4, 'h'),
                     np.datetime64('now', 'us') + np.timedelta64(8, 'h'))
-        pl, epoch = readsp3(getsp3file((gpsweekgps(gtime), gpssowgps(gtime))))
+        pl, epoch = readsp3(getsp3file(gtime))
     if time - epoch < np.timedelta64(2, 'h'):
-        pl0, epoch0 = readsp3(getsp3file((week, sow - 60*60*12)))
-# note: negative seconds of week will work fine
+        pl0, epoch0 = readsp3(getsp3file(time - np.timedelta64(12, 'h')))
         if epoch != epoch0 + len(pl0)*min15:
             info("Difference between sp3 files is not 900 seconds.")
 # TODO: when dealing with ultrarapid files, we may have problems with this
