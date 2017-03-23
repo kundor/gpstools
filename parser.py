@@ -20,6 +20,32 @@ HK_REC = np.dtype([('rxid', 'u1'), ('time', 'M8[us]'), ('mac', 'u8'), ('lon', 'i
                    ('lat', 'i4'), ('alt', 'i4'), ('volt', 'u2'), ('temp', 'i2'),
                    ('msgct', 'u2'), ('err', 'u1')])
 GPSepoch = np.datetime64('1980-01-06', 'us')
+SNR_ALLOC = 10**6 # how much to preallocate for these types
+HK_ALLOC = 1000
+
+class GrowArray:
+    """Allows appending to a numpy recarray, reallocating as necessary."""
+    def __init__(self, alloc, dtype, initarr=None):
+        if initarr:
+            self.curind = len(initarr)
+            alloc = max(alloc, int(self.curind * 1.2))
+            self.arr = np.recarray((alloc,), dtype=dtype)
+            self.arr[:self.curind] = initarr # copy so that we own the memory (we'll resize it)
+        else:
+            self.curind = 0
+            self.arr = np.recarray((alloc,), dtype=dtype)
+
+    def append(self, val):
+        try:
+            self.arr[self.curind] = val
+        except IndexError:
+            newlen = int(len(self.arr) * 1.2)
+            self.arr.resize((newlen,), refcheck=False)
+            self.arr[self.curind] = val
+        self.curind += 1
+
+    def sliced(self):
+        return self.arr[:self.curind]
 
 def allcoeffs(poslist, epoch, n=5):
     """Return fitted coefficients for poslist an N*3 numpy array of ECEF locations
@@ -101,27 +127,25 @@ def reader(fid, preSNRs=None, preHK=None):
     After resuming, the next values are the arrays enlarged by subsequently received
     records (the entire arrays are returned each time, not just the new records).
     """
-    snralloc = 10**6
-    hkalloc = 1000
-    SNRs = defaultdict(lambda: np.recarray((snralloc,), dtype=SNR_REC))
+    SNRs = defaultdict(lambda: np.recarray((SNR_ALLOC,), dtype=SNR_REC))
     curind = defaultdict(int) # how far we've filled the corresponding SNR array
     if preSNRs:
         for rx, SNR in preSNRs.items():
             rxlen = len(SNR)
-            if rxlen > snralloc:
+            if rxlen > SNR_ALLOC:
                 newlen = int(rxlen*1.2)
                 SNRs[rx] = np.recarray((newlen,), dtype=SNR_REC)
             SNRs[rx][:rxlen] = SNR
             curind[rx] = rxlen
     if preHK is None:
-        HK = np.recarray((hkalloc,), dtype=HK_REC)
+        HK = np.recarray((HK_ALLOC,), dtype=HK_REC)
         curh = 0
         rxloc = {} # for each rxid, its location, filled in when we get a HK record
         trans = {} # for each rxid, a ENU translation matrix, filled in when location known
     else:
         curh = len(preHK)
         rxloc, trans = rx_locations(preHK)
-        newlen = max(hkalloc, int(curh*1.2))
+        newlen = max(HK_ALLOC, int(curh*1.2))
         HK = np.recarray((newlen,), dtype=HK_REC)
         HK[:curh] = preHK # copy so that we own the memory (we'll resize it)
     cofns = None # compute as soon as we find a good time record
