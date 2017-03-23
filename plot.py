@@ -203,6 +203,7 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True):
         thresh, endtime = _thresh(hrs, endtime)
     if thresh:
         SNR = SNR[SNR.time > thresh]
+        SNR = SNR[SNR.time < endtime]
     if omit_zero:
         SNR = SNR[SNR.snr > 0]
     prns, ct = np.unique(SNR.prn, return_counts=True)
