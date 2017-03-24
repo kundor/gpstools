@@ -101,7 +101,11 @@ def midnightplots(SNRs, HK, day=None, ddir=None):
         day = np.datetime64('now') - np.timedelta64(6, 'h')
     day = day.astype('M8[D]')
     ddir = day.tolist().strftime(ddir)
-    os.makedirs(ddir, exist_ok=True)
+    try:
+        os.makedirs(ddir, exist_ok=True)
+    except FileExistsError as e:
+        info('Could not create directory', ddir, '\n    ', e)
+        return
     etime = day + np.timedelta64(1, 'D')
     makeplots(SNRs, HK, pdir=ddir, snrhours=24, hkhours=24, endtime=etime,
               figlength=20, doazel=False, minelev=15)
