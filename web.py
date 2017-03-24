@@ -103,7 +103,8 @@ def midnightplots(SNRs, HK, day=None, ddir=None):
     ddir = day.tolist().strftime(ddir)
     os.makedirs(ddir, exist_ok=True)
     etime = day + np.timedelta64(1, 'D')
-    makeplots(SNRs, HK, pdir=ddir, snrhours=24, hkhours=24, endtime=etime, figlength=20, doazel=False)
+    makeplots(SNRs, HK, pdir=ddir, snrhours=24, hkhours=24, endtime=etime,
+              figlength=20, doazel=False, minelev=15)
     index = os.path.join(config.PLOTDIR, 'index.html')
     shutil.copy(index, ddir)
 
