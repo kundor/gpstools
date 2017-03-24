@@ -187,7 +187,7 @@ def _thresh(hrs, endtime):
         return endtime - hrs * np.timedelta64(3600, 's'), endtime
     return None, None
 
-def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True):
+def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, figlength=12, doazel=True):
     """Plot SNR for each tracked satellite over the time period given.
 
     If rxid is given, an image is written out in the current directory, named
@@ -207,14 +207,17 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True):
     if omit_zero:
         SNR = SNR[SNR.snr > 0]
     prns, ct = np.unique(SNR.prn, return_counts=True)
-    prns = prns[ct > 1200] # at least a 20 minutes data
+    prns = prns[ct > 1200] # at least 20 minutes data
     numsat = len(prns)
     if not numsat:
         info('No records', 'for RX{:02}'.format(rxid) if rxid else '',
              'in the given time period', thresh, 'to', endtime)
         return
-    fig = plt.figure(figsize=(12, 2*numsat))
-    gs = mp.gridspec.GridSpec(numsat, 2, width_ratios=[4, 1])
+    fig = plt.figure(figsize=(figlength, 2*numsat))
+    if doazel:
+        gs = mp.gridspec.GridSpec(numsat, 2, width_ratios=[4, 1])
+    else:
+        gs = mp.gridspec.GridSpec(numsat, 1)
     axes = [0]*numsat
     for i, prn in enumerate(prns):
         psnr = SNR[SNR.prn == prn]
@@ -226,8 +229,9 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True):
             ax.xaxis.set_major_formatter(mp.dates.DateFormatter('%H:%M'))
         ax.scatter(psnr.time.tolist(), psnr.snr / 10, s=2)
         ax.set_ylabel('PRN {:02}'.format(prn))
-        ax1 = fig.add_subplot(gs[i, 1], projection='polar')
-        polarazel(psnr.az, psnr.el, ax1, label_el=False)
+        if doazel:
+            ax1 = fig.add_subplot(gs[i, 1], projection='polar')
+            polarazel(psnr.az, psnr.el, ax1, label_el=False)
     axes[-1].set_xlabel('Time (UTC)')
     axes[0].set_ylim(min(SNR.snr) / 10, max(SNR.snr) / 10)
     if thresh:

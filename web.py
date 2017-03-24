@@ -49,7 +49,7 @@ def rxline(rxid, HK):
         {1:.5f}&deg;W, {2:.5f}&deg;N, {3:.3f}m.
         </li>""".format(rxid, lon, lat, alt)
 
-def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, endtime=None):
+def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, endtime=None, **snrargs):
     if pdir is None:
         pdir = config.PLOTDIR
     if snrhours is None:
@@ -73,7 +73,7 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, en
         snrtab = open('snrtab-new.html', 'wt')
         for rxid, SNR in SNRs.items():
             snrtab.write(format_stats(rxid, *calcsnrstat(gensnrnp(SNR))))
-            allsnr = plot.prn_snr(SNR, rxid, snrhours, endtime)
+            allsnr = plot.prn_snr(SNR, rxid, snrhours, endtime, **snrargs)
             nsx = plot.numsats(SNR, rxid, minelev=10, hrs=hkhours, endtime=endtime)
             avg = plot.meansnr(SNR, rxid, hkhours, endtime, minelev=10)
             if symlink:
@@ -103,7 +103,7 @@ def midnightplots(SNRs, HK, day=None, ddir=None):
     ddir = day.tolist().strftime(ddir)
     os.makedirs(ddir, exist_ok=True)
     etime = day + np.timedelta64(1, 'D')
-    makeplots(SNRs, HK, pdir=ddir, snrhours=24, hkhours=24, endtime=etime)
+    makeplots(SNRs, HK, pdir=ddir, snrhours=24, hkhours=24, endtime=etime, figlength=20, doazel=False)
     index = os.path.join(config.PLOTDIR, 'index.html')
     shutil.copy(index, ddir)
 
