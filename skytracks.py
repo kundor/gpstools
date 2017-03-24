@@ -9,10 +9,10 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy import sin, cos
-from numba import jit
 from plot import polarazel
 from coords import xyz2llh, earthnormal_xyz, lengthlat, lengthlon, WGS84
 from satpos import myinterp, mvec, coeffs
+import findfirst
 
 ETNA0 = (4878146, 1309017, 3886374) # ECEF in meters
 REDBT = (-2802350, -1444879, 5527495)
@@ -50,14 +50,6 @@ def skytracks(sp3file, LOC):
             polarazel(az[ind[beg:end]], el[ind[beg:end]], ax)
 
 # skytracks('/scratch/sp3/igs19162.sp3', REDBT)
-
-@jit(nopython=True)
-def findfirstlt(vec, val):
-    """Find index of first value in vec less than val, or -1 if none exist."""
-    for i in range(len(vec)):
-        if vec[i] < val:
-            return i
-    return -1
 
 def quadformula(a, b, c):
     """Solve a x^2 + b x + c == 0 (real roots)."""
@@ -235,8 +227,8 @@ def groundlocs(llh, dist):
     londel = dist / lengthlon(llh[0])
     latdel = dist / lengthlat(llh[0])
     lonind = lons.searchsorted([llh[1] - londel, llh[1] + londel])
-    latind = [findfirstlt(lats, llh[0] + latdel),
-              findfirstlt(lats, llh[0] - latdel)]
+    latind = [findfirst.findfirstlt(lats, llh[0] + latdel),
+              findfirst.findfirstlt(lats, llh[0] - latdel)]
     latrange = slice(*latind)
     lonrange = slice(*lonind)
 
