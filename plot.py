@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D #analysis:ignore
 from gpstime import gpssowgps
 from utility import info, mode
+from findfirst import findfirstgt
 import config
 
 def posneg(arr):
@@ -202,8 +203,7 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
     else:
         thresh, endtime = _thresh(hrs, endtime)
     if thresh:
-        SNR = SNR[SNR.time > thresh]
-        SNR = SNR[SNR.time < endtime]
+        SNR = SNR[findfirstgt(SNR.time, thresh) : findfirstgt(SNR.time, endtime)]
     if minelev:
         SNR = SNR[SNR.el > minelev]
     if omit_zero:
@@ -326,7 +326,7 @@ def tempvolts(hk, hrs=None, endtime=None):
     figs = []
     ax = None
     if hrs is not None:
-        hk = hk[np.logical_and(hk.time > thresh, hk.time <= endtime)]
+        hk = hk[findfirstgt(hk.time, thresh) : findfirstgt(hk.time, endtime)]
     for rx in np.unique(hk.rxid):
         mask = hk.rxid == rx
         if not mask.any():
@@ -355,7 +355,7 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
     """
     if hrs is not None:
         thresh, endtime = _thresh(hrs, endtime)
-        snr = snr[np.logical_and(snr.time > thresh, snr.time <= endtime)]
+        snr = snr[findfirstgt(snr.time, thresh) : findfirstgt(snr.time, endtime)]
     if minelev:
         snr = snr[snr.el > minelev]
     if not len(snr):
@@ -403,7 +403,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None):
     """
     if hrs is not None:
         thresh, endtime = _thresh(hrs, endtime)
-        snr = snr[np.logical_and(snr.time > thresh, snr.time <= endtime)]
+        snr = snr[findfirstgt(snr.time, thresh) : findfirstgt(snr.time, endtime)]
     if minelev:
         snr = snr[snr.el > minelev]
     if not len(snr):
