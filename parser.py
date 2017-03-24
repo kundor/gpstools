@@ -47,6 +47,12 @@ class GrowArray:
     def sliced(self):
         return self.arr[:self.curind]
 
+def growSNR(arr=None):
+    return GrowArray(SNR_ALLOC, SNR_REC, arr)
+
+def growHK(arr=None):
+    return GrowArray(HK_ALLOC, HK_REC, arr)
+
 def allcoeffs(poslist, epoch, n=5):
     """Return fitted coefficients for poslist an N*3 numpy array of ECEF locations
     for the desired satellite every 15 minutes, and epoch the start time as a numpy datetime64."""
@@ -83,32 +89,23 @@ def sod(time):
     """Convert numpy datetime64 to seconds of day."""
     return (time - time.astype('M8[D]')) / np.timedelta64(1, 's')
 
-def assignrec(arr, ind, val):
-    """Assign val to arr[ind], growing it if necessary."""
-    try:
-        arr[ind] = val
-    except IndexError:
-        newlen = int(len(arr)*1.2)
-        arr.resize((newlen,), refcheck=False)
-        arr[ind] = val
-
-def addrecords(SNR, time, snrs, curi, cofns, rxloc, trans):
-    """Add snr records to array SNR, starting at index curi."""
+def addrecords(SNR, time, snrs, cofns, rxloc, trans):
+    """Add snr records to array SNR."""
     totsec = gpstotsecgps(time)
     for prn, snr in snrs:
         sxloc = mvec(totsec) @ cofns[prn-1](totsec)
         az, el = azel(sxloc, rxloc, trans)
-        assignrec(SNR, curi, (prn, time, el, az, snr))
-        curi += 1
-    return curi
+        SNR.append((prn, time, el, az, snr))
 
 def rx_locations(HK):
     """Return a dictionary of receiver locations determined from the housekeeping messages."""
+    rxloc = {}
+    trans = {}
+	if HK is None:
+		return rxloc, trans
     HK = cleanhk(HK)
     HK = HK[HK.lon != 0]
     HK = HK[HK.lat != 0]
-    rxloc = {}
-    trans = {}
     for rx in np.unique(HK.rxid):
         lon = np.median(HK[HK.rxid == rx].lon) / 1e7
         lat = np.median(HK[HK.rxid == rx].lat) / 1e7
@@ -127,27 +124,13 @@ def reader(fid, preSNRs=None, preHK=None):
     After resuming, the next values are the arrays enlarged by subsequently received
     records (the entire arrays are returned each time, not just the new records).
     """
-    SNRs = defaultdict(lambda: np.recarray((SNR_ALLOC,), dtype=SNR_REC))
-    curind = defaultdict(int) # how far we've filled the corresponding SNR array
+    SNRs = defaultdict(growSNR)
     if preSNRs:
         for rx, SNR in preSNRs.items():
-            rxlen = len(SNR)
-            if rxlen > SNR_ALLOC:
-                newlen = int(rxlen*1.2)
-                SNRs[rx] = np.recarray((newlen,), dtype=SNR_REC)
-            SNRs[rx][:rxlen] = SNR
-            curind[rx] = rxlen
-    if preHK is None:
-        HK = np.recarray((HK_ALLOC,), dtype=HK_REC)
-        curh = 0
-        rxloc = {} # for each rxid, its location, filled in when we get a HK record
-        trans = {} # for each rxid, a ENU translation matrix, filled in when location known
-    else:
-        curh = len(preHK)
-        rxloc, trans = rx_locations(preHK)
-        newlen = max(HK_ALLOC, int(curh*1.2))
-        HK = np.recarray((newlen,), dtype=HK_REC)
-        HK[:curh] = preHK # copy so that we own the memory (we'll resize it)
+			SNRs[rx] = growSNR(SNR)
+	HK = growHK(preHK)
+	rxloc, trans = rx_locations(preHK)
+    # for each rxid, its location and ENU translation matrix, filled in when location known
     cofns = None # compute as soon as we find a good time record
     numtot, numempty, numearly, numnoloc = [defaultdict(int) for _ in range(4)]
     thisweek = gpsweekgps(np.datetime64('now'))
@@ -155,7 +138,7 @@ def reader(fid, preSNRs=None, preHK=None):
         try:
             rid, vals = read_record(fid)
         except EOFError:
-            sliced = {rxid: SNR[:curind[rxid]] for rxid, SNR in SNRs.items()}, HK[:curh]
+            sliced = {rxid: SNR.sliced() for rxid, SNR in SNRs.items()}, HK.sliced()
             fid = (yield sliced) or fid
             continue
         except ValueError as e:
@@ -183,13 +166,11 @@ def reader(fid, preSNRs=None, preHK=None):
                 pl, epoch = poslist(time)
                 cofns = satcoeffs(pl, epoch)
                 end_time = epoch + np.timedelta64(15, 'm') * (len(pl) - 7) # 1.5 hours before last entry
-            curind[rxid] = addrecords(SNRs[rxid], time, snrs, curind[rxid], cofns,
-                                      rxloc[rxid], trans[rxid])
+            addrecords(SNRs[rxid], time, snrs, cofns, rxloc[rxid], trans[rxid])
         elif rid == 193:
             rxid = vals[0]
             vals = rxid, weeksow_to_np(*vals[1]), *vals[2:]
-            assignrec(HK, curh, vals)
-            curh += 1
+            HK.append(vals)
             if rxid not in rxloc:
                 if vals[1] > np.datetime64('now') + np.timedelta64(1, 'h'):
                     info('Rx', rxid, ': Not using location from future time', vals[1])
