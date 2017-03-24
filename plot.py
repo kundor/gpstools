@@ -318,10 +318,10 @@ def tempvolts(hk, hrs=None, endtime=None):
     fnames = []
     figs = []
     ax = None
+    if hrs is not None:
+        hk = hk[np.logical_and(hk.time > thresh, hk.time <= endtime)]
     for rx in np.unique(hk.rxid):
         mask = hk.rxid == rx
-        if hrs is not None:
-            mask = np.logical_and(mask, hk.time > thresh)
         if not mask.any():
             info('No records for RX{:02} in the given time period'.format(rx), thresh, 'to', endtime)
             continue
@@ -331,6 +331,7 @@ def tempvolts(hk, hrs=None, endtime=None):
         ax.set_title(title)
         if hrs is not None:
             ax.set_xlim(thresh.tolist(), endtime.tolist())
+            _utclocallabel(ax) # rewrite labels after changing the range
         figs += [fig]
         fnames += ['TV-RX{:02}-{:%j}.png'.format(rx, doy)]
     # Wait to save them, in case the shared axes are resized
@@ -347,7 +348,7 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
     """
     if hrs is not None:
         thresh, endtime = _thresh(hrs, endtime)
-        snr = snr[snr.time > thresh]
+        snr = snr[np.logical_and(snr.time > thresh, snr.time <= endtime)]
     if minelev:
         snr = snr[snr.el > minelev]
     if not len(snr):
@@ -395,7 +396,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None):
     """
     if hrs is not None:
         thresh, endtime = _thresh(hrs, endtime)
-        snr = snr[snr.time > thresh]
+        snr = snr[np.logical_and(snr.time > thresh, snr.time <= endtime)]
     if minelev:
         snr = snr[snr.el > minelev]
     if not len(snr):
