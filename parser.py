@@ -11,7 +11,6 @@ import numpy as np
 from binex import read_record
 from ascii_read import poslist
 from gpstime import gpstotsecgps, gpsweekgps
-from satpos import mvec, myinterp
 from coords import llh2xyz, get_ellipsoid_ht
 from utility import info, mode
 
@@ -53,23 +52,54 @@ def growSNR(arr=None):
 def growHK(arr=None):
     return GrowArray(HK_ALLOC, HK_REC, arr)
 
-def allcoeffs(poslist, epoch, n=5):
-    """Return fitted coefficients for poslist an N*3 numpy array of ECEF locations
-    for the desired satellite every 15 minutes, and epoch the start time as a numpy datetime64."""
-    sec0 = gpstotsecgps(epoch)
-    return [np.linalg.solve(np.array([mvec(sec0 + i*900, n) for i in range(idx-n, idx+n+1)]),
-                            poslist[idx-n:idx+n+1])
-            for idx in range(n, len(poslist)-n)]
-
-def satcoeffs(pl, epoch, n=5):
-    secn = gpstotsecgps(epoch) + n*900
-    return [myinterp(secn, 900, allcoeffs(pl[:,prn,:], epoch, n)) for prn in range(32)]
-
 def enutrans(lat, lon):
     sin, cos = np.sin, np.cos
     return np.array([[-sin(lon), -sin(lat)*cos(lon), cos(lat)*cos(lon)],
                      [ cos(lon), -sin(lat)*sin(lon), cos(lat)*sin(lon)],
                      [ 0,         cos(lat),          sin(lat)]])
+
+class SatPositions:
+    """Class which precomputes satellite positions once a second, and gives them out
+    when called. When the desired time is outside the range, a new set is precomputed."""
+    @staticmethod
+    def mvecs(times):
+        P = 2 * np.pi / 86164.090530833 * times
+        return np.hstack((np.ones((len(P), 1)),
+                          np.sin(np.outer(P, np.arange(1, 6))),
+                          np.cos(np.outer(P, np.arange(5, 0, -1)))))
+        # Better yet, go with a constant 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1
+
+    def __init__(self):
+        self.endtime = np.datetime64('0')
+        self.start = 0
+
+    def __call__(self, prn, time):
+        if time >= self.endtime:
+            self.update(time, 6)
+        return self.pos[int(gpstotsecgps(time)) - self.start, prn - 1, :]
+
+    def update(self, time, hours=None):
+        """Compute an n*32*3 array of satellite positions for all PRNS, once per second,
+        starting around *time* and lasting a maximum of the given *hours*."""
+        pl, epoch = poslist(time)
+        sec0 = gpstotsecgps(epoch)
+        tim0 = gpstotsecgps(time)
+        step0 = int((tim0 - sec0)/900)
+        self.start = int(sec0 + step0*900)
+        stop = int(sec0) + 900*(len(pl) - 6)
+        endidx = len(pl) - 5
+        if hours is not None:
+            stop = min(stop, self.start + hours * 3600)
+            endidx = min(endidx, 1 + step0 + hours * 4)
+        COFS = np.array([[np.linalg.solve(self.mvecs(sec0 + np.arange(idx-5, idx+6)*900), pl[idx-5:idx+6, prn, :])
+                      for prn in range(32)] for idx in range(step0, endidx)])
+        M = self.mvecs(np.arange(self.start, stop))
+        S = np.arange(0, 1, 1/900)
+        S.shape = (900, 1, 1, 1)
+        MS = 1 - S
+        K = np.kron(COFS[:-1], MS) + np.kron(COFS[1:], S)
+        self.endtime = time + np.timedelta64(stop - int(tim0), 's')
+        self.pos = np.sum(M.reshape((-1, 1, 11, 1)) * K, axis=2)
 
 def azel(sxloc, rxloc, trans):
     """Given satellite location sxloc, receiver location rxloc (ECEF, meters)
@@ -89,11 +119,10 @@ def sod(time):
     """Convert numpy datetime64 to seconds of day."""
     return (time - time.astype('M8[D]')) / np.timedelta64(1, 's')
 
-def addrecords(SNR, time, snrs, cofns, rxloc, trans):
+def addrecords(SNR, time, snrs, satpos, rxloc, trans):
     """Add snr records to array SNR."""
-    totsec = gpstotsecgps(time)
     for prn, snr in snrs:
-        sxloc = mvec(totsec) @ cofns[prn-1](totsec)
+        sxloc = satpos(prn, time)
         az, el = azel(sxloc, rxloc, trans)
         SNR.append((prn, time, el, az, snr))
 
@@ -131,7 +160,7 @@ def reader(fid, preSNRs=None, preHK=None):
     HK = growHK(preHK)
     rxloc, trans = rx_locations(preHK)
     # for each rxid, its location and ENU translation matrix, filled in when location known
-    cofns = None # compute as soon as we find a good time record
+    satpos = SatPositions()
     numtot, numempty, numearly, numnoloc = [defaultdict(int) for _ in range(4)]
     thisweek = gpsweekgps(np.datetime64('now'))
     while True:
@@ -162,11 +191,7 @@ def reader(fid, preSNRs=None, preHK=None):
             if numnoloc[rxid]:
                 info("Skipped", numnoloc[rxid], "records before receiver", rxid, "location was known.")
                 numnoloc[rxid] = 0
-            if not cofns or time > end_time:
-                pl, epoch = poslist(time)
-                cofns = satcoeffs(pl, epoch)
-                end_time = epoch + np.timedelta64(15, 'm') * (len(pl) - 7) # 1.5 hours before last entry
-            addrecords(SNRs[rxid], time, snrs, cofns, rxloc[rxid], trans[rxid])
+            addrecords(SNRs[rxid], time, snrs, satpos, rxloc[rxid], trans[rxid])
         elif rid == 193:
             rxid = vals[0]
             vals = rxid, weeksow_to_np(*vals[1]), *vals[2:]
