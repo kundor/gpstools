@@ -174,6 +174,9 @@ def plotupdate(fname=None, handover=None, oldstate=None):
                         if ofile != os.path.abspath(current_binex()):
                             info('No new records at', tic, '. Attempting handover.')
                             fid.close()
+                            info('Starting midnight plotting at', tic)
+                            midnightplots(SNRs, HK)
+                            info('Done at', np.datetime64('now'))
                             fid = open(current_binex(), 'rb')
                             ofile = os.path.abspath(current_binex())
                             recgen.send(fid)
