@@ -101,8 +101,8 @@ def rx_locations(HK):
     """Return a dictionary of receiver locations determined from the housekeeping messages."""
     rxloc = {}
     trans = {}
-	if HK is None:
-		return rxloc, trans
+    if HK is None:
+        return rxloc, trans
     HK = cleanhk(HK)
     HK = HK[HK.lon != 0]
     HK = HK[HK.lat != 0]
@@ -127,9 +127,9 @@ def reader(fid, preSNRs=None, preHK=None):
     SNRs = defaultdict(growSNR)
     if preSNRs:
         for rx, SNR in preSNRs.items():
-			SNRs[rx] = growSNR(SNR)
-	HK = growHK(preHK)
-	rxloc, trans = rx_locations(preHK)
+            SNRs[rx] = growSNR(SNR)
+    HK = growHK(preHK)
+    rxloc, trans = rx_locations(preHK)
     # for each rxid, its location and ENU translation matrix, filled in when location known
     cofns = None # compute as soon as we find a good time record
     numtot, numempty, numearly, numnoloc = [defaultdict(int) for _ in range(4)]
