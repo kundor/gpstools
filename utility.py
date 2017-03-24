@@ -49,6 +49,22 @@ def stdouttofile(file):
     with open(file, 'a') as f, redirect_stdout(f):
         yield
 
+@contextmanager
+def fullprint(**kwargs):
+    """A context manager to print full numpy arrays.
+
+    with fullprint():
+        print(a)
+    with fullprint(linewidth=20, precision=3):
+        print(a)
+    """
+    if 'threshold' not in kwargs:
+        kwargs['threshold'] = np.inf
+    oldopt = np.get_printoptions()
+    np.set_printoptions(**kwargs)
+    yield
+    np.set_printoptions(**oldopt)
+
 def decompress(filename, move=False):
     """Decompress a (Lempel-Ziv) compress'd file.
 
