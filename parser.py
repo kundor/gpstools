@@ -121,8 +121,9 @@ def sod(time):
 
 def addrecords(SNR, time, snrs, satpos, rxloc, trans):
     """Add snr records to array SNR."""
+    idx = int(gpstotsecgps(time)) - satpos.start
     for prn, snr in snrs:
-        sxloc = satpos(prn, time)
+        sxloc = satpos.pos[idx, prn - 1, :]
         az, el = azel(sxloc, rxloc, trans)
         SNR.append((prn, time, el, az, snr))
 
@@ -191,6 +192,8 @@ def reader(fid, preSNRs=None, preHK=None):
             if numnoloc[rxid]:
                 info("Skipped", numnoloc[rxid], "records before receiver", rxid, "location was known.")
                 numnoloc[rxid] = 0
+            if time > satpos.endtime:
+                satpos.update(time, 6)
             addrecords(SNRs[rxid], time, snrs, satpos, rxloc[rxid], trans[rxid])
         elif rid == 193:
             rxid = vals[0]
