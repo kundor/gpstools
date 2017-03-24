@@ -98,7 +98,7 @@ class SatPositions:
         S.shape = (900, 1, 1, 1)
         MS = 1 - S
         K = np.kron(COFS[:-1], MS) + np.kron(COFS[1:], S)
-        self.endtime = time + np.timedelta64(stop - int(tim0), 's')
+        self.endtime = time + np.timedelta64(stop - int(tim0) - 1, 's')
         self.pos = np.sum(M.reshape((-1, 1, 11, 1)) * K, axis=2)
 
 def azel(sxloc, rxloc, trans):
