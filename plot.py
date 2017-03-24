@@ -187,7 +187,7 @@ def _thresh(hrs, endtime):
         return endtime - hrs * np.timedelta64(3600, 's'), endtime
     return None, None
 
-def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, figlength=12, doazel=True):
+def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, figlength=12, doazel=True):
     """Plot SNR for each tracked satellite over the time period given.
 
     If rxid is given, an image is written out in the current directory, named
@@ -204,6 +204,8 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, figlength=12
     if thresh:
         SNR = SNR[SNR.time > thresh]
         SNR = SNR[SNR.time < endtime]
+    if minelev:
+        SNR = SNR[SNR.el > minelev]
     if omit_zero:
         SNR = SNR[SNR.snr > 0]
     prns, ct = np.unique(SNR.prn, return_counts=True)
@@ -228,7 +230,8 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, figlength=12
             ax.xaxis_date()
             ax.xaxis.set_major_formatter(mp.dates.DateFormatter('%H:%M'))
         ax.scatter(psnr.time.tolist(), psnr.snr / 10, s=2)
-        ax.set_ylabel('PRN {:02}'.format(prn))
+        rxlab = 'RX{:02} - '.format(rxid) if rxid else ''
+        ax.set_ylabel(rxlab + 'PRN {:02}'.format(prn))
         if doazel:
             ax1 = fig.add_subplot(gs[i, 1], projection='polar')
             polarazel(psnr.az, psnr.el, ax1, label_el=False)
