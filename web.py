@@ -8,6 +8,7 @@ Created on Wed Mar 15 11:54:05 2017
 import os
 import time
 import sys
+import shutil
 from collections import defaultdict
 import numpy as np
 from snrstats import calcsnrstat, gensnrnp
@@ -87,6 +88,24 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, en
                 fid.write(rxline(rxid, HK))
         updatetime()
 
+def midnightplots(SNRs, HK, day=None, ddir=None):
+    """Make 24-hour archive page in *ddir* (default config.DAILYDIR).
+
+    *day* is a numpy datetime64 in the desired day (default: the immediately
+    preceding day.)
+    *SNRs* and *HK* should include data for the desired 24 hours.
+    """
+    if ddir is None:
+        ddir = config.DAILYDIR
+    if day is None:
+        day = np.datetime64('now') - np.timedelta64(6, 'h')
+    day = day.astype('M8[D]')
+    ddir = day.tolist().strftime(ddir)
+    os.makedirs(ddir, exist_ok=True)
+    etime = day + np.timedelta64(1, 'D')
+    makeplots(SNRs, HK, pdir=ddir, snrhours=24, hkhours=24, endtime=etime)
+    index = os.path.join(config.PLOTDIR, 'index.html')
+    shutil.copy(index, ddir)
 
 def updatetime(append=''):
     updstr = time.strftime('%b %d %Y %H:%M:%S UTC', time.gmtime()) + time.strftime(' (%H:%M:%S %Z)')
