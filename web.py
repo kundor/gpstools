@@ -13,7 +13,7 @@ import numpy as np
 from snrstats import calcsnrstat, gensnrnp
 import plot
 from parser import reader, readall, hkreport, cleanhk
-from utility import info, debug, mode, pushdir
+from utility import info, debug, pushdir
 import config
 
 def _symlink(src, dest):
@@ -63,7 +63,7 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, en
         if symlink:
             for tv in tvs:
                 _symlink(tv, tv[:7] + '.png')
-        day = mode(HK.time.astype('M8[D]'))
+        day = endtime or np.datetime64('now')
         hkfile = day.tolist().strftime('HK_%j.%y.txt')
         with open(hkfile, 'wt') as fid:
             hkreport(HK, fid)
