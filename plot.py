@@ -230,7 +230,7 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
             ax.xaxis_date()
             ax.xaxis.set_major_formatter(mp.dates.DateFormatter('%H:%M'))
         ax.scatter(psnr.time.tolist(), psnr.snr / 10, s=2)
-        rxlab = 'RX{:02} - '.format(rxid) if rxid else ''
+        rxlab = 'RX{:02}: '.format(rxid) if rxid else ''
         ax.set_ylabel(rxlab + 'PRN {:02}'.format(prn))
         if doazel:
             ax1 = fig.add_subplot(gs[i, 1], projection='polar')
