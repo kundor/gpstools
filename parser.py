@@ -12,7 +12,7 @@ from binex import read_record
 from ascii_read import poslist
 from gpstime import gpstotsecgps, gpsweekgps
 from coords import llh2xyz, get_ellipsoid_ht
-from utility import info, mode
+from utility import info, debug, mode
 
 SNR_REC = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('snr', 'u2')])
 HK_REC = np.dtype([('rxid', 'u1'), ('time', 'M8[us]'), ('mac', 'u8'), ('lon', 'i4'),
@@ -204,7 +204,8 @@ def reader(fid, preSNRs=None, preHK=None):
                 info("Skipped", numnoloc[rxid], "records before receiver", rxid, "location was known.")
                 numnoloc[rxid] = 0
             if time > satpos.endtime:
-                satpos.update(time, 6)
+                debug('Updating satellite locations;', time, ' > ', satpos.endtime)
+                satpos.update(time, 4)
             addrecords(SNRs[rxid], time, snrs, satpos, rxid)
         elif rid == 193:
             rxid = vals[0]
