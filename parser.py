@@ -99,7 +99,13 @@ class SatPositions:
         S = np.arange(0, 1, 1/900)
         S.shape = (900, 1, 1, 1)
         MS = 1 - S
-        K = np.kron(COFS[:-1], MS) + np.kron(COFS[1:], S)
+        # K = np.kron(COFS[:-1], MS) + np.kron(COFS[1:], S)
+        # This is equivalent to the kronecker product, but much faster:
+        K = (COFS[:-1,np.newaxis,:,np.newaxis,:,np.newaxis,:,np.newaxis]
+            * MS[np.newaxis, :, np.newaxis, :,np.newaxis, :,np.newaxis, :]
+            + COFS[1:,np.newaxis,:,np.newaxis,:,np.newaxis,:,np.newaxis]
+            * S[np.newaxis, :, np.newaxis, :,np.newaxis, :,np.newaxis, :])
+        K.shape = (-1, *COFS.shape[1:])
         self.endtime = time + np.timedelta64(stop - int(tim0) - 1, 's')
         self.pos = np.sum(M.reshape((-1, 1, 11, 1)) * K, axis=2)
         for rxid in self.rxlocs:
