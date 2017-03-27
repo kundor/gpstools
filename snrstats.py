@@ -1,7 +1,9 @@
 from math import sqrt
 from collections import namedtuple
 import re
+import numpy as np
 from utility import info
+from numba import jit
 
 def gensnrs(lineiter):
     """Get the SNR values from each line in VAPR ASCII format.
@@ -62,7 +64,48 @@ def bestspan(bins):
 def paren(num):
     return '(' + str(num) + ')'
 
-def calcsnrstat(snriter, return_bins=False):
+def calcsnrstat(snrs):
+    Stat = namedtuple('Stats', ['min', 'max', 'mean', 'num', 'std'])
+    stats, statp = snrstatfast(snrs)
+    return Stat(*stats), Stat(*statp)
+
+@jit(nopython=True)
+def snrstatfast(snrs):
+    snrmin = 100.
+    snrminp = 100.
+    snrmax = 0.
+    snrmean = 0.
+    snrmeanp = 0.
+    num = 0
+    nump = 0
+    M2 = 0.
+    M2p = 0.
+    for i in range(len(snrs)):
+        num += 1
+        delta = snrs[i] - snrmean
+        snrmean += delta / num
+        delta2 = snrs[i] - snrmean
+        M2 += delta * delta2
+        if snrs[i] > snrmax:
+            snrmax = snrs[i]
+        if snrs[i] < snrmin:
+            snrmin = snrs[i]
+        if snrs[i] > 0:
+            nump += 1
+            delta = snrs[i] - snrmeanp
+            snrmeanp += delta / nump
+            delta2 = snrs[i] - snrmeanp
+            M2p += delta * delta2
+            if snrs[i] < snrminp:
+                snrminp = snrs[i]
+    snrstd = sqrt(M2 / (num - 1))
+    snrstdp = sqrt(M2p / (nump - 1))
+    return ((snrmin, snrmax, snrmean, num, snrstd),
+            (snrminp, snrmax, snrmeanp, nump, snrstdp))
+
+def calcsnrstat_bins(snriter, return_bins=False):
+    """Like calcsnrstat, but works for general iterables (not just numpy-compatible types)
+    and can sort the input into bins."""
     snrmin = 100.
     snrminp = 100.
     snrmax = 0.

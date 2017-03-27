@@ -11,7 +11,7 @@ import sys
 import shutil
 from collections import defaultdict
 import numpy as np
-from snrstats import calcsnrstat, gensnrnp
+from snrstats import calcsnrstat
 import plot
 from parser import reader, readall, hkreport, cleanhk
 from utility import info, debug, pushdir
