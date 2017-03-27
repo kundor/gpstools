@@ -63,17 +63,17 @@ def dorises2(snrdata, prn):
     """Plot snr vs. elevation for all periods of rising-then-falling elevation.
 
     Plot each ascension in a different figure, and save to a file instead of
-    displaying. Input is a numpy recarray of SNR records. One image is generated
+    displaying. Input is a numpy array of SNR records. One image is generated
     per rising/falling arc, named as PRN-DOY-HR-Q#.png (HR is the time the arc
     begins, and # is the quadrant wherein the satellite rose.)
     """
     plt.ioff()
-    snrdata = snrdata[snrdata.prn == prn]
+    snrdata = snrdata[snrdata['prn'] == prn]
     if not snrdata.size:
         info('PRN {} not found'.format(prn))
         return
-    eles, azis, snr = snrdata.el, snrdata.az, snrdata.snr / 10
-    sow = gpssowgps(snrdata.time)
+    eles, azis, snr = snrdata['el'], snrdata['az'], snrdata['snr'] / 10
+    sow = gpssowgps(snrdata['time'])
     riz = rises(eles, sow, prn)
     for beg, peak, end in riz:
         if not np.count_nonzero(snr[beg:end+1]):
@@ -95,7 +95,7 @@ def dorises2(snrdata, prn):
         _setsnrlim(ax0, snr[beg:end+1])
         plt.xlabel('Elevation')
         plt.ylabel('SNR (dB-Hz)')
-        doy = snrdata[beg].time.tolist().strftime('%j')
+        doy = snrdata[beg]['time'].tolist().strftime('%j')
         daz = np.diff(azis[beg:end+1])
         if (daz >= 0).all():
             azinc = r'$\uparrow$'
@@ -130,7 +130,7 @@ def allrises(SNR):
         with suppress(FileExistsError):
             os.mkdir(rdir)
         os.chdir(rdir)
-        for prn in np.unique(SNR[rxid].prn):
+        for prn in np.unique(SNR[rxid]['prn']):
             dorises2(SNR[rxid], prn)
         os.chdir(os.pardir)
 
@@ -203,12 +203,12 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
     else:
         thresh, endtime = _thresh(hrs, endtime)
     if thresh:
-        SNR = SNR[findfirstgt(SNR.time, thresh) : findfirstgt(SNR.time, endtime)]
+        SNR = SNR[findfirstgt(SNR['time'], thresh) : findfirstgt(SNR['time'], endtime)]
     if minelev:
-        SNR = SNR[SNR.el > minelev]
+        SNR = SNR[SNR['el'] > minelev]
     if omit_zero:
-        SNR = SNR[SNR.snr > 0]
-    prns, ct = np.unique(SNR.prn, return_counts=True)
+        SNR = SNR[SNR['snr'] > 0]
+    prns, ct = np.unique(SNR['prn'], return_counts=True)
     prns = prns[ct > 1200] # at least 20 minutes data
     numsat = len(prns)
     if not numsat:
@@ -222,25 +222,25 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         gs = mp.gridspec.GridSpec(numsat, 1)
     axes = [0]*numsat
     for i, prn in enumerate(prns):
-        psnr = SNR[SNR.prn == prn]
+        psnr = SNR[SNR['prn'] == prn]
         if i:
             ax = axes[i] = fig.add_subplot(gs[i, 0], sharex=axes[0], sharey=axes[0])
         else:
             ax = axes[0] = fig.add_subplot(gs[0, 0])
             ax.xaxis_date()
             ax.xaxis.set_major_formatter(mp.dates.DateFormatter('%H:%M'))
-        ax.scatter(psnr.time.tolist(), psnr.snr / 10, s=2)
+        ax.scatter(psnr['time'].tolist(), psnr['snr'] / 10, s=2)
         rxlab = 'RX{:02}: '.format(rxid) if rxid else ''
         ax.set_ylabel(rxlab + 'PRN {:02}'.format(prn))
         if doazel:
             ax1 = fig.add_subplot(gs[i, 1], projection='polar')
-            polarazel(psnr.az, psnr.el, ax1, label_el=False)
+            polarazel(psnr['az'], psnr['el'], ax1, label_el=False)
     axes[-1].set_xlabel('Time (UTC)')
-    axes[0].set_ylim(min(SNR.snr) / 10, max(SNR.snr) / 10)
+    axes[0].set_ylim(min(SNR['snr']) / 10, max(SNR['snr']) / 10)
     if thresh:
         axes[0].set_xlim(thresh.tolist(), endtime.tolist())
     else:
-        axes[0].set_xlim(min(SNR.time.tolist()), max(SNR.time.tolist()))
+        axes[0].set_xlim(min(SNR['time'].tolist()), max(SNR['time'].tolist()))
     fig.tight_layout()
     if rxid:
         fname = 'ALLSNR-RX{:02}-{:%j}.png'.format(rxid, endtime.tolist())
@@ -286,13 +286,13 @@ def _localmidnight(ax):
     ax.axvline(midnt)
 
 def tempvolt(hk, shareax=None):
-    """Plot temperature and voltage from the recarray of HK records.
+    """Plot temperature and voltage from the array of HK records.
 
     Return a figure.
     """
-    times = hk.time.tolist()
-    volt = hk.volt / 100
-    temp = hk.temp
+    times = hk['time'].tolist()
+    volt = hk['volt'] / 100
+    temp = hk['temp']
     fig, ax = _gethouraxes((10, 3), shareax)
     ax.scatter(times, volt, c='b')
     ax.set_ylabel('Volts', color='b')
@@ -313,7 +313,7 @@ def tempvolt(hk, shareax=None):
     return fig, ax
 
 def tempvolts(hk, hrs=None, endtime=None):
-    """Plot temperature and voltage for each receiver in a recarray of housekeeping records.
+    """Plot temperature and voltage for each receiver in a array of housekeeping records.
 
     The two plots are on the same axes, against time. One image per receiver is
     written out in the current directory, named TV-RX##-DOY.png.
@@ -326,14 +326,14 @@ def tempvolts(hk, hrs=None, endtime=None):
     figs = []
     ax = None
     if hrs is not None:
-        hk = hk[findfirstgt(hk.time, thresh) : findfirstgt(hk.time, endtime)]
-    for rx in np.unique(hk.rxid):
-        mask = hk.rxid == rx
+        hk = hk[findfirstgt(hk['time'], thresh) : findfirstgt(hk['time'], endtime)]
+    for rx in np.unique(hk['rxid']):
+        mask = hk['rxid'] == rx
         if not mask.any():
             info('No records for RX{:02} in the given time period'.format(rx), thresh, 'to', endtime)
             continue
         fig, ax = tempvolt(hk[mask], ax)
-        doy = mode(hk[mask].time.astype('M8[D]')).tolist()
+        doy = mode(hk[mask]['time'].astype('M8[D]')).tolist()
         title = 'Rx{:02} {:%Y-%m-%d}: Voltage and Temperature'.format(rx, doy)
         ax.set_title(title)
         if hrs is not None:
@@ -348,30 +348,30 @@ def tempvolts(hk, hrs=None, endtime=None):
     return fnames
 
 def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
-    """Plot number of tracked satellites vs. time from a recarray of SNR records.
+    """Plot number of tracked satellites vs. time from a array of SNR records.
 
     If rxid is given, an image is written out in the current directory, named
     NS-RX##-DOY.png. Otherwise the figure is returned.
     """
     if hrs is not None:
         thresh, endtime = _thresh(hrs, endtime)
-        snr = snr[findfirstgt(snr.time, thresh) : findfirstgt(snr.time, endtime)]
+        snr = snr[findfirstgt(snr['time'], thresh) : findfirstgt(snr['time'], endtime)]
     if minelev:
-        snr = snr[snr.el > minelev]
+        snr = snr[snr['el'] > minelev]
     if not len(snr):
         info('No records', 'for RX{:02}'.format(rxid) if rxid else '',
              'above {}° from'.format(minelev), thresh, 'to', endtime)
         return
-    time, idx = np.unique(snr.time, return_index=True)
+    time, idx = np.unique(snr['time'], return_index=True)
     idx.sort() # if the times aren't in order for some reason
-    numsats = [len(set(snr[a:b].prn)) for a, b in zip(idx, np.append(idx[1:], len(snr)))]
-#   time, idx, numsats = np.unique(snr.time, return_index=True, return_counts=True)
+    numsats = [len(set(snr[a:b]['prn'])) for a, b in zip(idx, np.append(idx[1:], len(snr)))]
+#   time, idx, numsats = np.unique(snr['time'], return_index=True, return_counts=True)
 #    for n, a, b in zip(numsats, idx, np.append(idx[1:], len(snr))):
-#        if len(set(snr[a:b].prn)) != n:
+#        if len(set(snr[a:b]['prn'])) != n:
 #            info('Same PRN in multiple records?')
 #            debug(snr[a:b])
     doy = mode(time.astype('M8[D]')).tolist() # most common day
-    time = snr.time[idx].tolist() # get datetime.datetime, which matplotlib can handle
+    time = snr['time'][idx].tolist() # get datetime.datetime, which matplotlib can handle
     if rxid:
         plt.ioff()
         title = 'Rx{:02} {:%Y-%m-%d}: Number of satellites over {}°'.format(rxid, doy, minelev)
@@ -396,29 +396,29 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
     return fig
 
 def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None):
-    """Plot mean snr vs. time from a recarray of SNR records.
+    """Plot mean snr vs. time from a array of SNR records.
 
     If rxid is given, an image is written out in the current directory, named
     AVG-RX##-DOY.png. Otherwise the figure is returned.
     """
     if hrs is not None:
         thresh, endtime = _thresh(hrs, endtime)
-        snr = snr[findfirstgt(snr.time, thresh) : findfirstgt(snr.time, endtime)]
+        snr = snr[findfirstgt(snr['time'], thresh) : findfirstgt(snr['time'], endtime)]
     if minelev:
-        snr = snr[snr.el > minelev]
+        snr = snr[snr['el'] > minelev]
     if not len(snr):
         info('No records', 'for RX{:02}'.format(rxid) if rxid else '',
              'in the given time period', thresh, 'to', endtime)
         return
-    time, idx = np.unique(snr.time, return_index=True)
+    time, idx = np.unique(snr['time'], return_index=True)
     idx.sort() # if the times aren't in order for some reason
-    time = snr.time[idx]
+    time = snr['time'][idx]
     doy = mode(time.astype('M8[D]')).tolist() # most common day
     idx = np.append(idx, len(snr))
     means = []
     pmeans = []
     for a, b in zip(idx, idx[1:]):
-        tsnr = snr[a:b].snr / 10
+        tsnr = snr[a:b]['snr'] / 10
         means += [np.mean(tsnr)]
         if np.count_nonzero(tsnr):
             pmeans += [np.mean(tsnr[tsnr > 0])]

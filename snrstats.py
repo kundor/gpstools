@@ -33,11 +33,11 @@ def gensnr89(filenames, minelev=None):
                 yield float(mch.group(4))
 
 def gensnrnp(arr, minelev=None):
-    """Get the SNR values from a numpy recarray with SNR_REC datatype."""
+    """Get the SNR values from a numpy array with SNR_REC datatype."""
     for rec in arr:
-        if minelev and rec.el < minelev:
+        if minelev and rec['el'] < minelev:
             continue
-        yield float(rec.snr / 10)
+        yield float(rec['snr'] / 10)
 
 def reportspans(spanstarts, bins):
     pnum = sum(bins) / 100

@@ -41,9 +41,9 @@ def format_stats(rxid, stat, statp):
 
 def rxline(rxid, HK):
     """A list entry for the web page for the given receiver."""
-    lon = np.median(HK[HK.rxid == rxid].lon) / 1e7
-    lat = np.median(HK[HK.rxid == rxid].lat) / 1e7
-    alt = np.median(HK[HK.rxid == rxid].alt) / 1000
+    lon = np.median(HK[HK['rxid'] == rxid]['lon']) / 1e7
+    lat = np.median(HK[HK['rxid'] == rxid]['lat']) / 1e7
+    alt = np.median(HK[HK['rxid'] == rxid]['alt']) / 1000
     return """    <li>
         RX{0:02}: <a href="#RX{0:02}-HK">HK</a> <a href="#RX{0:02}-SNR">SNR</a>
         {1:.5f}&deg;W, {2:.5f}&deg;N, {3:.3f}m.
@@ -72,7 +72,7 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, en
             _symlink(hkfile, 'HK.txt')
         snrtab = open('snrtab-new.html', 'wt', encoding='utf-8')
         for rxid, SNR in SNRs.items():
-            snrtab.write(format_stats(rxid, *calcsnrstat(SNR.snr / 10)))
+            snrtab.write(format_stats(rxid, *calcsnrstat(SNR['snr'] / 10)))
             allsnr = plot.prn_snr(SNR, rxid, snrhours, endtime, **snrargs)
             nsx = plot.numsats(SNR, rxid, minelev=10, hrs=hkhours, endtime=endtime)
             avg = plot.meansnr(SNR, rxid, hkhours, endtime, minelev=10)
@@ -195,7 +195,7 @@ def plotupdate(fname=None, handover=None, oldstate=None):
                 continue
             attempt = 0
             rectic = tic
-            dattic = max(max(s[-1].time for s in SNRs.values()), HK[-1].time)
+            dattic = max(max(s[-1]['time'] for s in SNRs.values()), HK[-1]['time'])
             debug('{:2} new records {} at'.format(sum(nlens.values()) - sum(olens.values()),
                                                  [nlens[rx] - olens[rx] for rx in nlens]),
                   tic, 'timestamped', dattic)

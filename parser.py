@@ -23,16 +23,16 @@ SNR_ALLOC = 10**6 # how much to preallocate for these types
 HK_ALLOC = 1000
 
 class GrowArray:
-    """Allows appending to a numpy recarray, reallocating as necessary."""
+    """Allows appending to a numpy array, reallocating as necessary."""
     def __init__(self, alloc, dtype, initarr=None):
         if initarr:
             self.curind = len(initarr)
             alloc = max(alloc, int(self.curind * 1.2))
-            self.arr = np.recarray((alloc,), dtype=dtype)
+            self.arr = np.array((alloc,), dtype=dtype)
             self.arr[:self.curind] = initarr # copy so that we own the memory (we'll resize it)
         else:
             self.curind = 0
-            self.arr = np.recarray((alloc,), dtype=dtype)
+            self.arr = np.array((alloc,), dtype=dtype)
 
     def append(self, val):
         try:
@@ -144,12 +144,12 @@ def rx_locations(HK, satpos=None):
     """Return a dictionary of receiver locations determined from the housekeeping messages."""
     rxllh = {}
     HK = cleanhk(HK)
-    HK = HK[HK.lon != 0]
-    HK = HK[HK.lat != 0]
-    for rx in np.unique(HK.rxid):
-        lon = np.median(HK[HK.rxid == rx].lon) / 1e7
-        lat = np.median(HK[HK.rxid == rx].lat) / 1e7
-        alt = np.median(HK[HK.rxid == rx].alt) / 1000
+    HK = HK[HK['lon'] != 0]
+    HK = HK[HK['lat'] != 0]
+    for rx in np.unique(HK['rxid']):
+        lon = np.median(HK[HK['rxid'] == rx]['lon']) / 1e7
+        lat = np.median(HK[HK['rxid'] == rx]['lat']) / 1e7
+        alt = np.median(HK[HK['rxid'] == rx]['alt']) / 1000
         if alt == 0:
             info('Obtaining terrain altitude for RX{:02} from Google and Unavco.'.format(rx))
             alt = get_ellipsoid_ht(lat, lon)
@@ -253,9 +253,9 @@ HK_RANGE = ((0, 63), # rxid
 def cleanhk(HK):
     """Return HK masked to only sensible entries."""
     macs = {}
-    for rx in np.unique(HK.rxid):
-        macs[rx] = mode(HK[HK.rxid == rx].mac)
-    macmask = np.array([h.mac == macs[h.rxid] for h in HK])
+    for rx in np.unique(HK['rxid']):
+        macs[rx] = mode(HK[HK['rxid'] == rx]['mac'])
+    macmask = np.array([h['mac'] == macs[h['rxid']] for h in HK])
     HK_RANGE[1][1] = np.datetime64('now') + np.timedelta64(1, 'h')
     return HK[np.logical_and.reduce([a <= HK[f] for (a, b), f in zip(HK_RANGE, HK_REC.names)]
                                   + [HK[f] <= b for (a, b), f in zip(HK_RANGE, HK_REC.names)]
@@ -269,7 +269,7 @@ def validhk(hkr):
 def readall(fid):
     """Return all the records currently in fid.
 
-    Return a dictionary of rxid to SNR recarrays, and an HK recarray.
+    Return a dictionary of rxid to SNR arrays, and an HK array.
     """
     return next(reader(fid))
 
@@ -278,7 +278,7 @@ def out_snr88(SNR, filename):
     with open(filename, 'wt') as fid:
         for rec in SNR:
             fid.write('{:3} {:9.4f} {:9.4f} {:9.1f}      0.      0. {:6.2f}     0.\n'.format(
-                       rec.prn, rec.el, rec.az, sod(rec.time), rec.snr/10))
+                       rec['prn'], rec['el'], rec['az'], sod(rec['time']), rec['snr']/10))
 
 def write_all_snr88(SNRs, prefix='rx'):
     """Write out each receiver's snr records in a file in the current directory.
@@ -287,7 +287,7 @@ def write_all_snr88(SNRs, prefix='rx'):
     GPS day.
     """
     for rxid, SNR in SNRs.items():
-        epoch = SNR[0].time
+        epoch = SNR[0]['time']
         fname = prefix + '{:02}'.format(rxid) + epoch.tolist().strftime('%j0.%y.snr88')
         info('Writing', fname, '...')
         out_snr88(SNR, fname)
@@ -299,20 +299,20 @@ def macformat(mac):
 def hkreport(HK, file=sys.stdout):
     """Print out the contents of housekeeping messages in the array HK."""
     for rec in HK:
-        file.write('Rx{:02} '.format(rec.rxid))
+        file.write('Rx{:02} '.format(rec['rxid']))
         try:
-            file.write('{:%x %X}'.format(rec.time.tolist()))
+            file.write('{:%x %X}'.format(rec['time'].tolist()))
         except ValueError:
-            file.write('{}'.format(rec.time))
+            file.write('{}'.format(rec['time']))
         file.write('  {}  {:10.5f}°E {:9.5f}°N {:8.3f}m  {:.2f}V {:2}°C msgct:{:5}  '
-                   'flags: {:02X}\n'.format(macformat(rec.mac),
-                                            rec.lon/1e7,
-                                            rec.lat/1e7,
-                                            rec.alt/1000,
-                                            rec.volt/100,
-                                            rec.temp,
-                                            rec.msgct,
-                                            rec.err))
+                   'flags: {:02X}\n'.format(macformat(rec['mac']),
+                                            rec['lon']/1e7,
+                                            rec['lat']/1e7,
+                                            rec['alt']/1000,
+                                            rec['volt']/100,
+                                            rec['temp'],
+                                            rec['msgct'],
+                                            rec['err']))
 
 def translate(fid):
     """Translate BINEX data to ASCII formats.
@@ -322,7 +322,7 @@ def translate(fid):
     """
     SNRs, HK = readall(fid)
     write_all_snr88(SNRs)
-    hkfile = HK[0].time.tolist().strftime('HK_%j.%y.txt') # we need a site identifier!
+    hkfile = HK[0]['time'].tolist().strftime('HK_%j.%y.txt') # we need a site identifier!
     info('Writing', hkfile, '...')
     with open(hkfile, 'wt') as fid:
         hkreport(HK, fid)
