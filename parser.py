@@ -28,11 +28,11 @@ class GrowArray:
         if initarr:
             self.curind = len(initarr)
             alloc = max(alloc, int(self.curind * 1.2))
-            self.arr = np.array((alloc,), dtype=dtype)
+            self.arr = np.empty((alloc,), dtype=dtype)
             self.arr[:self.curind] = initarr # copy so that we own the memory (we'll resize it)
         else:
             self.curind = 0
-            self.arr = np.array((alloc,), dtype=dtype)
+            self.arr = np.empty((alloc,), dtype=dtype)
 
     def append(self, val):
         try:
