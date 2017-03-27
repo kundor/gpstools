@@ -57,7 +57,7 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, en
     if hkhours is None:
         hkhours = config.PLOT_HK_HOURS
     with pushdir(pdir):
-        with open('updatetime.txt', 'at') as fid:
+        with open('updatetime.txt', 'at', encoding='utf-8') as fid:
             fid.write('. Updating...')
         #plot.allrises(SNRs) # skip for now
         tvs = plot.tempvolts(cleanhk(HK), hkhours, endtime)
@@ -83,7 +83,7 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, en
                 _symlink(avg, 'AVG' + suf)
         snrtab.close()
         os.replace('snrtab-new.html', 'snrtab.html')
-        with open('rxlist.html', 'wt') as fid:
+        with open('rxlist.html', 'wt', encoding='utf-8') as fid:
             for rxid in SNRs:
                 fid.write(rxline(rxid, HK))
         updatetime()
@@ -108,7 +108,7 @@ def midnightplots(SNRs, HK, day=None, ddir=None):
         return
     etime = day + np.timedelta64(1, 'D')
     makeplots(SNRs, HK, pdir=ddir, snrhours=24, hkhours=24, endtime=etime,
-              figlength=20, doazel=False, minelev=15)
+              figlength=16, doazel=False, minelev=15)
     index = os.path.join(config.PLOTDIR, 'index.html')
     shutil.copy(index, ddir)
 
@@ -202,7 +202,7 @@ def plotupdate(fname=None, handover=None, oldstate=None):
             olens = nlens
             if tic - oldtic > config.PLOT_IVAL:
                 info('Starting plotting at', tic)
-                makeplots(SNRs, HK, endtime=tic)
+                makeplots(SNRs, HK, endtime=tic, minelev=10)
                 info('Done at', np.datetime64('now'))
                 oldtic = tic
             else:
