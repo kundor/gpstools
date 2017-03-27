@@ -66,11 +66,11 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, en
                 _symlink(tv, tv[:7] + '.png')
         day = endtime or np.datetime64('now')
         hkfile = day.tolist().strftime('HK_%j.%y.txt')
-        with open(hkfile, 'wt') as fid:
+        with open(hkfile, 'wt', encoding='utf-8') as fid:
             hkreport(HK, fid)
         if symlink:
             _symlink(hkfile, 'HK.txt')
-        snrtab = open('snrtab-new.html', 'wt')
+        snrtab = open('snrtab-new.html', 'wt', encoding='utf-8')
         for rxid, SNR in SNRs.items():
             snrtab.write(format_stats(rxid, *calcsnrstat(gensnrnp(SNR))))
             allsnr = plot.prn_snr(SNR, rxid, snrhours, endtime, **snrargs)
