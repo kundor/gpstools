@@ -7,7 +7,9 @@ and azimuth and elevation from a base point (in radians).
 """
 
 from math import atan2, cos, sin, sqrt, pi
-import urllib
+from urllib.request import urlopen
+from urllib.parse import urlencode
+from urllib.error import HTTPError
 import json
 import re
 import scipy.integrate
@@ -61,7 +63,7 @@ def earthradius(lat):
 
 def jsonfetch(url, **kwargs):
     """Make a GET request to url with parameters from the keyword arguments; parse result as JSON."""
-    with urllib.request.urlopen(url + '?' + urllib.parse.urlencode(kwargs)) as resp:
+    with urlopen(url + '?' + urlencode(kwargs)) as resp:
         enc = resp.info().get_content_charset('utf-8')
         return json.loads(resp.read().decode(enc))
 
@@ -75,7 +77,7 @@ def google_ht(lat, lon, bestguess=0):
     try:
         resp = jsonfetch(gurl, key=gkey, locations='{},{}'.format(lat, lon))
         return resp['results'][0]['elevation']
-    except (urllib.error.HTTPError, KeyError, IndexError) as e:
+    except (HTTPError, KeyError, IndexError) as e:
         info(e)
         return bestguess
 
@@ -86,12 +88,12 @@ def orthometric_ht(lat, lon):
     Add the result to the geoid height to get ellipsoid height.
     """
     url = 'http://jules.unavco.org/Geoid/Geoid'
-    dat = urllib.parse.urlencode(dict(lat=lat, lon=lon, gpsheight=0)).encode('ascii')
+    dat = urlencode(dict(lat=lat, lon=lon, gpsheight=0)).encode('ascii')
     try:
-        with urllib.request.urlopen(url, dat) as resp:
+        with urlopen(url, dat) as resp:
             enc = resp.info().get_content_charset('utf-8')
             text = resp.read().decode(enc)
-    except urllib.error.HTTPError as e:
+    except HTTPError as e:
         info(e)
         return None
     mch = re.search(r'Orthometric height [^0-9]* EGM96 [^0-9]* (-?[0-9]+\.[0-9]+)', text)

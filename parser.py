@@ -12,7 +12,7 @@ from binex import read_record
 from ascii_read import poslist
 from gpstime import gpstotsecgps, gpsweekgps
 from coords import llh2xyz, get_ellipsoid_ht
-from utility import info, mode
+from utility import info, debug, mode
 
 SNR_REC = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('snr', 'u2')])
 HK_REC = np.dtype([('rxid', 'u1'), ('time', 'M8[us]'), ('mac', 'u8'), ('lon', 'i4'),
@@ -72,6 +72,8 @@ class SatPositions:
     def __init__(self):
         self.endtime = np.datetime64('0')
         self.start = 0
+        self.rxlocs = {}
+        self.rxazel = {}
 
     def __call__(self, prn, time):
         if time >= self.endtime:
@@ -97,19 +99,31 @@ class SatPositions:
         S = np.arange(0, 1, 1/900)
         S.shape = (900, 1, 1, 1)
         MS = 1 - S
-        K = np.kron(COFS[:-1], MS) + np.kron(COFS[1:], S)
+        # K = np.kron(COFS[:-1], MS) + np.kron(COFS[1:], S)
+        # This is equivalent to the kronecker product, but much faster:
+        K = (COFS[:-1,np.newaxis,:,np.newaxis,:,np.newaxis,:,np.newaxis]
+            * MS[np.newaxis, :, np.newaxis, :,np.newaxis, :,np.newaxis, :]
+            + COFS[1:,np.newaxis,:,np.newaxis,:,np.newaxis,:,np.newaxis]
+            * S[np.newaxis, :, np.newaxis, :,np.newaxis, :,np.newaxis, :])
+        K.shape = (-1, *COFS.shape[1:])
         self.endtime = time + np.timedelta64(stop - int(tim0) - 1, 's')
         self.pos = np.sum(M.reshape((-1, 1, 11, 1)) * K, axis=2)
+        for rxid in self.rxlocs:
+            self.compazel(rxid)
 
-def azel(sxloc, rxloc, trans):
-    """Given satellite location sxloc, receiver location rxloc (ECEF, meters)
-    and a ENU translation matrix trans, return azimuth and elevation (degrees)."""
-    east, north, up = (sxloc - rxloc) @ trans
-    az = np.arctan2(east, north) * 180 / np.pi
-    if az < 0:
-        az += 360
-    el = np.arctan2(up, np.sqrt(east*east + north*north)) * 180 / np.pi
-    return az, el
+    def rxadd(self, rxid, lat, lon, alt):
+        lat *= np.pi / 180
+        lon *= np.pi / 180
+        self.rxlocs[rxid] = (llh2xyz(lat, lon, alt), enutrans(lat, lon))
+        if self.start:
+            self.compazel(rxid)
+
+    def compazel(self, rxid):
+        ENU = (self.pos - self.rxlocs[rxid][0]) @ self.rxlocs[rxid][1]
+        az = np.arctan2(ENU[:, :, 0], ENU[:, :, 1]) * 180 / np.pi
+        az[az < 0] += 360
+        el = np.arctan2(ENU[:, :, 2], np.linalg.norm(ENU[:, :, :2], axis=2)) * 180 / np.pi
+        self.rxazel[rxid] = np.stack((az, el), axis=-1)
 
 def weeksow_to_np(week, sow):
     """Convert GPS week and (fractional) second-of-week to numpy datetime64 in GPS time."""
@@ -119,20 +133,16 @@ def sod(time):
     """Convert numpy datetime64 to seconds of day."""
     return (time - time.astype('M8[D]')) / np.timedelta64(1, 's')
 
-def addrecords(SNR, time, snrs, satpos, rxloc, trans):
+def addrecords(SNR, time, snrs, satpos, rxid):
     """Add snr records to array SNR."""
     idx = int(gpstotsecgps(time)) - satpos.start
     for prn, snr in snrs:
-        sxloc = satpos.pos[idx, prn - 1, :]
-        az, el = azel(sxloc, rxloc, trans)
+        az, el = satpos.rxazel[rxid][idx, prn - 1, :]
         SNR.append((prn, time, el, az, snr))
 
-def rx_locations(HK):
+def rx_locations(HK, satpos=None):
     """Return a dictionary of receiver locations determined from the housekeeping messages."""
-    rxloc = {}
-    trans = {}
-    if HK is None:
-        return rxloc, trans
+    rxllh = {}
     HK = cleanhk(HK)
     HK = HK[HK.lon != 0]
     HK = HK[HK.lat != 0]
@@ -144,9 +154,10 @@ def rx_locations(HK):
             info('Obtaining terrain altitude for RX{:02} from Google and Unavco.'.format(rx))
             alt = get_ellipsoid_ht(lat, lon)
         info("RX{:02} found at {}°E, {}°N, {} m.".format(rx, lon, lat, alt))
-        rxloc[rx] = llh2xyz(lat * np.pi / 180, lon * np.pi / 180, alt)
-        trans[rx] = enutrans(lat, lon)
-    return rxloc, trans
+        rxllh[rx] = (lon, lat, alt)
+        if satpos:
+            satpos.rxadd(lat, lon, alt)
+    return rxllh
 
 def reader(fid, preSNRs=None, preHK=None):
     """A generator that yields all the available records from fid whenever the stream ends.
@@ -159,9 +170,9 @@ def reader(fid, preSNRs=None, preHK=None):
         for rx, SNR in preSNRs.items():
             SNRs[rx] = growSNR(SNR)
     HK = growHK(preHK)
-    rxloc, trans = rx_locations(preHK)
-    # for each rxid, its location and ENU translation matrix, filled in when location known
     satpos = SatPositions()
+    if preHK:
+        rx_locations(preHK, satpos)
     numtot, numempty, numearly, numnoloc = [defaultdict(int) for _ in range(4)]
     thisweek = gpsweekgps(np.datetime64('now'))
     while True:
@@ -186,20 +197,21 @@ def reader(fid, preSNRs=None, preHK=None):
                 info("Skipped {:2} records ({:2} empty, {:2} early) at {:%H:%M:%S}.".format(
                         numtot[rxid], numempty[rxid], numearly[rxid], time.tolist()))
                 numtot[rxid] = numempty[rxid] = numearly[rxid] = 0
-            if rxid not in rxloc:
+            if rxid not in satpos.rxlocs:
                 numnoloc[rxid] += 1
                 continue
             if numnoloc[rxid]:
                 info("Skipped", numnoloc[rxid], "records before receiver", rxid, "location was known.")
                 numnoloc[rxid] = 0
             if time > satpos.endtime:
-                satpos.update(time, 6)
-            addrecords(SNRs[rxid], time, snrs, satpos, rxloc[rxid], trans[rxid])
+                debug('Updating satellite locations;', time, ' > ', satpos.endtime)
+                satpos.update(time, 4)
+            addrecords(SNRs[rxid], time, snrs, satpos, rxid)
         elif rid == 193:
             rxid = vals[0]
             vals = rxid, weeksow_to_np(*vals[1]), *vals[2:]
             HK.append(vals)
-            if rxid not in rxloc:
+            if rxid not in satpos.rxlocs:
                 if vals[1] > np.datetime64('now') + np.timedelta64(1, 'h'):
                     info('Rx', rxid, ': Not using location from future time', vals[1])
                     continue
@@ -223,10 +235,7 @@ def reader(fid, preSNRs=None, preHK=None):
                     info('Obtaining terrain altitude from Google and Unavco.')
                     alt = get_ellipsoid_ht(lat, lon)
                 info("Receiver", rxid, "reported at", lon, "°E, ", lat, "°N, ", alt, " m.")
-                lon *= np.pi / 180
-                lat *= np.pi / 180
-                rxloc[rxid] = llh2xyz(lat, lon, alt)
-                trans[rxid] = enutrans(lat, lon)
+                satpos.rxadd(rxid, lat, lon, alt)
         else:
             info('Unknown record {}:'.format(rid), vals.hex())
 
