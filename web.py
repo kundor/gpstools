@@ -72,7 +72,7 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, en
             _symlink(hkfile, 'HK.txt')
         snrtab = open('snrtab-new.html', 'wt', encoding='utf-8')
         for rxid, SNR in SNRs.items():
-            snrtab.write(format_stats(rxid, *calcsnrstat(gensnrnp(SNR))))
+            snrtab.write(format_stats(rxid, *calcsnrstat(SNR.snr / 10)))
             allsnr = plot.prn_snr(SNR, rxid, snrhours, endtime, **snrargs)
             nsx = plot.numsats(SNR, rxid, minelev=10, hrs=hkhours, endtime=endtime)
             avg = plot.meansnr(SNR, rxid, hkhours, endtime, minelev=10)
