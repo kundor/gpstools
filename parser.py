@@ -156,7 +156,7 @@ def rx_locations(HK, satpos=None):
         info("RX{:02} found at {}°E, {}°N, {} m.".format(rx, lon, lat, alt))
         rxllh[rx] = (lon, lat, alt)
         if satpos:
-            satpos.rxadd(lat, lon, alt)
+            satpos.rxadd(rx, lat, lon, alt)
     return rxllh
 
 def reader(fid, preSNRs=None, preHK=None):
