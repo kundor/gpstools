@@ -178,7 +178,7 @@ def _gethouraxes(figsize, shareax=None, **kwargs):
     else:
         ax = fig.add_subplot(1, 1, 1, sharex=shareax, sharey=shareax, **kwargs)
     #ax.set_xlabel('Time (UTC)') # To save space on stacked plots: we'll only label the bottom x-axis
-    ax.set_position([0.06, 0.14, 0.89, 0.75]) # ensure the plots line up with eachother
+    ax.set_position([0.055, 0.14, 0.89, 0.75]) # ensure the plots line up with eachother
     return fig, ax
 
 def _thresh(hrs, endtime):
@@ -295,7 +295,7 @@ def tempvolt(hk, shareax=None):
     temp = hk['temp']
     fig, ax = _gethouraxes((10, 3), shareax)
     ax.scatter(times, volt, c='b')
-    ax.set_ylabel('Volts', labelpad=4, color='b')
+    ax.set_ylabel('Volts', labelpad=3, color='b')
     ax.tick_params('y', colors='b')
     ax.yaxis.set_major_formatter(mp.ticker.FormatStrFormatter('%.1f'))
     _expandlim(config.VOLT_RANGE, ax)
