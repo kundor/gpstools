@@ -295,7 +295,7 @@ def tempvolt(hk, shareax=None):
     temp = hk['temp']
     fig, ax = _gethouraxes((10, 3), shareax)
     ax.scatter(times, volt, c='b')
-    ax.set_ylabel('Volts', color='b')
+    ax.set_ylabel('Volts', labelpad=4, color='b')
     ax.tick_params('y', colors='b')
     ax.yaxis.set_major_formatter(mp.ticker.FormatStrFormatter('%.1f'))
     _expandlim(config.VOLT_RANGE, ax)
@@ -307,7 +307,7 @@ def tempvolt(hk, shareax=None):
     ax.set_xlim(min(times), max(times))
     _utclocallabel(ax)
     _localmidnight(ax)
-    ax2.set_ylabel('Temperature (°C)', color='r')
+    ax2.set_ylabel('Temperature (°C)', labelpad=4, color='r')
     ax2.tick_params('y', colors='r')
     _expandlim(config.TEMP_RANGE, ax2)
     return fig, ax
