@@ -432,9 +432,9 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None):
     if minelev:
         title += ' over {}°'.format(minelev)
     fig, ax = _gethouraxes((10, 3), title=title, ylabel='Mean SNR (dB-Hz)')
-    ax.scatter(time.tolist(), means, s=2, c='b', edgecolors='face')
     pmeans = np.array(pmeans)
-    ax.scatter(time[pmeans > 0].tolist(), pmeans[pmeans > 0], s=2, c='r', edgecolors='face',)
+    ax.plot(time.tolist(), means, 'bo',
+            time[pmeans > 0].tolist(), pmeans[pmeans > 0], 'ro', ms=2, mew=0)
     if hrs is not None:
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
