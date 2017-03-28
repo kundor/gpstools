@@ -294,7 +294,7 @@ def tempvolt(hk, shareax=None):
     volt = hk['volt'] / 100
     temp = hk['temp']
     fig, ax = _gethouraxes((10, 3), shareax)
-    ax.plot(times, volt, 'b.', ms=2)
+    ax.plot(times, volt, 'b.', ms=4)
     ax.set_ylabel('Volts', labelpad=3, color='b')
     ax.tick_params('y', colors='b')
     ax.yaxis.set_major_formatter(mp.ticker.FormatStrFormatter('%.1f'))
