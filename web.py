@@ -14,7 +14,7 @@ import numpy as np
 from snrstats import calcsnrstat
 import plot
 from parser import reader, readall, hkreport, cleanhk
-from utility import info, debug, pushdir
+from utility import info, debug, pushdir, static_vars
 import config
 
 def _symlink(src, dest):
@@ -47,7 +47,41 @@ def rxline(rxid, HK):
     return """    <li>
         RX{0:02}: <a href="#RX{0:02}-HK">HK</a> <a href="#RX{0:02}-SNR">SNR</a>
         {1:.5f}&deg;W, {2:.5f}&deg;N, {3:.3f}m.
-        </li>""".format(rxid, lon, lat, alt)
+        </li>
+        """.format(rxid, lon, lat, alt)
+
+def rxhkplots(rxid):
+    """HTML to include the housekeeping plots for RX *rxid*."""
+    rxstr = 'RX{:02}'.format(rxid)
+    return """<h3 class="rxhead"><a name="{0}-HK">{0}</a></h3>
+        <img src="TV-{0}.png"><br>
+        <img src="NS-{0}.png"><br>
+        <img src="AVG-{0}.png"><br>
+        <hr>
+        """.format(rxstr)
+
+def snrplots(rxid):
+    """HTML to include the SNR plots for RX *rxid*."""
+    rxstr = 'RX{:02}'.format(rxid)
+    return """<h3 class="rxhead"><a name="{0}-SNR">{0}</a></h3>
+        <img src="ALLSNR-{0}.png">
+        """.format(rxstr)
+
+@static_vars(rxlist=[])
+def plotspage(rxlist, HK):
+    """Write out the receiver list and image lists for the web page."""
+    rxlist = sorted(rxlist)
+    if rxlist == plotspage.rxlist:
+        return
+    with open('rxlist.html', 'wt', encoding='utf-8') as fid:
+         for rxid in rxlist:
+             fid.write(rxline(rxid, HK))
+    with open('plots.html', 'wt', encoding='utf-8') as fid:
+        for rxid in rxlist:
+            fid.write(rxhkplots(rxid))
+        for rxid in rxlist:
+            fid.write(snrplots(rxid))
+    plotspage.rxlist = rxlist
 
 def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, endtime=None, **snrargs):
     if pdir is None:
@@ -83,9 +117,7 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, en
                 _symlink(avg, 'AVG' + suf)
         snrtab.close()
         os.replace('snrtab-new.html', 'snrtab.html')
-        with open('rxlist.html', 'wt', encoding='utf-8') as fid:
-            for rxid in SNRs:
-                fid.write(rxline(rxid, HK))
+        plotspage(SNRs, HK)
         updatetime()
 
 def midnightplots(SNRs, HK, day=None, ddir=None):
