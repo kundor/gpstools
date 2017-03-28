@@ -117,6 +117,11 @@ def decompress(filename, move=False):
             info("Command '", ' '.join(cmd), "' succeeded, but did not produce the output file?!")
     raise RuntimeError('Could not get an external program to decompress the file ' + filename)
 
+class FieldObj:
+    """Just an object you can set fields on."""
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
 class ProfileThis:
     """A context manager to profile the contained code.
 
