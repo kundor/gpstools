@@ -65,6 +65,23 @@ def fullprint(**kwargs):
     yield
     np.set_printoptions(**oldopt)
 
+def static_vars(**kwargs):
+    """A function decorator to set static variables as attributes on the function.
+
+    Usage:
+    @static_vars(counter=0)
+    def foo():
+        foo.counter += 1
+        ...
+    (User Claudiu, http://stackoverflow.com/a/279586/2132213)
+    """
+    def decorate(func):
+        for k, val in kwargs.items():
+            setattr(func, k, val)
+        return func
+    return decorate
+
+
 def decompress(filename, move=False):
     """Decompress a (Lempel-Ziv) compress'd file.
 
