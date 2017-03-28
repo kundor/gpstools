@@ -25,7 +25,7 @@ HK_ALLOC = 1000
 class GrowArray:
     """Allows appending to a numpy array, reallocating as necessary."""
     def __init__(self, alloc, dtype, initarr=None):
-        if initarr:
+        if initarr is not None:
             self.curind = len(initarr)
             alloc = max(alloc, int(self.curind * 1.2))
             self.arr = np.empty((alloc,), dtype=dtype)
@@ -171,7 +171,7 @@ def reader(fid, preSNRs=None, preHK=None):
             SNRs[rx] = growSNR(SNR)
     HK = growHK(preHK)
     satpos = SatPositions()
-    if preHK:
+    if preHK is not None:
         rx_locations(preHK, satpos)
     numtot, numempty, numearly, numnoloc = [defaultdict(int) for _ in range(4)]
     thisweek = gpsweekgps(np.datetime64('now'))
