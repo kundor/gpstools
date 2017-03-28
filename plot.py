@@ -85,8 +85,8 @@ def dorises2(snrdata, prn):
         ax0 = plt.subplot(gs[0])
         pel = eles[peak]
         twoel = 2*pel
-        ax0.scatter(eles[beg:peak+1], snr[beg:peak+1], s=1)
-        ax0.scatter(twoel - eles[peak+1:end+1], snr[peak+1:end+1], s=1)
+        ax0.plot(eles[beg:peak+1], snr[beg:peak+1], 'k.', ms=1)
+        ax0.plot(twoel - eles[peak+1:end+1], snr[peak+1:end+1], 'k.', ms=1)
         ax0.axvline(eles[peak])
         xt = np.arange(pel/5, twoel-1, pel/5)
         xlab = ['{:.0f}°'.format(x if x <= pel else twoel - x) for x in xt]
@@ -229,7 +229,7 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
             ax = axes[0] = fig.add_subplot(gs[0, 0])
             ax.xaxis_date()
             ax.xaxis.set_major_formatter(mp.dates.DateFormatter('%H:%M'))
-        ax.scatter(psnr['time'].tolist(), psnr['snr'] / 10, s=2)
+        ax.plot(psnr['time'].tolist(), psnr['snr'] / 10, 'k.', ms=2)
         rxlab = 'RX{:02}: '.format(rxid) if rxid else ''
         ax.set_ylabel(rxlab + 'PRN {:02}'.format(prn))
         if doazel:
@@ -294,7 +294,7 @@ def tempvolt(hk, shareax=None):
     volt = hk['volt'] / 100
     temp = hk['temp']
     fig, ax = _gethouraxes((10, 3), shareax)
-    ax.scatter(times, volt, c='b')
+    ax.plot(times, volt, 'b.', ms=2)
     ax.set_ylabel('Volts', labelpad=3, color='b')
     ax.tick_params('y', colors='b')
     ax.yaxis.set_major_formatter(mp.ticker.FormatStrFormatter('%.1f'))
@@ -433,8 +433,8 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None):
         title += ' over {}°'.format(minelev)
     fig, ax = _gethouraxes((10, 3), title=title, ylabel='Mean SNR (dB-Hz)')
     pmeans = np.array(pmeans)
-    ax.plot(time.tolist(), means, 'bo',
-            time[pmeans > 0].tolist(), pmeans[pmeans > 0], 'ro', ms=2, mew=0)
+    ax.plot(time.tolist(), means, 'b.',
+            time[pmeans > 0].tolist(), pmeans[pmeans > 0], 'r.', ms=2)
     if hrs is not None:
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
