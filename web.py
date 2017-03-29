@@ -74,6 +74,7 @@ def plotspage(rxlist, HK):
     rxlist = sorted(rxlist)
     if rxlist == plotspage.rxlist and os.path.exists('rxlist.html') and os.path.exists('plots.html'):
         return
+    HK = cleanhk(HK)
     with open('rxlist.html', 'wt', encoding='utf-8') as fid:
          for rxid in rxlist:
              fid.write(rxline(rxid, HK))
