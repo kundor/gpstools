@@ -18,9 +18,11 @@ SNR_REC = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'),
 HK_REC = np.dtype([('rxid', 'u1'), ('time', 'M8[us]'), ('mac', 'u8'), ('lon', 'i4'),
                    ('lat', 'i4'), ('alt', 'i4'), ('volt', 'u2'), ('temp', 'i2'),
                    ('msgct', 'u2'), ('err', 'u1')])
+NM_REC = np.dtype([('time', 'M8[us]'), ('numsat', 'u1'), ('mean', 'f'), ('pmean', 'f')])
 GPSepoch = np.datetime64('1980-01-06', 'us')
 SNR_ALLOC = 10**6 # how much to preallocate for these types
 HK_ALLOC = 1000
+NM_ALLOC = 86400
 
 class GrowArray:
     """Allows appending to a numpy array, reallocating as necessary."""
@@ -51,6 +53,9 @@ def growSNR(arr=None):
 
 def growHK(arr=None):
     return GrowArray(HK_ALLOC, HK_REC, arr)
+
+def growNM(arr=None):
+    return GrowArray(NM_ALLOC, NM_REC, arr)
 
 def enutrans(lat, lon):
     sin, cos = np.sin, np.cos
