@@ -72,7 +72,7 @@ def snrplots(rxid):
 def plotspage(rxlist, HK):
     """Write out the receiver list and image lists for the web page."""
     rxlist = sorted(rxlist)
-    if rxlist == plotspage.rxlist:
+    if rxlist == plotspage.rxlist and os.path.exists('rxlist.html') and os.path.exists('plots.html'):
         return
     with open('rxlist.html', 'wt', encoding='utf-8') as fid:
          for rxid in rxlist:
@@ -142,7 +142,7 @@ def midnightplots(SNRs, HK, day=None, ddir=None):
         return
     etime = day + np.timedelta64(1, 'D')
     makeplots(SNRs, HK, pdir=ddir, snrhours=24, hkhours=24, endtime=etime,
-              figlength=16, doazel=False, minelev=15)
+              figlength=14, doazel=False, minelev=15)
     index = os.path.join(config.PLOTDIR, 'index.html')
     shutil.copy(index, ddir)
 
