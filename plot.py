@@ -4,7 +4,7 @@ from contextlib import suppress
 import time
 import numpy as np
 import matplotlib as mp
-mp.use('Agg') # non-interactive backend, allows importing without crashing X-less ipython
+mp.use('Agg', warn=False) # non-interactive backend, allows importing without crashing X-less ipython
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D #analysis:ignore
 from gpstime import gpssowgps
@@ -227,7 +227,7 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         return
     fig = plt.figure(figsize=(figlength, 2*numsat))
     if doazel:
-        gs = mp.gridspec.GridSpec(numsat, 2, width_ratios=[figlength - 2, 2])
+        gs = mp.gridspec.GridSpec(numsat, 2, width_ratios=[figlength - 2, 1.8])
     else:
         gs = mp.gridspec.GridSpec(numsat, 1)
     axes = [0]*numsat
@@ -259,7 +259,7 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
                            handletextpad=0.4, handlelength=0.8)
     else:
         axes[0].set_xlim(min(SNR['time'].tolist()), max(SNR['time'].tolist()))
-    fig.tight_layout()
+    fig.tight_layout(pad=0.1, h_pad=0.01, w_pad=0.01)
     if rxid:
         fname = 'ALLSNR-RX{:02}-{:%j}.png'.format(rxid, endtime.tolist())
         fig.savefig(fname)
