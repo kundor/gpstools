@@ -501,6 +501,7 @@ def polarazel(azis, eles, ax=None, label_el=True):
     xlab = (90 - xloc * 180 / pi) % 360
     plt.xticks(xloc, ['{:.0f}°'.format(x) for x in xlab])
     yloc = range(20, 90, 20)
+    ax.set_ylim(0, 90)
     if label_el:
         plt.yticks(yloc, (str(90 - y) for y in yloc))
     else:
