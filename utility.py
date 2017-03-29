@@ -121,6 +121,10 @@ class FieldObj:
     """Just an object you can set fields on."""
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
+    def __str__(self):
+        return '\n'.join('{}: {}'.format(k, v) for k, v in self.__dict__.items())
+    def __repr__(self):
+        return 'FieldObj(' + ', '.join('{}={!r}'.format(k, v) for k, v in self.__dict__.items()) + ')'
 
 class ProfileThis:
     """A context manager to profile the contained code.
