@@ -227,7 +227,7 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         return
     fig = plt.figure(figsize=(figlength, 2*numsat))
     if doazel:
-        gs = mp.gridspec.GridSpec(numsat, 2, width_ratios=[4, 1])
+        gs = mp.gridspec.GridSpec(numsat, 2, width_ratios=[figlength - 2, 2])
     else:
         gs = mp.gridspec.GridSpec(numsat, 1)
     axes = [0]*numsat
