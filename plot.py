@@ -283,7 +283,7 @@ def _localmidnight(ax):
     else:
         info('Local midnight did not occur in axis')
         return
-    ax.axvline(midnt)
+    ax.axvline(midnt, color='0.3', zorder=0)
 
 def tempvolt(hk, shareax=None):
     """Plot temperature and voltage from the array of HK records.
