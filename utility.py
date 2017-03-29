@@ -5,6 +5,8 @@ These are not very specific in usage, however, and could be useful anywhere.
 from contextlib import suppress, redirect_stdout, contextmanager
 import subprocess
 import os
+import shutil
+from textwrap import TextWrapper
 import inspect
 import numpy as np
 import config
@@ -117,14 +119,31 @@ def decompress(filename, move=False):
             info("Command '", ' '.join(cmd), "' succeeded, but did not produce the output file?!")
     raise RuntimeError('Could not get an external program to decompress the file ' + filename)
 
+def subdent(lead, obj, width):
+    """Return lead + str(obj), with lines after the first indented to len(lead)."""
+    if isinstance(obj, np.ndarray):
+        obst = np.array2string(obj, max_line_width=width, prefix=lead)
+    else:
+        iin = ' '*len(lead)
+        wrp = TextWrapper(width=width, expand_tabs=False, replace_whitespace=False,
+                          initial_indent=iin, subsequent_indent=iin+'…')
+        obst = '\n'.join(wrp.fill(txt) for txt in str(obj).splitlines()).lstrip()
+    return lead + obst
+
 class FieldObj:
     """Just an object you can set fields on."""
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
+
     def __str__(self):
-        return '\n'.join('{}: {}'.format(k, v) for k, v in self.__dict__.items())
+        width = shutil.get_terminal_size().columns
+        with fullprint(precision=3, threshold=20, infstr='∞'):
+            return '\n'.join(subdent(k + ': ', v, width) for k, v in self.__dict__.items())
+
     def __repr__(self):
-        return 'FieldObj(' + ', '.join('{}={!r}'.format(k, v) for k, v in self.__dict__.items()) + ')'
+        pref = 'FieldObj('
+        intr = ',\n    '
+        return pref + intr.join('{}={!r}'.format(k, v) for k, v in self.__dict__.items()) + ')'
 
 class ProfileThis:
     """A context manager to profile the contained code.
