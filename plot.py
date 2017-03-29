@@ -240,8 +240,9 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         ax.set_ylabel(rxlab + 'PRN {:02}'.format(prn))
         if thresh:
             opsnr = OSNR[OSNR['prn'] == prn]
-            tims = opsnr['time'] + diftime
-            ax.plot(tims.tolist(), opsnr['snr'] / 10, 'g.', ms=2, zorder=0, label=prev)
+            if len(opsnr):
+                tims = opsnr['time'] + diftime
+                ax.plot(tims.tolist(), opsnr['snr'] / 10, 'g.', ms=2, zorder=0, label=prev)
         if doazel:
             ax1 = fig.add_subplot(gs[i, 1], projection='polar')
             polarazel(psnr['az'], psnr['el'], ax1, label_el=False)
@@ -249,8 +250,9 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
     axes[0].set_ylim(min(SNR['snr']) / 10, max(SNR['snr']) / 10)
     if thresh:
         axes[0].set_xlim(thresh.tolist(), endtime.tolist())
-        axes[0].legend(loc='best', fontsize='small', numpoints=1, markerscale=4,
-                       handletextpad=0.4, handlelength=0.8)
+        if len(OSNR):
+            axes[0].legend(loc='best', fontsize='small', numpoints=1, markerscale=4,
+                           handletextpad=0.4, handlelength=0.8)
     else:
         axes[0].set_xlim(min(SNR['time'].tolist()), max(SNR['time'].tolist()))
     fig.tight_layout()
