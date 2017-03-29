@@ -196,18 +196,21 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
     If hrs is set to 'all', then all data in the provided array are plotted.
     If hrs is not given, then config.PLOT_SNR_HOURS is used.
     """
+    diftime = np.timedelta64(1, 'D') - np.timedelta64(246, 's')
     if hrs is None:
         hrs = config.PLOT_SNR_HOURS
     if hrs == 'all':
         thresh = None
     else:
         thresh, endtime = _thresh(hrs, endtime)
-    if thresh:
-        SNR = SNR[findfirstgt(SNR['time'], thresh) : findfirstgt(SNR['time'], endtime)]
     if minelev:
         SNR = SNR[SNR['el'] > minelev]
     if omit_zero:
         SNR = SNR[SNR['snr'] > 0]
+    if thresh:
+        OSNR = SNR[findfirstgt(SNR['time'], thresh - diftime :
+                   findfirstgt(SNR['time'], endtime - diftime]
+        SNR = SNR[findfirstgt(SNR['time'], thresh) : findfirstgt(SNR['time'], endtime)]
     prns, ct = np.unique(SNR['prn'], return_counts=True)
     prns = prns[ct > 1200] # at least 20 minutes data
     numsat = len(prns)
@@ -232,6 +235,10 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         ax.plot(psnr['time'].tolist(), psnr['snr'] / 10, 'k.', ms=2)
         rxlab = 'RX{:02}: '.format(rxid) if rxid else ''
         ax.set_ylabel(rxlab + 'PRN {:02}'.format(prn))
+        if thresh:
+            opsnr = OSNR[OSNR['prn'] == prn]
+            tims = opsnr['time'] + diftime
+            ax.plot(tims.tolist(), opsnr['snr'] / 10, 'g.', ms=2, zorder=0)
         if doazel:
             ax1 = fig.add_subplot(gs[i, 1], projection='polar')
             polarazel(psnr['az'], psnr['el'], ax1, label_el=False)
