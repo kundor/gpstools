@@ -440,8 +440,8 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None):
         title += ' over {}°'.format(minelev)
     fig, ax = _gethouraxes((10, 3), title=title, ylabel='Mean SNR (dB-Hz)')
     pmeans = np.array(pmeans)
-    ax.plot(time.tolist(), means, 'b.',
-            time[pmeans > 0].tolist(), pmeans[pmeans > 0], 'r.', ms=2)
+    ax.plot(time.tolist(), means, 'b.', ms=2, label='All values')
+    ax.plot(time[pmeans > 0].tolist(), pmeans[pmeans > 0], 'r.', ms=2, label='Positive only')
     if hrs is not None:
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
@@ -449,6 +449,8 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None):
     _utclocallabel(ax)
     _setsnrlim(ax, pmeans) # add argument True to restrict y-range to observed values
     ax.tick_params(axis='y', labelleft='on', labelright='on')
+    ax.legend(loc='best', fontsize='small', numpoints=1, markerscale=4,
+              handletextpad=0.4, handlelength=0.8)
     if rxid:
         fname = 'AVG-RX{:02}-{:%j}.png'.format(rxid, doy)
         fig.savefig(fname)
