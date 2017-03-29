@@ -197,12 +197,15 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
     If hrs is not given, then config.PLOT_SNR_HOURS is used.
     """
     diftime = np.timedelta64(1, 'D') - np.timedelta64(246, 's')
+    cur, prev = 'Current', 'Previous day'
     if hrs is None:
         hrs = config.PLOT_SNR_HOURS
     if hrs == 'all':
         thresh = None
     else:
         thresh, endtime = _thresh(hrs, endtime)
+        if endtime > np.datetime64('now') - np.timedelta64(1, 'h'):
+            cur, prev = 'Today', 'Yesterday'
     if minelev:
         SNR = SNR[SNR['el'] > minelev]
     if omit_zero:
@@ -232,13 +235,13 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
             ax = axes[0] = fig.add_subplot(gs[0, 0])
             ax.xaxis_date()
             ax.xaxis.set_major_formatter(mp.dates.DateFormatter('%H:%M'))
-        ax.plot(psnr['time'].tolist(), psnr['snr'] / 10, 'k.', ms=2)
+        ax.plot(psnr['time'].tolist(), psnr['snr'] / 10, 'k.', ms=2, label=cur)
         rxlab = 'RX{:02}: '.format(rxid) if rxid else ''
         ax.set_ylabel(rxlab + 'PRN {:02}'.format(prn))
         if thresh:
             opsnr = OSNR[OSNR['prn'] == prn]
             tims = opsnr['time'] + diftime
-            ax.plot(tims.tolist(), opsnr['snr'] / 10, 'g.', ms=2, zorder=0)
+            ax.plot(tims.tolist(), opsnr['snr'] / 10, 'g.', ms=2, zorder=0, label=prev)
         if doazel:
             ax1 = fig.add_subplot(gs[i, 1], projection='polar')
             polarazel(psnr['az'], psnr['el'], ax1, label_el=False)
@@ -246,6 +249,8 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
     axes[0].set_ylim(min(SNR['snr']) / 10, max(SNR['snr']) / 10)
     if thresh:
         axes[0].set_xlim(thresh.tolist(), endtime.tolist())
+        axes[0].legend(loc='best', fontsize='small', numpoints=1, markerscale=4,
+                       handletextpad=0.4, handlelength=0.8)
     else:
         axes[0].set_xlim(min(SNR['time'].tolist()), max(SNR['time'].tolist()))
     fig.tight_layout()
