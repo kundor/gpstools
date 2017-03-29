@@ -214,9 +214,13 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         OSNR = SNR[findfirstgt(SNR['time'], thresh - diftime) :
                    findfirstgt(SNR['time'], endtime - diftime)]
         SNR = SNR[findfirstgt(SNR['time'], thresh) : findfirstgt(SNR['time'], endtime)]
-    prns, ct = np.unique(SNR['prn'], return_counts=True)
-    prns = prns[ct > 1200] # at least 20 minutes data
+    uprns, ct = np.unique(SNR['prn'], return_counts=True)
+    prns = uprns[ct > 1200] # at least 20 minutes data
     numsat = len(prns)
+    if not numsat:
+        # relax our standards and try again
+        prns = uprns
+        numsat = len(prns)
     if not numsat:
         info('No records', 'for RX{:02}'.format(rxid) if rxid else '',
              'in the given time period', thresh, 'to', endtime)
