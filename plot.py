@@ -168,17 +168,45 @@ def rises(el, sod, prn=None):
         riz.append([beg+1, peak, end])
     return riz
 
-def _gethouraxes(figsize, shareax=None, **kwargs):
+class UTCLocalFormat:
+    """Format datetime tick labels as two lines, UTC HH:MM on top, local HH:MM on bottom."""
+    def __init__(self, ax):
+        """The last tick, determined by ax (the axis we are ticking), has timezones appended."""
+        self.ax = ax
+    def __call__(self, x, pos):
+        dt = mp.dates.num2date(x)
+        if pos is None:
+            return dt.strftime('%H:%M')
+        if pos == len(self.ax.major.locator()) - 1:
+            return dt.strftime('%H:%M (UTC)\n')  + dt.astimezone().strftime('%H:%M (%Z)')
+        return dt.strftime('%H:%M\n') + dt.astimezone().strftime('%H:%M')
+
+def _gethouraxes(figsize, pos, shareax=None, **kwargs):
     """Return figure and axes set up for plotting against time, labeled HH:MM."""
+    if 'top' not in pos:
+        figsize[1] -= 0.3
+    if 'bot' not in pos:
+        figsize[1] -= 0.4
     fig = plt.figure(figsize=figsize)
+    if 'top' not in pos and 'title' in kwargs:
+        del kwargs['title']
     if shareax is None:
         ax = fig.add_subplot(1, 1, 1, **kwargs)
         ax.xaxis_date()
-        ax.xaxis.set_major_formatter(mp.dates.DateFormatter('%H:%M'))
     else:
         ax = fig.add_subplot(1, 1, 1, sharex=shareax, sharey=shareax, **kwargs)
     #ax.set_xlabel('Time (UTC)') # To save space on stacked plots: we'll only label the bottom x-axis
-    ax.set_position([0.055, 0.14, 0.89, 0.75]) # ensure the plots line up with eachother
+    bot = 0.06 / figsize[1]
+    height = 1 - 0.15 / figsize[1]
+    if 'bot' in pos:
+        bot = 0.42 / figsize[1]
+        height -= bot
+        ax.xaxis.set_major_formatter(mp.ticker.FuncFormatter(UTCLocalFormat(ax.xaxis)))
+    else:
+        ax.xaxis.set_major_formatter(mp.ticker.NullFormatter())
+    if 'top' in pos:
+        height -= 0.18 / figsize[1]
+    ax.set_position([0.055, bot, 0.89, height]) # ensure the plots line up with eachother
     return fig, ax
 
 def _thresh(hrs, endtime):
@@ -275,15 +303,6 @@ def _expandlim(minmax, ax):
         return
     ax.set_ylim(min(a0, y0), max(a1, y1))
 
-def _utclocallabel(ax):
-    """Put two-line labels in UTC and local time at x tick locations."""
-    times = [np.datetime64(t.replace(tzinfo=None)) for t in mp.dates.num2date(ax.get_xticks())]
-    xlabs = [str(t)[11:16] + '\n' + np.datetime_as_string(t, timezone='local')[11:16]
-            for t in times]
-    lastutc, lastlocal = xlabs[-1].splitlines()
-    xlabs[-1] = lastutc + ' (UTC)\n' + lastlocal + time.strftime(' (%Z)')
-    ax.set_xticklabels(xlabs)
-
 def _localmidnight(ax):
     """Put a line at local midnight on the x-axis.
 
@@ -303,7 +322,7 @@ def _localmidnight(ax):
         return
     ax.axvline(midnt, color='0.3', zorder=0)
 
-def tempvolt(hk, shareax=None):
+def tempvolt(hk, pos, shareax=None):
     """Plot temperature and voltage from the array of HK records.
 
     Return a figure.
@@ -311,7 +330,7 @@ def tempvolt(hk, shareax=None):
     times = hk['time'].tolist()
     volt = hk['volt'] / 100
     temp = hk['temp']
-    fig, ax = _gethouraxes((10, 3), shareax)
+    fig, ax = _gethouraxes([10, 3], pos, shareax)
     ax.plot(times, volt, 'b.', ms=6)
     ax.set_ylabel('Volts', labelpad=3, color='b')
     ax.tick_params('y', colors='b')
@@ -323,14 +342,13 @@ def tempvolt(hk, shareax=None):
     ax2.set_position(ax.get_position()) # You'd think this would be automatic
     ax2.plot(times, temp, c='r')
     ax.set_xlim(min(times), max(times))
-    _utclocallabel(ax)
     _localmidnight(ax)
     ax2.set_ylabel('Temperature (°C)', labelpad=4, color='r')
     ax2.tick_params('y', colors='r')
     _expandlim(config.TEMP_RANGE, ax2)
     return fig, ax
 
-def tempvolts(hk, hrs=None, endtime=None):
+def tempvolts(hk, hrs=None, endtime=None, pos='topbot'):
     """Plot temperature and voltage for each receiver in a array of housekeeping records.
 
     The two plots are on the same axes, against time. One image per receiver is
@@ -350,13 +368,15 @@ def tempvolts(hk, hrs=None, endtime=None):
         if not mask.any():
             info('No records for RX{:02} in the given time period'.format(rx), thresh, 'to', endtime)
             continue
-        fig, ax = tempvolt(hk[mask], ax)
+        fig, ax = tempvolt(hk[mask], pos, ax)
         doy = mode(hk[mask]['time'].astype('M8[D]')).tolist()
-        title = 'Rx{:02} {:%Y-%m-%d}: Voltage and Temperature'.format(rx, doy)
-        ax.set_title(title)
+        title = 'Rx{:02} {:%Y-%m-%d}'.format(rx, doy)
+        if pos != 'top':
+            title += ': Voltage and Temperature'
+        if 'top' in pos:
+            ax.set_title(title)
         if hrs is not None:
             ax.set_xlim(thresh.tolist(), endtime.tolist())
-            _utclocallabel(ax) # rewrite labels after changing the range
         figs += [fig]
         fnames += ['TV-RX{:02}-{:%j}.png'.format(rx, doy)]
     # Wait to save them, in case the shared axes are resized
@@ -365,7 +385,7 @@ def tempvolts(hk, hrs=None, endtime=None):
         plt.close(fig)
     return fnames
 
-def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
+def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None, pos='topbot'):
     """Plot number of tracked satellites vs. time from a array of SNR records.
 
     If rxid is given, an image is written out in the current directory, named
@@ -391,17 +411,21 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
     doy = mode(time.astype('M8[D]')).tolist() # most common day
     time = snr['time'][idx].tolist() # get datetime.datetime, which matplotlib can handle
     if rxid:
-        plt.ioff()
-        title = 'Rx{:02} {:%Y-%m-%d}: Number of satellites over {}°'.format(rxid, doy, minelev)
+        title = 'Rx{:02} {:%Y-%m-%d}'.format(rxid, doy)
     else:
-        title = 'VAPR {:%Y-%m-%d}: Number of satellites over {}°'.format(doy, minelev)
-    fig, ax = _gethouraxes((10, 3), title=title, ylabel='Tracked satellites')
+        title = 'VAPR {:%Y-%m-%d}'.format(doy)
+    if pos != 'top':
+        title += ': Number of satellites over {}°'.format(minelev)
+    if 'top' in pos:
+        ylabl = 'Tracked satellites'
+    else:
+        ylabl = 'No. satellites over {}°'.format(minelev)
+    fig, ax = _gethouraxes([10, 2.7], pos, title=title, ylabel=ylabl)
     ax.plot(time, numsats, '-o', ms=2)
     if hrs is not None:
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
         ax.set_xlim(min(time), max(time))
-    _utclocallabel(ax)
     ax.yaxis.set_major_locator(mp.ticker.MaxNLocator(integer=True))
     ax.set_ylim(min(numsats) - 1, max(numsats)+1)
     ax.tick_params(axis='y', labelleft='on', labelright='on')
@@ -413,7 +437,7 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None):
         return fname
     return fig
 
-def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None):
+def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None, pos='topbot'):
     """Plot mean snr vs. time from a array of SNR records.
 
     If rxid is given, an image is written out in the current directory, named
@@ -443,13 +467,15 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None):
         else:
             pmeans += [0]
     if rxid:
-        plt.ioff()
         title = 'Rx{:02} {:%Y-%m-%d}: Mean SNR'.format(rxid, doy)
     else:
         title = 'VAPR {:%Y-%m-%d}: Mean SNR'.format(doy)
     if minelev:
         title += ' over {}°'.format(minelev)
-    fig, ax = _gethouraxes((10, 3), title=title, ylabel='Mean SNR (dB-Hz)')
+    ylabl = 'Mean SNR (dB-Hz)'
+    if 'top' not in pos and minelev:
+        ylabl += ' over {}°'.format(minelev)
+    fig, ax = _gethouraxes([10, 3], pos, title=title, ylabel=ylabl)
     pmeans = np.array(pmeans)
     ax.plot(time.tolist(), means, 'b.', ms=2, label='All values')
     ax.plot(time[pmeans > 0].tolist(), pmeans[pmeans > 0], 'r.', ms=2, label='Positive only')
@@ -457,7 +483,6 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None):
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
         ax.set_xlim(min(time.tolist()), max(time.tolist()))
-    _utclocallabel(ax)
     _setsnrlim(ax, pmeans) # add argument True to restrict y-range to observed values
     ax.tick_params(axis='y', labelleft='on', labelright='on')
     ax.legend(loc='best', fontsize='small', numpoints=1, markerscale=4,
