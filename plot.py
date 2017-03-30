@@ -201,7 +201,7 @@ def _gethouraxes(figsize, pos, shareax=None, **kwargs):
     else:
         ax.xaxis.set_major_formatter(mp.ticker.NullFormatter())
     if 'top' in pos:
-        height -= 0.33 / figsize[1]
+        height -= 0.18 / figsize[1]
     ax.set_position([0.055, bot, 0.89, height]) # ensure the plots line up with eachother
     return fig, ax
 
