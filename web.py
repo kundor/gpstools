@@ -147,7 +147,7 @@ def midnightplots(SNRs, HK, day=None, ddir=None):
     index = os.path.join(config.PLOTDIR, 'index.html')
     shutil.copy(index, ddir)
     ylink = os.path.join(ddir, 'yesterlink.html')
-    yday = day = np.timedelta64(1, 'D')
+    yday = day - np.timedelta64(1, 'D')
     with open(ylink, 'wt') as fid:
         fid.write(yday.tolist().strftime('../../%Y/%j'))
 
