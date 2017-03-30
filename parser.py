@@ -84,6 +84,11 @@ class SatPositions:
         """Compute an n*32*3 array of satellite positions for all PRNS, once per second,
         starting around *time* and lasting a maximum of the given *hours*."""
         pl, epoch = poslist(time)
+        self.badprns, = np.where(np.all(pl == 0, axis=(0, 2)))
+        if len(self.badprns):
+            info('PRNS', self.badprns + 1, 'not in sp3 file.')
+        self.goodprns = [prn + 1 for prn in range(32) if prn not in self.badprns]
+        self.prndict = {prn: self.goodprns.index(prn) for prn in range(33) if prn in self.goodprns}
         sec0 = gpstotsecgps(epoch)
         tim0 = gpstotsecgps(time)
         step0 = int((tim0 - sec0)/900)
@@ -93,8 +98,10 @@ class SatPositions:
         if hours is not None:
             stop = min(stop, self.start + hours * 3600)
             endidx = min(endidx, 1 + step0 + hours * 4)
-        COFS = np.array([[np.linalg.solve(self.mvecs(sec0 + np.arange(idx-5, idx+6)*900), pl[idx-5:idx+6, prn, :])
-                      for prn in range(32)] for idx in range(step0, endidx)])
+        COFS = np.array([[np.linalg.solve(self.mvecs(sec0 + np.arange(idx-5, idx+6)*900),
+                                          pl[idx-5:idx+6, prn - 1, :])
+                          for prn in self.goodprns]
+                         for idx in range(step0, endidx)])
         M = self.mvecs(np.arange(self.start, stop))
         S = np.arange(0, 1, 1/900)
         S.shape = (900, 1, 1, 1)
@@ -137,8 +144,11 @@ def addrecords(SNR, time, snrs, satpos, rxid):
     """Add snr records to array SNR."""
     idx = int(gpstotsecgps(time)) - satpos.start
     for prn, snr in snrs:
-        az, el = satpos.rxazel[rxid][idx, prn - 1, :]
-        SNR.append((prn, time, el, az, snr))
+        try:
+            az, el = satpos.rxazel[rxid][idx, satpos.prndict[prn], :]
+            SNR.append((prn, time, el, az, snr))
+        except KeyError:
+            pass
 
 def rx_locations(HK, satpos=None):
     """Return a dictionary of receiver locations determined from the housekeeping messages."""
