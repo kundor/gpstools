@@ -96,7 +96,7 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, en
         with open('updatetime.txt', 'at', encoding='utf-8') as fid:
             fid.write('. Updating...')
         #plot.allrises(SNRs) # skip for now
-        tvs = plot.tempvolts(cleanhk(HK), hkhours, endtime)
+        tvs = plot.tempvolts(cleanhk(HK), hkhours, endtime, 'top')
         if symlink:
             for tv in tvs:
                 _symlink(tv, tv[:7] + '.png')
@@ -111,8 +111,8 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, en
         for rxid, SNR in SNRs.items():
             snrtab.write(format_stats(rxid, *calcsnrstat(SNR['snr'] / 10)))
             allsnr = plot.prn_snr(SNR, rxid, snrhours, endtime, **snrargs)
-            nsx = plot.numsats(SNR, rxid, minelev=10, hrs=hkhours, endtime=endtime)
-            avg = plot.meansnr(SNR, rxid, hkhours, endtime, minelev=10)
+            nsx = plot.numsats(SNR, rxid, minelev=10, hrs=hkhours, endtime=endtime, pos='mid')
+            avg = plot.meansnr(SNR, rxid, hkhours, endtime, minelev=10, pos='bot')
             if symlink:
                 suf = '-RX{:02}.png'.format(rxid)
                 _symlink(allsnr, 'ALLSNR' + suf)
