@@ -183,6 +183,10 @@ class UTCLocalFormat:
 
 def _gethouraxes(figsize, pos, shareax=None, **kwargs):
     """Return figure and axes set up for plotting against time, labeled HH:MM."""
+    if 'top' not in pos:
+        figsize[1] -= 0.3
+    if 'bot' not in pos:
+        figsize[1] -= 0.4
     fig = plt.figure(figsize=figsize)
     if 'top' not in pos and 'title' in kwargs:
         del kwargs['title']
@@ -326,7 +330,7 @@ def tempvolt(hk, pos, shareax=None):
     times = hk['time'].tolist()
     volt = hk['volt'] / 100
     temp = hk['temp']
-    fig, ax = _gethouraxes((10, 3), pos, shareax)
+    fig, ax = _gethouraxes([10, 3], pos, shareax)
     ax.plot(times, volt, 'b.', ms=6)
     ax.set_ylabel('Volts', labelpad=3, color='b')
     ax.tick_params('y', colors='b')
@@ -413,9 +417,10 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None, pos='topbot'):
     if pos != 'top':
         title += ': Number of satellites over {}°'.format(minelev)
     if 'top' in pos:
-        fig, ax = _gethouraxes((10, 3), pos, title=title, ylabel='Tracked satellites')
+        ylabl = 'Tracked satellites'
     else:
-        fig, ax = _gethouraxes((10, 2), pos, ylabel='No. satellites over {}°'.format(minelev))
+        ylabl = 'No. satellites over {}°'.format(minelev)
+    fig, ax = _gethouraxes([10, 2.7], pos, title=title, ylabel=ylabl)
     ax.plot(time, numsats, '-o', ms=2)
     if hrs is not None:
         ax.set_xlim(thresh.tolist(), endtime.tolist())
@@ -470,7 +475,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None, pos='topbot'):
     ylabl = 'Mean SNR (dB-Hz)'
     if 'top' not in pos and minelev:
         ylabl += ' over {}°'.format(minelev)
-    fig, ax = _gethouraxes((10, 3), pos, title=title, ylabel=ylabl)
+    fig, ax = _gethouraxes([10, 3], pos, title=title, ylabel=ylabl)
     pmeans = np.array(pmeans)
     ax.plot(time.tolist(), means, 'b.', ms=2, label='All values')
     ax.plot(time[pmeans > 0].tolist(), pmeans[pmeans > 0], 'r.', ms=2, label='Positive only')
