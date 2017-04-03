@@ -9,12 +9,13 @@ import os
 import time
 import sys
 import shutil
+import traceback
 from collections import defaultdict
 import numpy as np
 from snrstats import calcsnrstat
 import plot
 from parser import reader, readall, hkreport, cleanhk
-from utility import info, debug, pushdir, static_vars
+from utility import info, debug, pushdir, static_vars, email_exc
 from findfirst import findfirstgt
 import config
 
@@ -175,6 +176,15 @@ def after_midnight():
     now = np.datetime64('now')
     return np.timedelta64(0) < (now - now.astype('M8[D]')) < np.timedelta64(15, 'm')
 
+def guard_and_time(msg, fn, tic, *args, **kwargs):
+    info('Starting', msg, 'at', tic)
+    try:
+        fn(*args, **kwargs)
+    except Exception:
+        email_exc()
+        info(traceback.format_exc())
+    info('Done at', np.datetime64('now'))
+
 def plotupdate(fname=None, handover=None, oldstate=None):
     """Follow stream and update web plot periodically.
 
@@ -219,9 +229,7 @@ def plotupdate(fname=None, handover=None, oldstate=None):
                         if ofile != os.path.abspath(current_binex()):
                             info('No new records at', tic, '. Attempting handover.')
                             fid.close()
-                            info('Starting midnight plotting at', tic)
-                            midnightplots(SNRs, HK)
-                            info('Done at', np.datetime64('now'))
+                            guard_and_time('midnight plotting', midnightplots, tic, SNRs, HK)
                             fid = open(current_binex(), 'rb')
                             ofile = os.path.abspath(current_binex())
                             recgen.send(fid)
@@ -241,9 +249,7 @@ def plotupdate(fname=None, handover=None, oldstate=None):
                   tic, 'timestamped', dattic)
             olens = nlens
             if tic - oldtic > config.PLOT_IVAL:
-                info('Starting plotting at', tic)
-                makeplots(SNRs, HK, endtime=tic, minelev=10)
-                info('Done at', np.datetime64('now'))
+                guard_and_time('plotting', makeplots, tic, SNRs, HK, endtime=tic, minelev=10)
                 oldtic = tic
             else:
                 time.sleep(2)
