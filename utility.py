@@ -7,7 +7,10 @@ import subprocess
 import os
 import shutil
 from textwrap import TextWrapper
+from email.mime.text import MIMEText
+from smtplib import SMTP
 import inspect
+import traceback
 import numpy as np
 import config
 
@@ -27,6 +30,15 @@ def info(*args, logfile=None):
 def debug(*args, **kwargs):
     if config.DEBUG:
         info(*args, **kwargs)
+
+def email_exc():
+    """Call in an except: clause to email the traceback to config.ERR_EMAIL."""
+    msg = MIMEText(traceback.format_exc())
+    msg['Subject'] = 'VAPR Error'
+    msg['From'] = config.FROM_EMAIL
+    msg['To'] = config.ERR_EMAIL
+    with SMTP('localhost') as smtp:
+        smtp.send_message(msg)
 
 def mode(arr):
     """Return the value occuring most often in numpy array arr.

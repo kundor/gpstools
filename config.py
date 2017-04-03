@@ -36,3 +36,8 @@ PLOT_HK_HOURS = 24
 
 SP3DIR = '/scratch/sp3'
 """Where sp3 orbit position files are stored."""
+
+ERR_EMAIL = 'vapr@kundor.org'
+"""Where to email exception reports."""
+
+FROM_EMAIL = 'vapr@localhost'
