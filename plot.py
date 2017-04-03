@@ -48,6 +48,9 @@ def dorises(snrdata, prn):
 
 def _setsnrlim(ax, snrs, restrict=False):
     y0, y1 = config.SNR_RANGE
+    if not np.count_nonzero(snrs > 0):
+        ax.set_ylim(y0, y1)
+        return
     s0, s1 = min(snrs[snrs > 0]), max(snrs)
     if restrict:
         y0 = max(y0, s0)
@@ -516,6 +519,8 @@ def add_arrow(line, start_ind=None, direction='right', size=15, color=None):
         end_ind = start_ind + 1
     else:
         end_ind = start_ind - 1
+    if end_ind >= len(xdata):
+        return
 
     line.axes.annotate('',
                        xytext=(xdata[start_ind], ydata[start_ind]),
