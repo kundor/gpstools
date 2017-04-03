@@ -9,18 +9,14 @@ import shutil
 from textwrap import TextWrapper
 from email.mime.text import MIMEText
 from smtplib import SMTP
-import inspect
 import traceback
 import numpy as np
 import config
 
 def stacknames():
-    istk = inspect.stack()
-    try:
-        end = ['<' in f.filename or '<' in f.function for f in istk].index(True)
-    except ValueError:
-        end = min(len(istk), 5)
-    return ':'.join(f.function for f in reversed(istk[2:end]))
+    istk = traceback.extract_stack()
+    end = ''.join(f[2][0] for f in istk).rfind('<') + 1
+    return ':'.join(f[2] for f in istk[end:-2])
 
 def info(*args, logfile=None):
     if logfile is None:
