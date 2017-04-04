@@ -264,6 +264,8 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         gs = mp.gridspec.GridSpec(numsat, 1)
     axes = [0]*numsat
     dax = None
+    minsnr = 100.
+    maxsnr = 0.
     for i, prn in enumerate(prns):
         psnr = SNR[SNR['prn'] == prn]
         if i:
@@ -275,6 +277,8 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         ax.plot(psnr['time'].tolist(), psnr['snr'] / 10, 'k.', ms=2, label=cur)
         rxlab = 'RX{:02}: '.format(rxid) if rxid else ''
         ax.set_ylabel(rxlab + 'PRN {:02}'.format(prn))
+        minsnr = min(minsnr, np.percentile(psnr['snr'], 0.01) / 10)
+        maxsnr = max(maxsnr, np.percentile(psnr['snr'], 99.99) / 10)
         if thresh:
             opsnr = OSNR[OSNR['prn'] == prn]
             dax = plot_old_snr(ax, psnr, opsnr, diftime, prev, dax)
@@ -282,7 +286,7 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
             ax1 = fig.add_subplot(gs[i, 1], projection='polar')
             polarazel(psnr['az'], psnr['el'], ax1, label_el=False)
     axes[-1].set_xlabel('Time (UTC)')
-    axes[0].set_ylim(min(SNR['snr']) / 10, max(SNR['snr']) / 10)
+    axes[0].set_ylim(minsnr, maxsnr)
     if thresh:
         axes[0].set_xlim(thresh.tolist(), endtime.tolist())
         if len(OSNR):
