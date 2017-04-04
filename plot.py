@@ -4,6 +4,7 @@ from contextlib import suppress
 import time
 import numpy as np
 import pandas as pd
+from scipy.signal import savgol_filter
 import matplotlib as mp
 mp.use('Agg', warn=False) # non-interactive backend, allows importing without crashing X-less ipython
 from matplotlib import pyplot as plt
@@ -257,19 +258,20 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         info('No records', 'for RX{:02}'.format(rxid) if rxid else '',
              'in the given time period', thresh, 'to', endtime)
         return
-    fig = plt.figure(figsize=(figlength, 2*numsat))
+    fig = plt.figure(figsize=(figlength, 3*numsat))
     if doazel:
-        gs = mp.gridspec.GridSpec(numsat, 2, width_ratios=[figlength - 2, 1.8])
+        gs = mp.gridspec.GridSpec(2*numsat, 2, width_ratios=[figlength - 2, 1.8],
+                                  height_ratios=[2, 1]*numsat)
     else:
-        gs = mp.gridspec.GridSpec(numsat, 1)
+        gs = mp.gridspec.GridSpec(2*numsat, 1, height_ratios=[2, 1]*numsat)
     axes = [0]*numsat
-    dax = None
+    dax = eax = None
     minsnr = 100.
     maxsnr = 0.
     for i, prn in enumerate(prns):
         psnr = SNR[SNR['prn'] == prn]
         if i:
-            ax = axes[i] = fig.add_subplot(gs[i, 0], sharex=axes[0], sharey=axes[0])
+            ax = axes[i] = fig.add_subplot(gs[2*i, 0], sharex=axes[0], sharey=axes[0])
         else:
             ax = axes[0] = fig.add_subplot(gs[0, 0])
             ax.xaxis_date()
@@ -281,9 +283,9 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         maxsnr = max(maxsnr, np.percentile(psnr['snr'], 99.99) / 10)
         if thresh:
             opsnr = OSNR[OSNR['prn'] == prn]
-            dax = plot_old_snr(ax, psnr, opsnr, diftime, prev, dax)
+            dax, eax = plot_old_snr(fig, gs, i, ax, psnr, opsnr, diftime, prev, dax, eax)
         if doazel:
-            ax1 = fig.add_subplot(gs[i, 1], projection='polar')
+            ax1 = fig.add_subplot(gs[2*i, 1], projection='polar')
             polarazel(psnr['az'], psnr['el'], ax1, label_el=False)
     axes[-1].set_xlabel('Time (UTC)')
     axes[0].set_ylim(minsnr, maxsnr)
@@ -314,26 +316,34 @@ def _twinax(ax, **kwargs):
     ax2.set_position(ax.get_position())
     return ax2
 
-def plot_old_snr(ax, psnr, opsnr, diftime, prev, dax):
+def plot_old_snr(fig, gs, i, ax, psnr, opsnr, diftime, prev, dax, eax):
     if not len(opsnr):
         return
     tims = opsnr['time'] + diftime
     today = pd.Series(psnr['snr'] / 10, psnr['time'])
     yestr = pd.Series(opsnr['snr'] / 10, tims)
-    mn_dif = today.resample('5s').mean() - yestr.resample('5s').mean()
+    #mn_dif = today.resample('5s').mean() - yestr.resample('5s').mean()
+    sm_td = pd.Series(savgol_filter(today, 31, 4), psnr['time'])
+    sm_yd = pd.Series(savgol_filter(yestr, 31, 4), tims)
+    sm_dif = sm_td.resample('1s').first() - sm_yd.resample('1s').first()
+    els = pd.Series(psnr['el'], psnr['time'])
     ax.plot(yestr, 'g.', ms=2, zorder=0, label=prev)
-    m0 = np.floor(np.nanpercentile(mn_dif, 0.1) * 10) / 10
-    m1 = np.ceil(np.nanpercentile(mn_dif, 99.9) * 10) / 10
-    if dax:
-        y0, y1 = dax.get_ylim()
-        m0 = min(m0, y0)
-        m1 = max(m1, y1)
-    ax2 = _twinax(ax, sharey=dax)
-    ax2.plot(mn_dif, 'm', label='Difference')
+    ax.xaxis.set_visible(False)
+#    m0 = np.floor(np.nanpercentile(mn_dif, 0.1) * 10) / 10
+#    m1 = np.ceil(np.nanpercentile(mn_dif, 99.9) * 10) / 10
+#    if dax:
+#        y0, y1 = dax.get_ylim()
+#        m0 = min(m0, y0)
+#        m1 = max(m1, y1)
+    ax2 = fig.add_subplot(gs[2*i + 1, 0], sharex=ax, sharey=dax)
+    ax2.plot(sm_dif, 'm', label='Difference')
     ax2.set_ylabel('Difference', labelpad=4, color='m')
     ax2.tick_params('y', colors='m')
-    ax2.set_ylim(m0, m1)
-    return ax2
+#    ax2.set_ylim(m0, m1)
+    ax3 = _twinax(ax2, sharey=eax)
+    ax3.plot(els, 'k', label='Elevation')
+    ax3.set_ylabel('Elevation')
+    return ax2, ax3
 
 def _expandlim(minmax, ax):
     """Expand y-range to the given (y0, y1) (but don't shrink it.)"""
