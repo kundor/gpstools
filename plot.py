@@ -322,10 +322,17 @@ def plot_old_snr(ax, psnr, opsnr, diftime, prev, dax):
     yestr = pd.Series(opsnr['snr'] / 10, tims)
     mn_dif = today.resample('5s').mean() - yestr.resample('5s').mean()
     ax.plot(yestr, 'g.', ms=2, zorder=0, label=prev)
+    m0 = np.floor(np.nanpercentile(mn_dif, 0.1) * 10) / 10
+    m1 = np.ceil(np.nanpercentile(mn_dif, 99.9) * 10) / 10
+    if dax:
+        y0, y1 = dax.get_ylim()
+        m0 = min(m0, y0)
+        m1 = max(m1, y1)
     ax2 = _twinax(ax, sharey=dax)
     ax2.plot(mn_dif, 'm', label='Difference')
     ax2.set_ylabel('Difference', labelpad=4, color='m')
     ax2.tick_params('y', colors='m')
+    ax2.set_ylim(m0, m1)
     return ax2
 
 def _expandlim(minmax, ax):
@@ -371,8 +378,7 @@ def tempvolt(hk, pos, shareax=None):
     _expandlim(config.VOLT_RANGE, ax)
     if min(np.diff(ax.yaxis.get_major_locator()())) < 0.1:
         ax.yaxis.set_major_locator(mp.ticker.MultipleLocator(0.1))
-    ax2 = ax.twinx()
-    ax2.set_position(ax.get_position()) # You'd think this would be automatic
+    ax2 = _twinax(ax)
     ax2.plot(times, temp, c='r')
     ax.set_xlim(min(times), max(times))
     _localmidnight(ax)
