@@ -329,20 +329,22 @@ def plot_old_snr(fig, gs, i, ax, psnr, opsnr, diftime, prev, dax, eax):
     els = pd.Series(psnr['el'], psnr['time'])
     ax.plot(yestr, 'g.', ms=2, zorder=0, label=prev)
     ax.xaxis.set_visible(False)
-#    m0 = np.floor(np.nanpercentile(mn_dif, 0.1) * 10) / 10
-#    m1 = np.ceil(np.nanpercentile(mn_dif, 99.9) * 10) / 10
-#    if dax:
-#        y0, y1 = dax.get_ylim()
-#        m0 = min(m0, y0)
-#        m1 = max(m1, y1)
+    m0 = np.floor(np.nanpercentile(sm_dif, 0.05) * 10) / 10
+    m1 = np.ceil(np.nanpercentile(sm_dif, 99.95) * 10) / 10
+    if dax:
+        y0, y1 = dax.get_ylim()
+        m0 = min(m0, y0)
+        m1 = max(m1, y1)
     ax2 = fig.add_subplot(gs[2*i + 1, 0], sharex=ax, sharey=dax)
+    ax2.yaxis.set_major_locator(mp.ticker.MaxNLocator(nbins=3, prune='both', integer=True))
     ax2.plot(sm_dif, 'm', label='Difference')
     ax2.set_ylabel('Difference', labelpad=4, color='m')
     ax2.tick_params('y', colors='m')
-#    ax2.set_ylim(m0, m1)
+    ax2.set_ylim(m0, m1)
     ax3 = _twinax(ax2, sharey=eax)
     ax3.plot(els, 'k', label='Elevation')
     ax3.set_ylabel('Elevation')
+    ax3.yaxis.set_major_locator(mp.ticker.MultipleLocator(20))
     return ax2, ax3
 
 def _expandlim(minmax, ax):
