@@ -41,3 +41,7 @@ ERR_EMAIL = 'vapr@kundor.org'
 """Where to email exception reports."""
 
 FROM_EMAIL = 'vapr@localhost'
+"""Address to use as the from address in emailed reports."""
+
+SMTP_HOST = 'localhost'
+"""SMTP server for sending emails."""

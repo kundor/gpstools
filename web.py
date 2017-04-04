@@ -9,7 +9,6 @@ import os
 import time
 import sys
 import shutil
-import traceback
 from collections import defaultdict
 import numpy as np
 from snrstats import calcsnrstat
@@ -182,7 +181,6 @@ def guard_and_time(msg, fn, tic, *args, **kwargs):
         fn(*args, **kwargs)
     except Exception:
         email_exc()
-        info(traceback.format_exc())
     info('Done at', np.datetime64('now'))
 
 def plotupdate(fname=None, handover=None, oldstate=None):

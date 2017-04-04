@@ -27,14 +27,21 @@ def debug(*args, **kwargs):
     if config.DEBUG:
         info(*args, **kwargs)
 
-def email_exc():
-    """Call in an except: clause to email the traceback to config.ERR_EMAIL."""
-    msg = MIMEText(traceback.format_exc())
-    msg['Subject'] = 'VAPR Error'
+def vapr_email(subj, msg):
+    """Email the string *msg* with subject *subj* to config.ERR_EMAIL from config.FROM_EMAIL."""
+    msg = MIMEText(msg)
+    msg['Subject'] = subj
     msg['From'] = config.FROM_EMAIL
     msg['To'] = config.ERR_EMAIL
-    with SMTP('localhost') as smtp:
+    with SMTP(config.SMTP_HOST) as smtp:
         smtp.send_message(msg)
+
+def email_exc(also_print=True):
+    """Email a traceback of the exception currently being handled to config.ERR_EMAIL."""
+    msg = traceback.format_exc()
+    vapr_email('VAPR Error', msg)
+    if also_print:
+        info(msg)
 
 def mode(arr):
     """Return the value occuring most often in numpy array arr.
