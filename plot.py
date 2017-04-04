@@ -378,6 +378,7 @@ def tempvolt(hk, pos, shareax=None):
     _expandlim(config.VOLT_RANGE, ax)
     if min(np.diff(ax.yaxis.get_major_locator()())) < 0.1:
         ax.yaxis.set_major_locator(mp.ticker.MultipleLocator(0.1))
+    ax.grid(True)
     ax2 = _twinax(ax)
     ax2.plot(times, temp, c='r')
     ax.set_xlim(min(times), max(times))
