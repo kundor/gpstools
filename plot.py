@@ -285,7 +285,7 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
             opsnr = OSNR[OSNR['prn'] == prn]
             dax, eax = plot_old_snr(fig, gs, i, ax, psnr, opsnr, diftime, prev, dax, eax)
         if doazel:
-            ax1 = fig.add_subplot(gs[2*i, 1], projection='polar')
+            ax1 = fig.add_subplot(gs[2*i:2*i + 1, 1], projection='polar')
             polarazel(psnr['az'], psnr['el'], ax1, label_el=False)
     axes[-1].set_xlabel('Time (UTC)')
     axes[0].set_ylim(minsnr, maxsnr)
@@ -337,6 +337,7 @@ def plot_old_snr(fig, gs, i, ax, psnr, opsnr, diftime, prev, dax, eax):
         m1 = max(m1, y1)
     ax2 = fig.add_subplot(gs[2*i + 1, 0], sharex=ax, sharey=dax)
     ax2.yaxis.set_major_locator(mp.ticker.MaxNLocator(nbins=4, prune='both', integer=True))
+    ax2.axhline(0, color='0.3', zorder=0)
     ax2.plot(sm_dif, 'm', label='Difference')
     ax2.set_ylabel('Difference', labelpad=4, color='m')
     ax2.tick_params('y', colors='m')
