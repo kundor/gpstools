@@ -336,7 +336,7 @@ def plot_old_snr(fig, gs, i, ax, psnr, opsnr, diftime, prev, dax, eax):
         m0 = min(m0, y0)
         m1 = max(m1, y1)
     ax2 = fig.add_subplot(gs[2*i + 1, 0], sharex=ax, sharey=dax)
-    ax2.yaxis.set_major_locator(mp.ticker.MaxNLocator(nbins=3, prune='both', integer=True))
+    ax2.yaxis.set_major_locator(mp.ticker.MaxNLocator(nbins=4, prune='both', integer=True))
     ax2.plot(sm_dif, 'm', label='Difference')
     ax2.set_ylabel('Difference', labelpad=4, color='m')
     ax2.tick_params('y', colors='m')
@@ -345,6 +345,7 @@ def plot_old_snr(fig, gs, i, ax, psnr, opsnr, diftime, prev, dax, eax):
     ax3.plot(els, 'k', label='Elevation')
     ax3.set_ylabel('Elevation')
     ax3.yaxis.set_major_locator(mp.ticker.MultipleLocator(20))
+    ax3.set_ylim(10, 90)
     return ax2, ax3
 
 def _expandlim(minmax, ax):
