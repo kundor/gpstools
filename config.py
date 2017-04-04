@@ -10,7 +10,7 @@ DEBUG = False
 BINEX_FILES = "/data/VAPR/VB001/%Y/%j/data.bin"
 """Location of BINEX streams, in strftime format."""
 
-SNR_RANGE = (20, 56)
+SNR_RANGE = (30, 56)
 """Range of values to use for snr plots, to enable visual comparison between plots."""
 
 VOLT_RANGE = (3.3, 4.5)

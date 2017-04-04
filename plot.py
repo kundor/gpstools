@@ -3,6 +3,7 @@ import os
 from contextlib import suppress
 import time
 import numpy as np
+import pandas as pd
 import matplotlib as mp
 mp.use('Agg', warn=False) # non-interactive backend, allows importing without crashing X-less ipython
 from matplotlib import pyplot as plt
@@ -262,6 +263,7 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
     else:
         gs = mp.gridspec.GridSpec(numsat, 1)
     axes = [0]*numsat
+    dax = None
     for i, prn in enumerate(prns):
         psnr = SNR[SNR['prn'] == prn]
         if i:
@@ -275,9 +277,7 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         ax.set_ylabel(rxlab + 'PRN {:02}'.format(prn))
         if thresh:
             opsnr = OSNR[OSNR['prn'] == prn]
-            if len(opsnr):
-                tims = opsnr['time'] + diftime
-                ax.plot(tims.tolist(), opsnr['snr'] / 10, 'g.', ms=2, zorder=0, label=prev)
+            dax = plot_old_snr(ax, psnr, opsnr, diftime, prev, dax)
         if doazel:
             ax1 = fig.add_subplot(gs[i, 1], projection='polar')
             polarazel(psnr['az'], psnr['el'], ax1, label_el=False)
@@ -297,6 +297,32 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         plt.close(fig)
         return fname
     return fig
+
+def _twinax(ax, **kwargs):
+    """Like ax.twinx, but you can specify keyword arguments for the new axis."""
+    ax2 = ax._make_twin_axes(sharex=ax, **kwargs)
+    ax2.yaxis.tick_right()
+    ax2.yaxis.set_label_position('right')
+    ax2.yaxis.set_offset_position('right')
+    ax.yaxis.tick_left()
+    ax2.xaxis.set_visible(False)
+    ax2.patch.set_visible(False)
+    ax2.set_position(ax.get_position())
+    return ax2
+
+def plot_old_snr(ax, psnr, opsnr, diftime, prev, dax):
+    if not len(opsnr):
+        return
+    tims = opsnr['time'] + diftime
+    today = pd.Series(psnr['snr'] / 10, psnr['time'])
+    yestr = pd.Series(opsnr['snr'] / 10, tims)
+    mn_dif = today.resample('5s').mean() - yestr.resample('5s').mean()
+    ax.plot(yestr, 'g.', ms=2, zorder=0, label=prev)
+    ax2 = _twinax(ax, sharey=dax)
+    ax2.plot(mn_dif, 'm', label='Difference')
+    ax2.set_ylabel('Difference', labelpad=4, color='m')
+    ax2.tick_params('y', colors='m')
+    return ax2
 
 def _expandlim(minmax, ax):
     """Expand y-range to the given (y0, y1) (but don't shrink it.)"""
