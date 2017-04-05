@@ -137,7 +137,7 @@ def hk_msg(msg):
               (19, 23, sint), # lat, decimal degrees * 10**7
               (23, 27, sint), # alt, millimeters above ellipsoid
               (27, 29, uint), # volt
-              (29, 30, uint), # temp, only top byte used for now. degrees celsius
+              (29, 30, sint), # temp, only top byte used for now. degrees celsius
               (31, 33, uint), # msgct
               (33, 34, uint)) # error flags
     return [fn(msg[a:b]) for a,b,fn in fields]
