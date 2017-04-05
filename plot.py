@@ -260,8 +260,8 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         return
     fig = plt.figure(figsize=(figlength, 3*numsat))
     gs = mp.gridspec.GridSpec(numsat, 1 + doazel, width_ratios=[figlength - 2, 1.8*doazel],
-                              left=0.535/figlength, right=1-(0.52-0.292*doazel)/figlength,
-                              bottom=0.09/numsat, top=1-0.02/numsat,
+                              left=0.53/figlength, right=1-(0.5-0.272*doazel)/figlength,
+                              bottom=0.08/numsat, top=1-0.02/numsat,
                               wspace=0.12, hspace=0.09)
     axes = [0]*numsat
     dax = None
