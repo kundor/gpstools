@@ -318,7 +318,7 @@ def _twinax(ax, **kwargs):
 
 def plot_old_snr(fig, gs, i, ax, psnr, opsnr, diftime, prev, dax, eax):
     if not len(opsnr):
-        return
+        return dax, eax
     tims = opsnr['time'] + diftime
     today = pd.Series(psnr['snr'] / 10, psnr['time'])
     yestr = pd.Series(opsnr['snr'] / 10, tims)
