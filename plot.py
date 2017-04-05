@@ -260,32 +260,35 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         return
     fig = plt.figure(figsize=(figlength, 3*numsat))
     if doazel:
-        gs = mp.gridspec.GridSpec(2*numsat, 2, width_ratios=[figlength - 2, 1.8],
-                                  height_ratios=[2, 1]*numsat)
+        gs = mp.gridspec.GridSpec(numsat, 2, width_ratios=[figlength - 2, 1.8],
+                                  left=0.04476, right=0.981, bottom=0.008, top=0.997,
+                                  wspace=0.12, hspace=0.72 / numsat)
     else:
-        gs = mp.gridspec.GridSpec(2*numsat, 1, height_ratios=[2, 1]*numsat)
+        gs = mp.gridspec.GridSpec(numsat, 1, left=0.04476, right=0.981, bottom=0.008,
+                                  top=0.997, wspace=0.12, hspace=0.72 / numsat)
     axes = [0]*numsat
     dax = eax = None
     minsnr = 100.
     maxsnr = 0.
     for i, prn in enumerate(prns):
         psnr = SNR[SNR['prn'] == prn]
+        gs2 = mp.gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=gs[i, 0], hspace=0., height_ratios=[2, 1])
         if i:
-            ax = axes[i] = fig.add_subplot(gs[2*i, 0], sharex=axes[0], sharey=axes[0])
+            ax = axes[i] = fig.add_subplot(gs2[0], sharex=axes[0], sharey=axes[0])
         else:
-            ax = axes[0] = fig.add_subplot(gs[0, 0])
+            ax = axes[0] = fig.add_subplot(gs2[0])
             ax.xaxis_date()
             ax.xaxis.set_major_formatter(mp.dates.DateFormatter('%H:%M'))
         ax.plot(psnr['time'].tolist(), psnr['snr'] / 10, 'k.', ms=2, label=cur)
         rxlab = 'RX{:02}: '.format(rxid) if rxid else ''
         ax.set_ylabel(rxlab + 'PRN {:02}'.format(prn))
-        minsnr = min(minsnr, np.percentile(psnr['snr'], 0.01) / 10)
+        minsnr = min(minsnr, np.percentile(psnr['snr'], 0.02) / 10)
         maxsnr = max(maxsnr, np.percentile(psnr['snr'], 99.99) / 10)
         if thresh:
             opsnr = OSNR[OSNR['prn'] == prn]
-            dax, eax = plot_old_snr(fig, gs, i, ax, psnr, opsnr, diftime, prev, dax, eax)
+            dax, eax = plot_old_snr(fig, gs2, ax, psnr, opsnr, diftime, prev, dax, eax)
         if doazel:
-            ax1 = fig.add_subplot(gs[2*i:2*i + 2, 1], projection='polar')
+            ax1 = fig.add_subplot(gs[i, 1], projection='polar')
             polarazel(psnr['az'], psnr['el'], ax1, label_el=False)
     axes[-1].set_xlabel('Time (UTC)')
     axes[0].set_ylim(minsnr, maxsnr)
@@ -296,7 +299,7 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
                            handletextpad=0.4, handlelength=0.8)
     else:
         axes[0].set_xlim(min(SNR['time'].tolist()), max(SNR['time'].tolist()))
-    fig.tight_layout(pad=0.1, h_pad=0.01, w_pad=0.01)
+    #fig.tight_layout(pad=0.1, h_pad=0.01, w_pad=0.01)
     if rxid:
         fname = 'ALLSNR-RX{:02}-{:%j}.png'.format(rxid, endtime.tolist())
         fig.savefig(fname)
@@ -316,7 +319,7 @@ def _twinax(ax, **kwargs):
     ax2.set_position(ax.get_position())
     return ax2
 
-def plot_old_snr(fig, gs, i, ax, psnr, opsnr, diftime, prev, dax, eax):
+def plot_old_snr(fig, gs, ax, psnr, opsnr, diftime, prev, dax, eax):
     if not len(opsnr):
         return dax, eax
     tims = opsnr['time'] + diftime
@@ -328,22 +331,22 @@ def plot_old_snr(fig, gs, i, ax, psnr, opsnr, diftime, prev, dax, eax):
     sm_dif = sm_td.resample('1s').first() - sm_yd.resample('1s').first()
     els = pd.Series(psnr['el'], psnr['time'])
     ax.plot(yestr, 'g.', ms=2, zorder=0, label=prev)
-    ax.xaxis.set_visible(False)
+    plt.setp(ax.get_xticklabels(), visible=False)
     m0 = np.floor(np.nanpercentile(sm_dif, 0.05) * 10) / 10
     m1 = np.ceil(np.nanpercentile(sm_dif, 99.95) * 10) / 10
     if dax:
         y0, y1 = dax.get_ylim()
         m0 = min(m0, y0)
         m1 = max(m1, y1)
-    ax2 = fig.add_subplot(gs[2*i + 1, 0], sharex=ax, sharey=dax)
+    ax2 = fig.add_subplot(gs[1], sharex=ax, sharey=dax)
     ax2.yaxis.set_major_locator(mp.ticker.MaxNLocator(nbins=4, prune='both', integer=True))
     ax2.fill_between(sm_dif.index, 0, sm_dif, color='m', label='Difference')
-    ax2.set_ylabel('Difference', labelpad=4, color='m')
+    ax2.set_ylabel('Difference', labelpad=1, color='m')
     ax2.tick_params('y', colors='m')
     ax2.set_ylim(m0, m1)
     ax3 = _twinax(ax2, sharey=eax)
     ax3.plot(els, 'k', label='Elevation')
-    ax3.set_ylabel('Elevation')
+    ax3.set_ylabel('Elevation', labelpad=1)
     ax3.yaxis.set_major_locator(mp.ticker.MultipleLocator(20))
     ax3.set_ylim(10, 90)
     return ax2, ax3
