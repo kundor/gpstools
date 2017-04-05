@@ -262,10 +262,10 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
     if doazel:
         gs = mp.gridspec.GridSpec(numsat, 2, width_ratios=[figlength - 2, 1.8],
                                   left=0.04476, right=0.981, bottom=0.008, top=0.997,
-                                  wspace=0.12, hspace=0.9 / numsat)
+                                  wspace=0.12, hspace=0.09)
     else:
         gs = mp.gridspec.GridSpec(numsat, 1, left=0.04476, right=0.981, bottom=0.008,
-                                  top=0.997, wspace=0.12, hspace=0.9 / numsat)
+                                  top=0.997, wspace=0.12, hspace=0.09)
     axes = [0]*numsat
     dax = eax = None
     minsnr = 100.
@@ -343,12 +343,12 @@ def plot_old_snr(fig, gs, ax, psnr, opsnr, diftime, prev, dax, eax):
     ax2 = fig.add_subplot(gs[1], sharex=ax, sharey=dax)
     ax2.yaxis.set_major_locator(mp.ticker.MaxNLocator(nbins=4, prune='both', integer=True))
     ax2.fill_between(sm_dif.index, 0, sm_dif, color='m', label='Difference')
-    ax2.set_ylabel('Difference', labelpad=1, color='m')
+    ax2.set_ylabel('Difference', labelpad=2, color='m')
     ax2.tick_params('y', colors='m')
     ax2.set_ylim(m0, m1)
     ax3 = _twinax(ax2, sharey=eax)
     ax3.plot(els, 'k', label='Elevation')
-    ax3.set_ylabel('Elevation', labelpad=1)
+    ax3.set_ylabel('Elevation', labelpad=2)
     ax3.yaxis.set_major_locator(mp.ticker.MultipleLocator(20))
     ax3.set_ylim(10, 90)
     return ax2, ax3
