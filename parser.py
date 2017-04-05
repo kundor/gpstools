@@ -311,7 +311,7 @@ def hkreport(HK, file=sys.stdout):
     for rec in HK:
         file.write('Rx{:02} '.format(rec['rxid']))
         try:
-            file.write('{:%x %X}'.format(rec['time'].tolist()))
+            file.write('{:%m/%d/%Y %H:%M:%S}'.format(rec['time'].tolist()))
         except ValueError:
             file.write('{}'.format(rec['time']))
         file.write('  {}  {:10.5f}°E {:9.5f}°N {:8.3f}m  {:.2f}V {:2}°C msgct:{:5}  '
