@@ -262,10 +262,10 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
     if doazel:
         gs = mp.gridspec.GridSpec(numsat, 2, width_ratios=[figlength - 2, 1.8],
                                   left=0.04476, right=0.981, bottom=0.008, top=0.997,
-                                  wspace=0.12, hspace=0.72 / numsat)
+                                  wspace=0.12, hspace=0.9 / numsat)
     else:
         gs = mp.gridspec.GridSpec(numsat, 1, left=0.04476, right=0.981, bottom=0.008,
-                                  top=0.997, wspace=0.12, hspace=0.72 / numsat)
+                                  top=0.997, wspace=0.12, hspace=0.9 / numsat)
     axes = [0]*numsat
     dax = eax = None
     minsnr = 100.
@@ -338,6 +338,8 @@ def plot_old_snr(fig, gs, ax, psnr, opsnr, diftime, prev, dax, eax):
         y0, y1 = dax.get_ylim()
         m0 = min(m0, y0)
         m1 = max(m1, y1)
+    m0 = max(m0, -10)
+    m1 = min(m1, 10)
     ax2 = fig.add_subplot(gs[1], sharex=ax, sharey=dax)
     ax2.yaxis.set_major_locator(mp.ticker.MaxNLocator(nbins=4, prune='both', integer=True))
     ax2.fill_between(sm_dif.index, 0, sm_dif, color='m', label='Difference')
