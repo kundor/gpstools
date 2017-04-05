@@ -267,7 +267,7 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         gs = mp.gridspec.GridSpec(numsat, 1, left=0.04476, right=0.981, bottom=0.008,
                                   top=0.997, wspace=0.12, hspace=0.09)
     axes = [0]*numsat
-    dax = eax = None
+    dax = None
     minsnr = 100.
     maxsnr = 0.
     for i, prn in enumerate(prns):
@@ -286,7 +286,7 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         maxsnr = max(maxsnr, np.percentile(psnr['snr'], 99.99) / 10)
         if thresh:
             opsnr = OSNR[OSNR['prn'] == prn]
-            dax, eax = plot_old_snr(fig, gs2, ax, psnr, opsnr, diftime, prev, dax, eax)
+            dax = plot_old_snr(fig, gs2, ax, psnr, opsnr, diftime, prev, dax)
         if doazel:
             ax1 = fig.add_subplot(gs[i, 1], projection='polar')
             polarazel(psnr['az'], psnr['el'], ax1, label_el=False)
@@ -319,9 +319,9 @@ def _twinax(ax, **kwargs):
     ax2.set_position(ax.get_position())
     return ax2
 
-def plot_old_snr(fig, gs, ax, psnr, opsnr, diftime, prev, dax, eax):
+def plot_old_snr(fig, gs, ax, psnr, opsnr, diftime, prev, dax):
     if not len(opsnr):
-        return dax, eax
+        return dax
     tims = opsnr['time'] + diftime
     today = pd.Series(psnr['snr'] / 10, psnr['time'])
     yestr = pd.Series(opsnr['snr'] / 10, tims)
@@ -346,12 +346,12 @@ def plot_old_snr(fig, gs, ax, psnr, opsnr, diftime, prev, dax, eax):
     ax2.set_ylabel('Difference', labelpad=2, color='m')
     ax2.tick_params('y', colors='m')
     ax2.set_ylim(m0, m1)
-    ax3 = _twinax(ax2, sharey=eax)
+    ax3 = _twinax(ax2)
     ax3.plot(els, 'k', label='Elevation')
     ax3.set_ylabel('Elevation', labelpad=2)
     ax3.yaxis.set_major_locator(mp.ticker.MultipleLocator(20))
     ax3.set_ylim(10, 90)
-    return ax2, ax3
+    return ax2
 
 def _expandlim(minmax, ax):
     """Expand y-range to the given (y0, y1) (but don't shrink it.)"""
