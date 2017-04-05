@@ -259,13 +259,10 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
              'in the given time period', thresh, 'to', endtime)
         return
     fig = plt.figure(figsize=(figlength, 3*numsat))
-    if doazel:
-        gs = mp.gridspec.GridSpec(numsat, 2, width_ratios=[figlength - 2, 1.8],
-                                  left=0.04476, right=0.981, bottom=0.008, top=0.997,
-                                  wspace=0.12, hspace=0.09)
-    else:
-        gs = mp.gridspec.GridSpec(numsat, 1, left=0.04476, right=0.981, bottom=0.008,
-                                  top=0.997, wspace=0.12, hspace=0.09)
+    gs = mp.gridspec.GridSpec(numsat, 1 + doazel, width_ratios=[figlength - 2, 1.8*doazel],
+                              left=.537/figlength, right=1-.228/figlength,
+                              bottom=0.09/numsat, top=1-.026/numsat,
+                              wspace=0.12, hspace=0.09)
     axes = [0]*numsat
     dax = None
     minsnr = 100.
@@ -290,7 +287,6 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         if doazel:
             ax1 = fig.add_subplot(gs[i, 1], projection='polar')
             polarazel(psnr['az'], psnr['el'], ax1, label_el=False)
-    axes[-1].set_xlabel('Time (UTC)')
     axes[0].set_ylim(minsnr, maxsnr)
     if thresh:
         axes[0].set_xlim(thresh.tolist(), endtime.tolist())
