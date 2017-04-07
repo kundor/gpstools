@@ -13,6 +13,9 @@ import pandas as pd
 import numpy as np
 from utility import info
 
+CDDIS_HRLY = 'ftp://cddis.gsfc.nasa.gov/gnss/data/hourly/%Y/%j/hour%j0.%yn.Z'
+"""Where to fetch current hourly broadcast nav message; strftime format."""
+
 def epoc2dt64(s):
     sfmt = "20{:>02}-{:>02}-{:>02}T{:>02}:{:>02}:{:>04}"
     return np.datetime64(sfmt.format(*(s.decode().split())))
