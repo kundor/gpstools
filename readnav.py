@@ -76,7 +76,17 @@ def read_rinex_nav(file):
 
 
 # ToC: Time of Clock (year, month, day, hour, minute, second)
-# IODE: Issue of Data, Ephemeris
+#      20.3.3.3.3.1
+# IODE: Issue of Data, Ephemeris -- changes with any change in the ephemeris parameters
+#       whenever the terms of iode in subframes 2 and 3 and the 8 LSBs of the IODC in subframe 1
+#       do not match, a data set cutover has occurred
+# The IODE is an 8-bit number equal to the 8 LSBs of the 10-bit IODC of the same data set.
+#       Will be different than any value transmitted by the same sat in the preceding 6 hours
 # ToE: Time of Ephemeris (gps second of week)
-# IODC: Issue of Data, clock
+#   ToE which is offset from an hour boundary is the first data set after a new upload cutover
+#   20.3.3.4.3 ?
+# IODC: Issue of Data, clock. The issue number of the data set, to detect any change
+#       The transmitted IODC will be different from any value transmitted by the same SV
+#       in the preceding 7 days
 # ToM: Time of Message (gps second of week, derived from Z-count in Hand Over Word ?)
+#      20.3.3.5.2.4 ?
