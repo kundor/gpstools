@@ -16,6 +16,11 @@ from utility import info
 CDDIS_HRLY = 'ftp://cddis.gsfc.nasa.gov/gnss/data/hourly/%Y/%j/hour%j0.%yn.Z'
 """Where to fetch current hourly broadcast nav message; strftime format."""
 
+BKG_15 = 'ftp://igs.bkg.bund.de/NTRIP/BRDC/%Y/%j/brdc%j0.%yn.Z'
+"""Where to fetch current broadcast nav message, for a 24-hour sliding window
+updated every 15 minutes from NTRIP streams, at the German BKG GNSS Data Center."""
+
+
 def epoc2dt64(s):
     sfmt = "20{:>02}-{:>02}-{:>02}T{:>02}:{:>02}:{:>04}"
     return np.datetime64(sfmt.format(*(s.decode().split())))
