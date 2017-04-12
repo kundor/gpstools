@@ -43,7 +43,7 @@ def gpsweekgps(ndt):
 
 def gpsweekutc(ndt):
     """Compute GPS week number of a numpy datetime64 in UTC time."""
-    return gpsweekgps(ndt + leapsecs(ndt))
+    return gpsweekgps(ndt + leapsecsnp(ndt))
 
 def gpstotsecgps(ndt):
     """GPS seconds since epoch for a numpy datetime64 in GPS time."""
@@ -55,8 +55,7 @@ def gpssowgps(ndt):
 
 def gpssowutc(ndt):
     """GPS second of week of a numpy datetime64 in UTC time."""
-    return gpssowgps(ndt + leapsecs(ndt))
-
+    return gpssowgps(ndt + leapsecsnp(ndt))
 
 def gpsweek(dt):
     """Given aware datetime, return GPS week number (adding leapseconds)."""
@@ -250,15 +249,15 @@ def leapsecs(dt, cmp):
 
 def leapsecsutc(utc):
     """# of TAI-UTC leapseconds at UTC datetime."""
-    return leapsecs(utc, lambda l, dt : l <= dt)
+    return leapsecs(utc, lambda l, dt: l <= dt)
 
 def gpsleapsecsutc(utc):
     """# of GPS-UTC leapseconds at UTC datetime."""
-    return leapsecs(utc, lambda l, dt : l <= dt) - 19
+    return leapsecs(utc, lambda l, dt: l <= dt) - 19
 
 def leapsecstai(tai):
     """# of TAI-UTC leapseconds at TAI datetime."""
-    return leapsecs(tai, lambda l, dt : leapseconds[l] <= (dt - l).total_seconds())
+    return leapsecs(tai, lambda l, dt: leapseconds[l] <= (dt - l).total_seconds())
 
 def leapsecsnp(ndt):
     """GPS leap seconds at a numpy datetime64 in UTC time, as timedelta64.
