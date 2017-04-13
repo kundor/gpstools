@@ -28,6 +28,14 @@ def _symlink(src, dest):
         return
     os.symlink(src, dest)
 
+def _move(src, suf):
+    if not src:
+        return
+    if src.count(suf) != 1:
+        info('Suffix', suf, 'not found uniquely in filename', src)
+        return
+    os.replace(src, src.replace(suf, '', 1))
+
 def format_stats(rxid, stat, statp):
     """Format statistics as from calcsnrstat into an HTML table row."""
     return """
@@ -85,40 +93,35 @@ def plotspage(rxlist, HK):
             fid.write(snrplots(rxid))
     plotspage.rxlist = rxlist
 
-def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, endtime=None, **snrargs):
+def makeplots(SNRs, HK, domove=True, pdir=None, snrhours=None, hkhours=None, endtime=None, **snrargs):
     if pdir is None:
         pdir = config.PLOTDIR
     if snrhours is None:
         snrhours = config.PLOT_SNR_HOURS
     if hkhours is None:
         hkhours = config.PLOT_HK_HOURS
+    suf = '-new' * domove
+    day = endtime or np.datetime64('now')
+    hkfile = 'HK' + suf + '.txt'
+    idx = findfirstclosed(HK['time'], day - np.timedelta64(1, 'D'), day)
+    tabfile = 'snrtab' + suf + '.html'
+    files = [hkfile, tabfile]
     with pushdir(pdir):
         noteupdate()
         #plot.allrises(SNRs) # skip for now
-        tvs = plot.tempvolts(cleanhk(HK), hkhours, endtime, 'top')
-        if symlink:
-            for tv in tvs:
-                _symlink(tv, tv[:7] + '.png')
-        day = endtime or np.datetime64('now')
-        hkfile = day.tolist().strftime('HK_%j.%y.txt')
-        idx = findfirstclosed(HK['time'], day - np.timedelta64(1, 'D'), day)
+        files += plot.tempvolts(cleanhk(HK), hkhours, endtime, 'top', suffix=suf)
         with open(hkfile, 'wt', encoding='utf-8') as fid:
             hkreport(HK[idx:], fid)
-        if symlink:
-            _symlink(hkfile, 'HK.txt')
-        snrtab = open('snrtab-new.html', 'wt', encoding='utf-8')
+        snrtab = open(tabfile, 'wt', encoding='utf-8')
         for rxid, SNR in SNRs.items():
             snrtab.write(format_stats(rxid, *calcsnrstat(SNR['snr'] / 10)))
-            allsnr = plot.prn_snr(SNR, rxid, snrhours, endtime, **snrargs)
-            nsx = plot.numsats(SNR, rxid, minelev=10, hrs=hkhours, endtime=endtime, pos='mid')
-            avg = plot.meansnr(SNR, rxid, hkhours, endtime, minelev=10, pos='bot')
-            if symlink:
-                suf = '-RX{:02}.png'.format(rxid)
-                _symlink(allsnr, 'ALLSNR' + suf)
-                _symlink(nsx, 'NS' + suf)
-                _symlink(avg, 'AVG' + suf)
+            files += [plot.prn_snr(SNR, rxid, snrhours, endtime, suffix=suf, **snrargs),
+                      plot.numsats(SNR, rxid, minelev=10, hrs=hkhours, endtime=endtime, pos='mid', suffix=suf),
+                      plot.meansnr(SNR, rxid, hkhours, endtime, minelev=10, pos='bot', suffix=suf)]
         snrtab.close()
-        os.replace('snrtab-new.html', 'snrtab.html')
+        if domove:
+            for f in files:
+                _move(f, suf)
         plotspage(SNRs, HK)
         updatetime()
 
@@ -141,7 +144,7 @@ def midnightplots(SNRs, HK, day=None, ddir=None):
         info('Could not create directory', ddir, '\n    ', e)
         return
     etime = day + np.timedelta64(1, 'D')
-    makeplots(SNRs, HK, pdir=ddir, snrhours=24, hkhours=24, endtime=etime,
+    makeplots(SNRs, HK, domove=False, pdir=ddir, snrhours=24, hkhours=24, endtime=etime,
               figlength=14, doazel=False, minelev=15)
     index = os.path.join(config.PLOTDIR, 'index.html')
     shutil.copy(index, ddir)

@@ -221,7 +221,8 @@ def _thresh(hrs, endtime):
         return endtime - hrs * np.timedelta64(3600, 's'), endtime
     return None, None
 
-def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, figlength=12, doazel=True):
+def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, figlength=12,
+            doazel=True, suffix=''):
     """Plot SNR for each tracked satellite over the time period given.
 
     If rxid is given, an image is written out in the current directory, named
@@ -297,7 +298,7 @@ def prn_snr(SNR, rxid=None, hrs=None, endtime=None, omit_zero=True, minelev=0, f
         axes[0].set_xlim(min(SNR['time'].tolist()), max(SNR['time'].tolist()))
     #fig.tight_layout(pad=0.1, h_pad=0.01, w_pad=0.01)
     if rxid:
-        fname = 'ALLSNR-RX{:02}-{:%j}.png'.format(rxid, endtime.tolist())
+        fname = 'ALLSNR-RX{:02}{}.png'.format(rxid, suffix)
         fig.savefig(fname)
         plt.close(fig)
         return fname
@@ -402,7 +403,7 @@ def tempvolt(hk, pos, shareax=None):
     _expandlim(config.TEMP_RANGE, ax2)
     return fig, ax
 
-def tempvolts(hk, hrs=None, endtime=None, pos='topbot'):
+def tempvolts(hk, hrs=None, endtime=None, pos='topbot', suffix=''):
     """Plot temperature and voltage for each receiver in a array of housekeeping records.
 
     The two plots are on the same axes, against time. One image per receiver is
@@ -432,14 +433,14 @@ def tempvolts(hk, hrs=None, endtime=None, pos='topbot'):
         if hrs is not None:
             ax.set_xlim(thresh.tolist(), endtime.tolist())
         figs += [fig]
-        fnames += ['TV-RX{:02}-{:%j}.png'.format(rx, doy)]
+        fnames += ['TV-RX{:02}{}.png'.format(rx, suffix)]
     # Wait to save them, in case the shared axes are resized
     for fig, fname in zip(figs, fnames):
         fig.savefig(fname)
         plt.close(fig)
     return fnames
 
-def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None, pos='topbot'):
+def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None, pos='topbot', suffix=''):
     """Plot number of tracked satellites vs. time from a array of SNR records.
 
     If rxid is given, an image is written out in the current directory, named
@@ -485,13 +486,13 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None, pos='topbot'):
     ax.tick_params(axis='y', labelleft='on', labelright='on')
     ax.grid(True)
     if rxid:
-        fname = 'NS-RX{:02}-{:%j}.png'.format(rxid, doy)
+        fname = 'NS-RX{:02}{}.png'.format(rxid, suffix)
         fig.savefig(fname)
         plt.close(fig)
         return fname
     return fig
 
-def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None, pos='topbot'):
+def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None, pos='topbot', suffix=''):
     """Plot mean snr vs. time from a array of SNR records.
 
     If rxid is given, an image is written out in the current directory, named
@@ -542,7 +543,7 @@ def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None, pos='topbot'):
     ax.legend(loc='best', fontsize='small', numpoints=1, markerscale=4,
               handletextpad=0.4, handlelength=0.8)
     if rxid:
-        fname = 'AVG-RX{:02}-{:%j}.png'.format(rxid, doy)
+        fname = 'AVG-RX{:02}{}.png'.format(rxid, suffix)
         fig.savefig(fname)
         plt.close(fig)
         return fname
