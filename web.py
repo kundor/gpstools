@@ -93,20 +93,24 @@ def plotspage(rxlist, HK):
             fid.write(snrplots(rxid))
     plotspage.rxlist = rxlist
 
-def makeplots(SNRs, HK, domove=True, pdir=None, snrhours=None, hkhours=None, endtime=None, **snrargs):
+def makeplots(SNRs, HK, domove=True, pdir=None, snrhours=None, hkhours=None, endtime=None,
+              minel=None, **snrargs):
     if pdir is None:
         pdir = config.PLOTDIR
     if snrhours is None:
         snrhours = config.PLOT_SNR_HOURS
     if hkhours is None:
         hkhours = config.PLOT_HK_HOURS
+    if minel is None:
+        minel = config.MINELEV
     suf = '-new' * domove
     day = endtime or np.datetime64('now')
     hkfile = 'HK' + suf + '.txt'
     idx = findfirstclosed(HK['time'], day - np.timedelta64(1, 'D'), day)
     tabfile = 'snrtab' + suf + '.html'
     files = [hkfile, tabfile]
-    snrargs = {'hrs': snrhours, 'endtime': endtime, 'suffix': suf, **snrargs}
+    snrargs = {'hrs': snrhours, 'endtime': endtime, 'suffix': suf, 'minelev': minel, **snrargs}
+    # Any values already in snrargs will override these values
     hkargs = {'hrs': hkhours, 'endtime': endtime, 'suffix': suf}
     with pushdir(pdir):
         noteupdate()
@@ -115,7 +119,7 @@ def makeplots(SNRs, HK, domove=True, pdir=None, snrhours=None, hkhours=None, end
         with open(hkfile, 'wt', encoding='utf-8') as fid:
             hkreport(HK[idx:], fid)
         snrtab = open(tabfile, 'wt', encoding='utf-8')
-        hkargs['minelev'] = 10
+        hkargs['minelev'] = minel
         for rxid, SNR in SNRs.items():
             snrtab.write(format_stats(rxid, *calcsnrstat(SNR['snr'] / 10)))
             files += [plot.prn_snr(SNR, rxid, **snrargs),
@@ -259,7 +263,7 @@ def plotupdate(fname=None, handover=None, oldstate=None):
                   tic, 'timestamped', dattic)
             olens = nlens
             if tic - oldtic > config.PLOT_IVAL:
-                guard_and_time('plotting', makeplots, tic, SNRs, HK, endtime=tic, minelev=10)
+                guard_and_time('plotting', makeplots, tic, SNRs, HK, endtime=tic)
                 oldtic = tic
             else:
                 time.sleep(2)
@@ -267,20 +271,22 @@ def plotupdate(fname=None, handover=None, oldstate=None):
         return recgen, fid
 
 def usage():
-    print("Usage:", sys.argv[0], "<file> [snr_hours] [hk_hours] [endtime]\n"
+    print("Usage:", sys.argv[0], "<file> [snr_hours] [hk_hours] [endtime] [minelev]\n"
           "  <file> should be the path to VAPR BINEX data. \n"
           "  snr_hours (optional): how many hours to plot SNR values, default", config.PLOT_SNR_HOURS, "\n"
           "  hk_hours (optional): how many hours to plot housekeeping values, default", config.PLOT_HK_HOURS, "\n"
           "  endtime (optional): plots are made preceding this time (default now)\n"
-          "                      Format 2017-03-15T17:06:59\n")
+          "                      Format 2017-03-15T17:06:59\n"
+          "  minelev (optional): Only use values from above this elevation, default", config.MINELEV, "\n")
     sys.exit(1)
 
 if __name__ == "__main__": # When this file is run as a script
-    if len(sys.argv) < 2 or len(sys.argv) > 5:
+    if len(sys.argv) < 2 or len(sys.argv) > 6:
         usage()
     snrhours = config.PLOT_SNR_HOURS
     hkhours = config.PLOT_HK_HOURS
     endtime = np.datetime64('now')
+    minelev = config.MINELEV
     if len(sys.argv) > 2:
         try:
             snrhours = float(sys.argv[2])
@@ -299,6 +305,12 @@ if __name__ == "__main__": # When this file is run as a script
         except ValueError:
             print('Endtime must be given in the format YYYY-MM-DDTHH:MM:SS')
             usage()
+    if len(sys.argv) > 5:
+        try:
+            minelev = float(sys.argv[5])
+        except ValueError:
+            print('Minelev parameter must be a number')
+            usage()
     with open(sys.argv[1], 'rb') as fid:
         SNRs, HK = readall(fid)
-    makeplots(SNRs, HK, snrhours=snrhours, hkhours=hkhours, endtime=endtime)
+    makeplots(SNRs, HK, snrhours=snrhours, hkhours=hkhours, endtime=endtime, minel=minelev)

@@ -14,10 +14,13 @@ SNR_RANGE = (30, 56)
 """Range of values to use for snr plots, to enable visual comparison between plots."""
 
 VOLT_RANGE = (3.3, 4.5)
-"""Range to use for voltage plots. (This will be extended to accomadate extreme values.)"""
+"""Range to use for voltage plots. (This will be extended to accommodate extreme values.)"""
 
 TEMP_RANGE = (-5, 35)
-"""Range to use for temperature plots. (This will be extended to accomadate extreme values.)"""
+"""Range to use for temperature plots. (This will be extended to accommodate extreme values.)"""
+
+MINELEV = 10
+"""Minimum elevation to use for plotting SNR or no. tracked satellites."""
 
 PLOTDIR = '/usr/local/adm/config/apache/htdocs/i/vapr/VB001'
 """Where to save plot images for the web site."""
