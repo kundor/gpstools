@@ -21,6 +21,16 @@ BKG_15 = 'ftp://igs.bkg.bund.de/NTRIP/BRDC/%Y/%j/brdc%j0.%yn.Z'
 updated every 15 minutes from NTRIP streams, at the German BKG GNSS Data Center."""
 
 
+'http://celestrak.com/GPS/SOF/latest.sof'
+#: satellite outage listing; xml format; latest
+
+'ftp://ftp.agi.com/pub/Catalog/SOF/Current_SOF.txt'
+#: contains filename of the latest SOF file, which can be fetched under:
+'ftp://ftp.agi.com/pub/Catalog/SOF/'
+#...or:
+'http://celestrak.com/GPS/SOF/'
+
+
 def epoc2dt64(s):
     sfmt = "20{:>02}-{:>02}-{:>02}T{:>02}:{:>02}:{:>04}"
     return np.datetime64(sfmt.format(*(s.decode().split())))
