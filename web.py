@@ -93,38 +93,33 @@ def plotspage(rxlist, HK):
             fid.write(snrplots(rxid))
     plotspage.rxlist = rxlist
 
-def makeplots(SNRs, HK, domove=True, pdir=None, snrhours=None, hkhours=None, endtime=None,
-              minel=None, **snrargs):
+def makeplots(SNRs, HK, domove=True, pdir=None, **plotargs):
     if pdir is None:
         pdir = config.PLOTDIR
-    if snrhours is None:
-        snrhours = config.PLOT_SNR_HOURS
-    if hkhours is None:
-        hkhours = config.PLOT_HK_HOURS
-    if minel is None:
-        minel = config.MINELEV
     suf = '-new' * domove
-    day = endtime or np.datetime64('now')
+    plotargs = {'hkhours': config.PLOT_HK_HOURS,
+                'snrhours': config.PLOT_SNR_HOURS,
+                'endtime': np.datetime64('now'),
+                'suffix': suf,
+                'minelev': config.MINELEV,
+                **plotargs}
+    # Any values already in plotargs will override these values
     hkfile = 'HK' + suf + '.txt'
-    idx = findfirstclosed(HK['time'], day - np.timedelta64(1, 'D'), day)
     tabfile = 'snrtab' + suf + '.html'
+    day = plotargs['endtime']
+    hkstart = findfirstclosed(HK['time'], day - np.timedelta64(1, 'D'), day)
     files = [hkfile, tabfile]
-    snrargs = {'hrs': snrhours, 'endtime': endtime, 'suffix': suf, 'minelev': minel, **snrargs}
-    # Any values already in snrargs will override these values
-    hkargs = {'hrs': hkhours, 'endtime': endtime, 'suffix': suf}
     with pushdir(pdir):
         noteupdate()
-        #plot.allrises(SNRs) # skip for now
-        files += plot.tempvolts(cleanhk(HK), pos='top', **hkargs)
+        files += plot.tempvolts(cleanhk(HK), pos='top', **plotargs)
         with open(hkfile, 'wt', encoding='utf-8') as fid:
-            hkreport(HK[idx:], fid)
+            hkreport(HK[hkstart:], fid)
         snrtab = open(tabfile, 'wt', encoding='utf-8')
-        hkargs['minelev'] = minel
         for rxid, SNR in SNRs.items():
             snrtab.write(format_stats(rxid, *calcsnrstat(SNR['snr'] / 10)))
-            files += [plot.prn_snr(SNR, rxid, **snrargs),
-                      plot.numsats(SNR, rxid, pos='mid', **hkargs),
-                      plot.meansnr(SNR, rxid, pos='bot', **hkargs)]
+            files += [plot.prn_snr(SNR, rxid, **plotargs),
+                      plot.numsats(SNR, rxid, pos='mid', **plotargs),
+                      plot.meansnr(SNR, rxid, pos='bot', **plotargs)]
         snrtab.close()
         if domove:
             for f in files:
@@ -152,7 +147,7 @@ def midnightplots(SNRs, HK, day=None, ddir=None):
         return
     etime = day + np.timedelta64(1, 'D')
     makeplots(SNRs, HK, domove=False, pdir=ddir, snrhours=24, hkhours=24, endtime=etime,
-              figlength=14, doazel=False, minelev=15)
+              figlength=14, doazel=False, snrminel=15)
     index = os.path.join(config.PLOTDIR, 'index.html')
     shutil.copy(index, ddir)
     ylink = os.path.join(ddir, 'yesterlink.html')
@@ -313,4 +308,4 @@ if __name__ == "__main__": # When this file is run as a script
             usage()
     with open(sys.argv[1], 'rb') as fid:
         SNRs, HK = readall(fid)
-    makeplots(SNRs, HK, snrhours=snrhours, hkhours=hkhours, endtime=endtime, minel=minelev)
+    makeplots(SNRs, HK, snrhours=snrhours, hkhours=hkhours, endtime=endtime, minelev=minelev)
