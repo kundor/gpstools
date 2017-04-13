@@ -9,14 +9,15 @@ import os
 import time
 import sys
 import shutil
+import argparse
 from collections import defaultdict
 import numpy as np
-from snrstats import calcsnrstat
+import config
 import plot
+from snrstats import calcsnrstat
 from parser import reader, readall, hkreport, cleanhk
 from utility import info, debug, pushdir, static_vars, email_exc
 from findfirst import findfirstclosed
-import config
 
 def _move(srcs, suf):
     """Move each filename in *srcs* to the name obtained by removing *suf*."""
@@ -256,47 +257,23 @@ def plotupdate(fname=None, handover=None, oldstate=None):
     except KeyboardInterrupt:
         return recgen, fid
 
-def usage():
-    print("Usage:", sys.argv[0], "<file> [snr_hours] [hk_hours] [endtime] [minelev]\n"
-          "  <file> should be the path to VAPR BINEX data. \n"
-          "  snr_hours (optional): how many hours to plot SNR values, default", config.PLOT_SNR_HOURS, "\n"
-          "  hk_hours (optional): how many hours to plot housekeeping values, default", config.PLOT_HK_HOURS, "\n"
-          "  endtime (optional): plots are made preceding this time (default now)\n"
-          "                      Format 2017-03-15T17:06:59\n"
-          "  minelev (optional): Only use values from above this elevation, default", config.MINELEV, "\n")
-    sys.exit(1)
-
 if __name__ == "__main__": # When this file is run as a script
-    if len(sys.argv) < 2 or len(sys.argv) > 6:
-        usage()
-    snrhours = config.PLOT_SNR_HOURS
-    hkhours = config.PLOT_HK_HOURS
-    endtime = np.datetime64('now')
-    minelev = config.MINELEV
-    if len(sys.argv) > 2:
-        try:
-            snrhours = float(sys.argv[2])
-        except ValueError:
-            print('Hours parameter must be a number')
-            usage()
-    if len(sys.argv) > 3:
-        try:
-            hkhours = float(sys.argv[3])
-        except ValueError:
-            print('Hours parameter must be a number')
-            usage()
-    if len(sys.argv) > 4:
-        try:
-            endtime = np.datetime64(sys.argv[4])
-        except ValueError:
-            print('Endtime must be given in the format YYYY-MM-DDTHH:MM:SS')
-            usage()
-    if len(sys.argv) > 5:
-        try:
-            minelev = float(sys.argv[5])
-        except ValueError:
-            print('Minelev parameter must be a number')
-            usage()
-    with open(sys.argv[1], 'rb') as fid:
-        SNRs, HK = readall(fid)
-    makeplots(SNRs, HK, snrhours=snrhours, hkhours=hkhours, endtime=endtime, minelev=minelev)
+    parser = argparse.ArgumentParser(description='Create plots for the VAPR web site.',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('file', type=argparse.FileType('rb'),
+                        help='the path to VAPR BINEX data')
+    parser.add_argument('-s', dest='snr_hours', default=config.PLOT_SNR_HOURS, type=float,
+                        help='how many hours to plot SNR values')
+    parser.add_argument('-k', dest='hk_hours', default=config.PLOT_HK_HOURS, type=float,
+                        help='how many hours to plot housekeeping values')
+    parser.add_argument('-e', dest='endtime', default='now', type=np.datetime64,
+                        help='plots are made preceding this time. '
+                             'Use ISO 8601-type format, e.g. 2017-03-15T17:06:59')
+    parser.add_argument('-m', dest='minelev', default=config.MINELEV, type=float,
+                        help='Only use values from above this elevation')
+    args = parser.parse_args()
+
+    SNRs, HK = readall(args.file)
+    args.file.close()
+    makeplots(SNRs, HK, snrhours=args.snr_hours, hkhours=args.hk_hours,
+              endtime=args.endtime, minelev=args.minelev)
