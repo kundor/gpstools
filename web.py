@@ -18,16 +18,6 @@ from utility import info, debug, pushdir, static_vars, email_exc
 from findfirst import findfirstclosed
 import config
 
-def _symlink(src, dest):
-    if src is None:
-        return
-    if os.path.islink(dest):
-        os.remove(dest)
-    elif os.path.exists(dest):
-        info('Could not create symlink', dest, '->', src, 'because', dest, 'exists.')
-        return
-    os.symlink(src, dest)
-
 def _move(src, suf):
     if not src:
         return
