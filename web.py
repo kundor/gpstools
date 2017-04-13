@@ -93,8 +93,7 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, en
     if hkhours is None:
         hkhours = config.PLOT_HK_HOURS
     with pushdir(pdir):
-        with open('updatetime.txt', 'at', encoding='utf-8') as fid:
-            fid.write('. Updating...')
+        noteupdate()
         #plot.allrises(SNRs) # skip for now
         tvs = plot.tempvolts(cleanhk(HK), hkhours, endtime, 'top')
         if symlink:
@@ -151,17 +150,24 @@ def midnightplots(SNRs, HK, day=None, ddir=None):
     with open(ylink, 'wt') as fid:
         fid.write(yday.tolist().strftime('../../%Y/%j'))
 
+def noteupdate():
+    updstr = time.strftime('.<br>Updating (%H:%M:%S %Z)...')
+    with open('updatetime.txt', 'at', encoding='utf-8') as fid:
+        fid.write(updstr)
 
 def updatetime(append=''):
     updstr = time.strftime('%b %d %Y %H:%M:%S UTC', time.gmtime()) + time.strftime(' (%H:%M:%S %Z)')
-    with open('updatetime.txt', 'wt') as fid:
+    with open('updatetime.txt', 'wt', encoding='utf-8') as fid:
         fid.write(updstr + append)
 
 def report_failure(rectic, dattic, pdir=None):
     """Record data failure in updatetime.txt"""
     if pdir is None:
         pdir = config.PLOTDIR
-    failstr = ' (No data received since {}, timestamped {})'.format(rectic, dattic)
+    stamp = str(dattic)[:21] # chop off after deciseconds
+    failstr = '''<br>
+        <span class="fail">No data received since {}, timestamped {}</span>
+        '''.format(rectic, stamp)
     with pushdir(pdir):
         updatetime(failstr)
 
