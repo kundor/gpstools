@@ -20,7 +20,10 @@ sp3sites = [
 #  final  %YEAR/COD%WEEK%DoW.EPH.Z (after about two weeks)
 ## ftp://ftp.unibe.ch/aiub/AIUB_AFTP.TXT
 
-
+# sp3a files from NGA:
+# 'ftp://ftp.nga.mil/pub2/gps/pedata/%Ype/ngaWWWWD.Z'
+# with 9 days of predictions at
+# 'ftp://ftp.nga.mil/pub2/gps/predictions/9DayGPSpreds/'
 #  TODO: try http access as backup (http may work where ftp does not)
 #    (https,'igscb.jpl.nasa.gov', 'igscb/product', igs, sp3),
 #    (httpA, 'garner.ucsd.edu',   'pub/products', 'anonymous', 'anon@mail.com', igs, sp3),
