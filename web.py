@@ -18,13 +18,15 @@ from utility import info, debug, pushdir, static_vars, email_exc
 from findfirst import findfirstclosed
 import config
 
-def _move(src, suf):
-    if not src:
-        return
-    if src.count(suf) != 1:
-        info('Suffix', suf, 'not found uniquely in filename', src)
-        return
-    os.replace(src, src.replace(suf, '', 1))
+def _move(srcs, suf):
+    """Move each filename in *srcs* to the name obtained by removing *suf*."""
+    for src in srcs:
+        if not src:
+            continue
+        if src.count(suf) != 1:
+            info('Suffix', suf, 'not found uniquely in filename', src)
+            continue
+        os.replace(src, src.replace(suf, '', 1))
 
 def format_stats(rxid, stat, statp):
     """Format statistics as from calcsnrstat into an HTML table row."""
@@ -112,8 +114,7 @@ def makeplots(SNRs, HK, domove=True, pdir=None, **plotargs):
                       plot.meansnr(SNR, rxid, pos='bot', **plotargs)]
         snrtab.close()
         if domove:
-            for f in files:
-                _move(f, suf)
+            _move(files, suf)
         plotspage(SNRs, HK)
         updatetime()
 
