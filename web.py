@@ -106,18 +106,21 @@ def makeplots(SNRs, HK, domove=True, pdir=None, snrhours=None, hkhours=None, end
     idx = findfirstclosed(HK['time'], day - np.timedelta64(1, 'D'), day)
     tabfile = 'snrtab' + suf + '.html'
     files = [hkfile, tabfile]
+    snrargs = {'hrs': snrhours, 'endtime': endtime, 'suffix': suf, **snrargs}
+    hkargs = {'hrs': hkhours, 'endtime': endtime, 'suffix': suf}
     with pushdir(pdir):
         noteupdate()
         #plot.allrises(SNRs) # skip for now
-        files += plot.tempvolts(cleanhk(HK), hkhours, endtime, 'top', suffix=suf)
+        files += plot.tempvolts(cleanhk(HK), pos='top', **hkargs)
         with open(hkfile, 'wt', encoding='utf-8') as fid:
             hkreport(HK[idx:], fid)
         snrtab = open(tabfile, 'wt', encoding='utf-8')
+        hkargs['minelev'] = 10
         for rxid, SNR in SNRs.items():
             snrtab.write(format_stats(rxid, *calcsnrstat(SNR['snr'] / 10)))
-            files += [plot.prn_snr(SNR, rxid, snrhours, endtime, suffix=suf, **snrargs),
-                      plot.numsats(SNR, rxid, minelev=10, hrs=hkhours, endtime=endtime, pos='mid', suffix=suf),
-                      plot.meansnr(SNR, rxid, hkhours, endtime, minelev=10, pos='bot', suffix=suf)]
+            files += [plot.prn_snr(SNR, rxid, **snrargs),
+                      plot.numsats(SNR, rxid, pos='mid', **hkargs),
+                      plot.meansnr(SNR, rxid, pos='bot', **hkargs)]
         snrtab.close()
         if domove:
             for f in files:

@@ -440,7 +440,7 @@ def tempvolts(hk, hrs=None, endtime=None, pos='topbot', suffix=''):
         plt.close(fig)
     return fnames
 
-def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None, pos='topbot', suffix=''):
+def numsats(snr, rxid=None, hrs=None, endtime=None, minelev=0, pos='topbot', suffix=''):
     """Plot number of tracked satellites vs. time from a array of SNR records.
 
     If rxid is given, an image is written out in the current directory, named
@@ -492,7 +492,7 @@ def numsats(snr, rxid=None, minelev=0, hrs=None, endtime=None, pos='topbot', suf
         return fname
     return fig
 
-def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=None, pos='topbot', suffix=''):
+def meansnr(snr, rxid=None, hrs=None, endtime=None, minelev=0, pos='topbot', suffix=''):
     """Plot mean snr vs. time from a array of SNR records.
 
     If rxid is given, an image is written out in the current directory, named
