@@ -15,7 +15,7 @@ from snrstats import calcsnrstat
 import plot
 from parser import reader, readall, hkreport, cleanhk
 from utility import info, debug, pushdir, static_vars, email_exc
-from findfirst import findfirstrange
+from findfirst import findfirstclosed
 import config
 
 def _symlink(src, dest):
@@ -102,7 +102,7 @@ def makeplots(SNRs, HK, symlink=True, pdir=None, snrhours=None, hkhours=None, en
                 _symlink(tv, tv[:7] + '.png')
         day = endtime or np.datetime64('now')
         hkfile = day.tolist().strftime('HK_%j.%y.txt')
-        idx = findfirstrange(HK['time'], day - np.timedelta64(1, 'D'), day)
+        idx = findfirstclosed(HK['time'], day - np.timedelta64(1, 'D'), day)
         with open(hkfile, 'wt', encoding='utf-8') as fid:
             hkreport(HK[idx:], fid)
         if symlink:

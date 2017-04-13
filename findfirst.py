@@ -39,10 +39,18 @@ def findfirstlte(vec, val):
     return -1
 
 @jit(nopython=True)
-def findfirstrange(vec, vmin, vmax):
+def findfirstclosed(vec, vmin, vmax):
     """Index of first value in vec within the closed interval [vmin, vmax], or -1 if none exist."""
     for i in range(len(vec)):
         if vmin <= vec[i] <= vmax:
+            return i
+    return -1
+
+@jit(nopython=True)
+def findfirstopen(vec, vmin, vmax):
+    """Index of first value in vec within the open interval (vmin, vmax), or -1 if none exist."""
+    for i in range(len(vec)):
+        if vmin < vec[i] < vmax:
             return i
     return -1
 
