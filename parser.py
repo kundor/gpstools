@@ -261,13 +261,16 @@ HK_RANGE = ((0, 63), # rxid
             (0, 2**16 - 1), # msgct
             (0, 255)) # err
 
-def cleanhk(HK):
+def cleanhk(HK, nofuture=True):
     """Return HK masked to only sensible entries."""
     macs = {}
     for rx in np.unique(HK['rxid']):
         macs[rx] = mode(HK[HK['rxid'] == rx]['mac'])
     macmask = np.array([h['mac'] == macs[h['rxid']] for h in HK])
-    HK_RANGE[1][1] = np.datetime64('now') + np.timedelta64(1, 'h')
+    if nofuture:
+        HK_RANGE[1][1] = np.datetime64('now') + np.timedelta64(1, 'h')
+    else:
+        HK_RANGE[1][1] = np.datetime64(2**63 - 1, 'us')
     return HK[np.logical_and.reduce([a <= HK[f] for (a, b), f in zip(HK_RANGE, HK_REC.names)]
                                   + [HK[f] <= b for (a, b), f in zip(HK_RANGE, HK_REC.names)]
                                   + [macmask])]
