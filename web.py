@@ -105,7 +105,7 @@ def makeplots(SNRs, HK, domove=True, pdir=None, **plotargs):
     files = [hkfile, tabfile]
     with pushdir(pdir):
         noteupdate()
-        files += plot.tempvolts(cleanhk(HK), pos='top', **plotargs)
+        files += plot.tempvolts(cleanhk(HK, nofuture=False), pos='top', **plotargs)
         with open(hkfile, 'wt', encoding='utf-8') as fid:
             hkreport(HK[hkstart:], fid)
         snrtab = open(tabfile, 'wt', encoding='utf-8')
