@@ -54,7 +54,11 @@ def mode(arr):
 def pushdir(ndir):
     """A context manager to change to the given directory, then change back when done."""
     old = os.getcwd()
-    os.chdir(ndir)
+    try:
+        os.chdir(ndir)
+    except FileNotFoundError:
+        os.makedirs(ndir)
+        os.chdir(ndir)
     try:
         yield
     finally:
