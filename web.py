@@ -100,6 +100,8 @@ def makeplots(SNRs, HK, domove=True, pdir=None, **plotargs):
     tabfile = 'snrtab' + suf + '.html'
     day = plotargs['endtime']
     hkstart = findfirstclosed(HK['time'], day - np.timedelta64(1, 'D'), day)
+    if hkstart == -1:
+        hkstart = 0 # If there are no good dates, put everything in the report
     files = [hkfile, tabfile]
     with pushdir(pdir):
         noteupdate()
