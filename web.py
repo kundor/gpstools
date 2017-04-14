@@ -194,7 +194,11 @@ def plotupdate(fname=None, handover=None, oldstate=None):
         recgen, fid = oldstate
     elif fname is None and handover is not False:
         yesterday = np.datetime64('now') - np.timedelta64(1, 'D')
-        fid = open(current_binex(yesterday), 'rb')
+        try:
+            fid = open(current_binex(yesterday), 'rb')
+        except FileNotFoundError:
+            yesterday = False
+            fid = open(current_binex(), 'rb')
     elif fname is None:
         fid = open(current_binex(), 'rb')
     else:
