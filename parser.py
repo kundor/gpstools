@@ -8,6 +8,7 @@ Created on Fri Mar 10 09:04:30 2017
 from collections import defaultdict
 import sys
 import numpy as np
+import config
 from binex import read_record
 from ascii_read import poslist
 from gpstime import gpstotsecgps, gpsweekgps
@@ -283,6 +284,19 @@ def readall(fid):
     """
     return next(reader(fid))
 
+def readtimes(start, stop):
+    """Read all the BINEX files containing data between start and stop (datetime64)."""
+    fid = open(current_binex(start), 'rb')
+    recgen = reader(fid)
+    for SNRs, HK in recgen:
+        fid.close()
+        start += np.timedelta64(1, 'D')
+        if start.astype('M8[D]') >= stop:
+            break
+        fid = open(current_binex(start), 'rb')
+        recgen.send(fid)
+    return SNRs, HK
+
 def out_snr88(SNR, filename):
     """Output the records in the numpy array SNR to filename in snr88 format."""
     with open(filename, 'wt') as fid:
@@ -323,6 +337,11 @@ def hkreport(HK, file=sys.stdout):
                                             rec['temp'],
                                             rec['msgct'],
                                             rec['err']))
+
+def current_binex(time=None):
+    if time is None:
+        time = np.datetime64('now')
+    return time.tolist().strftime(config.BINEX_FILES)
 
 def translate(fid):
     """Translate BINEX data to ASCII formats.

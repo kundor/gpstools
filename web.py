@@ -7,15 +7,14 @@ Created on Wed Mar 15 11:54:05 2017
 """
 import os
 import time
-import sys
 import shutil
-import argparse
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from collections import defaultdict
 import numpy as np
 import config
 import plot
 from snrstats import calcsnrstat
-from parser import reader, readall, hkreport, cleanhk
+from parser import reader, current_binex, readtimes, hkreport, cleanhk
 from utility import info, debug, pushdir, static_vars, email_exc
 from findfirst import findfirstclosed
 
@@ -168,11 +167,6 @@ def report_failure(rectic, dattic, pdir=None):
     with pushdir(pdir):
         updatetime(failstr)
 
-def current_binex(time=None):
-    if time is None:
-        time = np.datetime64('now')
-    return time.tolist().strftime(config.BINEX_FILES)
-
 def after_midnight():
     """True if current time is within 15 minutes after UTC midnight."""
     now = np.datetime64('now')
@@ -258,10 +252,8 @@ def plotupdate(fname=None, handover=None, oldstate=None):
         return recgen, fid
 
 if __name__ == "__main__": # When this file is run as a script
-    parser = argparse.ArgumentParser(description='Create plots for the VAPR web site.',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('file', type=argparse.FileType('rb'),
-                        help='the path to VAPR BINEX data')
+    parser = ArgumentParser(description='Create plots for the VAPR web site.',
+                            formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument('-s', dest='snr_hours', default=config.PLOT_SNR_HOURS, type=float,
                         help='how many hours to plot SNR values')
     parser.add_argument('-k', dest='hk_hours', default=config.PLOT_HK_HOURS, type=float,
@@ -271,9 +263,13 @@ if __name__ == "__main__": # When this file is run as a script
                              'Use ISO 8601-type format, e.g. 2017-03-15T17:06:59')
     parser.add_argument('-m', dest='minelev', default=config.MINELEV, type=float,
                         help='Only use values from above this elevation')
+    parser.add_argument('-d', dest='plotdir', default=config.PLOTDIR,
+                        help='the directory in which to put plotted images')
     args = parser.parse_args()
 
-    SNRs, HK = readall(args.file)
-    args.file.close()
-    makeplots(SNRs, HK, snrhours=args.snr_hours, hkhours=args.hk_hours,
+    dhour = max(args.hk_hours, args.snr_hours + 24)
+    start = args.endtime - dhour * np.timedelta64(3600, 's')
+
+    SNRs, HK = readtimes(start, args.endtime)
+    makeplots(SNRs, HK, pdir=args.plotdir, snrhours=args.snr_hours, hkhours=args.hk_hours,
               endtime=args.endtime, minelev=args.minelev)
