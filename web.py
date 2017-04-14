@@ -242,7 +242,10 @@ def plotupdate(fname=None, handover=None, oldstate=None):
                 continue
             attempt = 0
             rectic = tic
-            dattic = max(max(s[-1]['time'] for s in SNRs.values()), HK[-1]['time'])
+            if SNRs:
+                dattic = max(s[-1]['time'] for s in SNRs.values())
+            if HK.size and HK[-1]['time'] > dattic:
+                dattic = HK[-1]['time']
             debug('{:2} new records {} at'.format(sum(nlens.values()) - sum(olens.values()),
                                                  [nlens[rx] - olens[rx] for rx in nlens]),
                   tic, 'timestamped', dattic)
