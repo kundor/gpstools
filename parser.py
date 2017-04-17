@@ -13,7 +13,7 @@ from binex import read_record
 from ascii_read import poslist
 from gpstime import gpstotsecgps, gpsweekgps
 from coords import llh2xyz, get_ellipsoid_ht
-from utility import info, debug, mode
+from utility import info, debug, mode, replace
 
 SNR_REC = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('snr', 'u2')])
 HK_REC = np.dtype([('rxid', 'u1'), ('time', 'M8[us]'), ('mac', 'u8'), ('lon', 'i4'),
@@ -261,18 +261,15 @@ HK_RANGE = ((0, 63), # rxid
             (0, 2**16 - 1), # msgct
             (0, 255)) # err
 
-def cleanhk(HK, nofuture=True):
+def cleanhk(HK, since=None, nofuture=True):
     """Return HK masked to only sensible entries."""
     macs = {}
     for rx in np.unique(HK['rxid']):
         macs[rx] = mode(HK[HK['rxid'] == rx]['mac'])
     macmask = np.array([h['mac'] == macs[h['rxid']] for h in HK])
-    if nofuture:
-        HK_RANGE[1][1] = np.datetime64('now') + np.timedelta64(1, 'h')
-    else:
-        HK_RANGE[1][1] = np.datetime64(2**63 - 1, 'us')
-    return HK[np.logical_and.reduce([a <= HK[f] for (a, b), f in zip(HK_RANGE, HK_REC.names)]
-                                  + [HK[f] <= b for (a, b), f in zip(HK_RANGE, HK_REC.names)]
+    hkr = replace(HK_RANGE, 1, [since or HK_RANGE[1][0],
+                                np.datetime64('now') + np.timedelta64(1, 'h') if nofuture else np.datetime64(2**63 - 1, 'us')])
+    return HK[np.logical_and.reduce([(a <= HK[f]) & (HK[f] <= b) for (a, b), f in zip(hkr, HK_REC.names)]
                                   + [macmask])]
 
 def validhk(hkr):

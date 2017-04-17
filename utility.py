@@ -50,6 +50,10 @@ def mode(arr):
     vals, ct = np.unique(arr, return_counts=True)
     return vals[np.argmax(ct)]
 
+def replace(seq, index, el):
+    """Return a copy of *seq* with the element at *index* replaced by *el*."""
+    return seq[:index] + type(seq)((el,)) + seq[index + 1:]
+
 @contextmanager
 def pushdir(ndir):
     """A context manager to change to the given directory, then change back when done."""

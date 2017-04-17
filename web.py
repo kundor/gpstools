@@ -69,12 +69,13 @@ def snrplots(rxid):
         """.format(rxstr)
 
 @static_vars(rxlist=[])
-def plotspage(rxlist, HK):
+def plotspage(HK, endtime):
     """Write out the receiver list and image lists for the web page."""
-    rxlist = sorted(rxlist)
+    since = endtime - max(config.PLOT_HK_HOURS, config.PLOT_SNR_HOURS) * np.timedelta64(3600, 's')
+    HK = cleanhk(HK, since=since)
+    rxlist = sorted(np.unique(HK['rxid']))
     if rxlist == plotspage.rxlist and os.path.exists('rxlist.html') and os.path.exists('plots.html'):
         return
-    HK = cleanhk(HK)
     with open('rxlist.html', 'wt', encoding='utf-8') as fid:
          for rxid in rxlist:
              fid.write(rxline(rxid, HK))
@@ -117,7 +118,7 @@ def makeplots(SNRs, HK, domove=True, pdir=None, **plotargs):
         snrtab.close()
         if domove:
             _move(files, suf)
-        plotspage(SNRs, HK)
+        plotspage(HK, day)
         updatetime()
 
 def midnightplots(SNRs, HK, day=None, ddir=None):
