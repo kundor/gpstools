@@ -221,23 +221,23 @@ def _thresh(hrs, endtime):
         return endtime - hrs * np.timedelta64(3600, 's'), endtime
     return None, None
 
-def prn_snr(SNR, rxid=None, snrhours=None, endtime=None, omit_zero=True, minelev=0, figlength=12,
+def prn_snr(SNR, rxid=None, snr_hours=None, endtime=None, omit_zero=True, minelev=0, figlength=12,
             doazel=True, suffix='', snrminel=None, **unused):
     """Plot SNR for each tracked satellite over the time period given.
 
     If rxid is given, an image is written out in the current directory, named
     ALLSNR-RX##-DOY.png. Otherwise the figure is returned.
-    If snrhours is set to 'all', then all data in the provided array are plotted.
-    If snrhours is not given, then config.PLOT_SNR_HOURS is used.
+    If snr_hours is set to 'all', then all data in the provided array are plotted.
+    If snr_hours is not given, then config.PLOT_SNR_HOURS is used.
     """
     diftime = np.timedelta64(1, 'D') - np.timedelta64(246, 's')
     cur, prev = 'Current', 'Previous day'
-    if snrhours is None:
-        snrhours = config.PLOT_SNR_HOURS
-    if snrhours == 'all':
+    if snr_hours is None:
+        snr_hours = config.PLOT_SNR_HOURS
+    if snr_hours == 'all':
         thresh = None
     else:
-        thresh, endtime = _thresh(snrhours, endtime)
+        thresh, endtime = _thresh(snr_hours, endtime)
         if endtime > np.datetime64('now') - np.timedelta64(1, 'h'):
             cur, prev = 'Today', 'Yesterday'
     if snrminel is not None:
@@ -405,20 +405,20 @@ def tempvolt(hk, pos, shareax=None):
     _expandlim(config.TEMP_RANGE, ax2)
     return fig, ax
 
-def tempvolts(hk, hkhours=None, endtime=None, pos='topbot', suffix='', **unused):
+def tempvolts(hk, hk_hours=None, endtime=None, pos='topbot', suffix='', **unused):
     """Plot temperature and voltage for each receiver in a array of housekeeping records.
 
     The two plots are on the same axes, against time. One image per receiver is
     written out in the current directory, named TV-RX##-DOY.png.
-    If hkhours is given, hkhours hours preceding the datetime64 endtime (default now)
+    If hk_hours is given, hk_hours hours preceding the datetime64 endtime (default now)
     are plotted (otherwise, all data is plotted.)
     """
     plt.ioff()
-    thresh, endtime = _thresh(hkhours, endtime)
+    thresh, endtime = _thresh(hk_hours, endtime)
     fnames = []
     figs = []
     ax = None
-    if hkhours is not None:
+    if hk_hours is not None:
         hk = hk[findfirstgt(hk['time'], thresh) : findfirstgt(hk['time'], endtime)]
     for rx in np.unique(hk['rxid']):
         mask = hk['rxid'] == rx
@@ -432,7 +432,7 @@ def tempvolts(hk, hkhours=None, endtime=None, pos='topbot', suffix='', **unused)
             title += ': Voltage and Temperature'
         if 'top' in pos:
             ax.set_title(title)
-        if hkhours is not None:
+        if hk_hours is not None:
             ax.set_xlim(thresh.tolist(), endtime.tolist())
         figs += [fig]
         fnames += ['TV-RX{:02}{}.png'.format(rx, suffix)]
@@ -442,14 +442,14 @@ def tempvolts(hk, hkhours=None, endtime=None, pos='topbot', suffix='', **unused)
         plt.close(fig)
     return fnames
 
-def numsats(snr, rxid=None, hkhours=None, endtime=None, minelev=0, pos='topbot', suffix='', **unused):
+def numsats(snr, rxid=None, hk_hours=None, endtime=None, minelev=0, pos='topbot', suffix='', **unused):
     """Plot number of tracked satellites vs. time from a array of SNR records.
 
     If rxid is given, an image is written out in the current directory, named
     NS-RX##-DOY.png. Otherwise the figure is returned.
     """
-    if hkhours is not None:
-        thresh, endtime = _thresh(hkhours, endtime)
+    if hk_hours is not None:
+        thresh, endtime = _thresh(hk_hours, endtime)
         snr = snr[findfirstgt(snr['time'], thresh) : findfirstgt(snr['time'], endtime)]
     if minelev:
         snr = snr[snr['el'] > minelev]
@@ -479,7 +479,7 @@ def numsats(snr, rxid=None, hkhours=None, endtime=None, minelev=0, pos='topbot',
         ylabl = 'No. satellites over {}°'.format(minelev)
     fig, ax = _gethouraxes([10, 2.7], pos, title=title, ylabel=ylabl)
     ax.plot(time, numsats, '-o', ms=2)
-    if hkhours is not None:
+    if hk_hours is not None:
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
         ax.set_xlim(min(time), max(time))
@@ -494,14 +494,14 @@ def numsats(snr, rxid=None, hkhours=None, endtime=None, minelev=0, pos='topbot',
         return fname
     return fig
 
-def meansnr(snr, rxid=None, hkhours=None, endtime=None, minelev=0, pos='topbot', suffix='', **unused):
+def meansnr(snr, rxid=None, hk_hours=None, endtime=None, minelev=0, pos='topbot', suffix='', **unused):
     """Plot mean snr vs. time from a array of SNR records.
 
     If rxid is given, an image is written out in the current directory, named
     AVG-RX##-DOY.png. Otherwise the figure is returned.
     """
-    if hkhours is not None:
-        thresh, endtime = _thresh(hkhours, endtime)
+    if hk_hours is not None:
+        thresh, endtime = _thresh(hk_hours, endtime)
         snr = snr[findfirstgt(snr['time'], thresh) : findfirstgt(snr['time'], endtime)]
     if minelev:
         snr = snr[snr['el'] > minelev]
@@ -536,7 +536,7 @@ def meansnr(snr, rxid=None, hkhours=None, endtime=None, minelev=0, pos='topbot',
     pmeans = np.array(pmeans)
     ax.plot(time.tolist(), means, 'b.', ms=2, label='All values')
     ax.plot(time[pmeans > 0].tolist(), pmeans[pmeans > 0], 'r.', ms=2, label='Positive only')
-    if hkhours is not None:
+    if hk_hours is not None:
         ax.set_xlim(thresh.tolist(), endtime.tolist())
     else:
         ax.set_xlim(min(time.tolist()), max(time.tolist()))

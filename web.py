@@ -86,12 +86,12 @@ def plotspage(HK, endtime):
             fid.write(snrplots(rxid))
     plotspage.rxlist = rxlist
 
-def makeplots(SNRs, HK, domove=True, pdir=None, **plotargs):
-    if pdir is None:
-        pdir = config.PLOTDIR
+def makeplots(SNRs, HK, domove=True, plotdir=None, **plotargs):
+    if plotdir is None:
+        plotdir = config.PLOTDIR
     suf = '-new' * domove
-    plotargs = {'hkhours': config.PLOT_HK_HOURS,
-                'snrhours': config.PLOT_SNR_HOURS,
+    plotargs = {'hk_hours': config.PLOT_HK_HOURS,
+                'snr_hours': config.PLOT_SNR_HOURS,
                 'endtime': np.datetime64('now'),
                 'suffix': suf,
                 'minelev': config.MINELEV,
@@ -104,7 +104,7 @@ def makeplots(SNRs, HK, domove=True, pdir=None, **plotargs):
     if hkstart == -1:
         hkstart = 0 # If there are no good dates, put everything in the report
     files = [hkfile, tabfile]
-    with pushdir(pdir):
+    with pushdir(plotdir):
         noteupdate()
         files += plot.tempvolts(cleanhk(HK, nofuture=False), pos='top', **plotargs)
         with open(hkfile, 'wt', encoding='utf-8') as fid:
@@ -140,7 +140,7 @@ def midnightplots(SNRs, HK, day=None, ddir=None):
         info('Could not create directory', ddir, '\n    ', e)
         return
     etime = day + np.timedelta64(1, 'D')
-    makeplots(SNRs, HK, domove=False, pdir=ddir, snrhours=24, hkhours=24, endtime=etime,
+    makeplots(SNRs, HK, domove=False, plotdir=ddir, snr_hours=24, hk_hours=24, endtime=etime,
               figlength=14, doazel=False, snrminel=15)
     index = os.path.join(config.PLOTDIR, 'index.html')
     shutil.copy(index, ddir)
@@ -275,11 +275,27 @@ if __name__ == "__main__": # When this file is run as a script
                         help='Only use values from above this elevation')
     parser.add_argument('-d', dest='plotdir', default=config.PLOTDIR,
                         help='the directory in which to put plotted images')
+    parser.add_argument('-y', dest='daily', action='store_true',
+                        help='Create daily overview plots: set defaults SNR_HOURS=HK_HOURS=24, '
+                             'PLOTDIR=' + config.DAILYDIR + ', '
+                             'ENDTIME=last UTC midnight. '
+                             'Make SNR plots longer, with minimum elevation at least 15, '
+                             'and remove az/el maps.')
     args = parser.parse_args()
+    if args.daily:
+        parser.set_defaults(snr_hours=24, hk_hours=24, minelev=15, plotdir=config.DAILYDIR,
+                            endtime=np.datetime64('now', 'D'))
+        args = parser.parse_args()
+        stime = args.endtime - max(args.hk_hours, args.snr_hours) * np.timedelta64(3600, 's')
+        args.plotdir = stime.tolist().strftime(args.plotdir)
+        args.figlength = 14
+        args.doazel = False
+        args.snrminel = max(15, args.minelev)
+        args.domove = False
+    del args.daily
 
     dhour = max(args.hk_hours, args.snr_hours + 24)
     start = args.endtime - dhour * np.timedelta64(3600, 's')
 
     SNRs, HK = readtimes(start, args.endtime)
-    makeplots(SNRs, HK, pdir=args.plotdir, snrhours=args.snr_hours, hkhours=args.hk_hours,
-              endtime=args.endtime, minelev=args.minelev)
+    makeplots(SNRs, HK, **vars(args))
