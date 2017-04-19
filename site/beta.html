@@ -1,1 +1,208 @@
-/home/xenon/student/nima9589/vapr-htdocs/VB001/beta.html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>VB001</title>
+    <link rel="icon" type="image/png" href="../volc32.png">
+    <style type="text/css">
+      table#rxinfo {
+        display:inline-table;
+        vertical-align: middle;
+        text-align: center;
+      }
+      td {
+        padding: 0 10px 0 10px;
+      }
+      img {
+        vertical-align: middle;
+      }
+      div#map {
+        width: 100%;
+        height: 50%;
+        max-height: 800px;
+        min-height: 400px;
+      }
+      span#update {
+        display: inline-block;
+        vertical-align: top;
+      }
+      span.fail {
+        color: red;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div class="rxlist">
+      <h3>Receivers</h3>
+      <table id="rxinfo">
+        <thead>
+          <tr>
+            <th>Rx</th>
+            <th>Lng</th>
+            <th>Lat</th>
+            <th>Alt</th>
+            <th>Range</th>
+            <th>Mean</th>
+            <th>(incl. zeros)</th>
+            <th>Std. dev</th>
+            <th>(incl. zeros)</th>
+          </tr>
+        </thead>
+        <tbody id="rxrows"></tbody>
+      </table>
+      <p><a href="HK.txt">Housekeeping records</a></p>
+      <p id="yesterlink"></p>
+      <p>Last updated: <span id="update"></span></p>
+    </div>
+    <script>
+      var map, rxdata;
+      function getJSON(url, callback) {
+        var hr = new XMLHttpRequest();
+        hr.open("GET", url, true);
+        hr.responseType = 'json';
+        hr.onload = function() {
+          if (hr.status == 200) {
+            callback(hr.response);
+          }
+        };
+        hr.send();
+      }
+      function updatetime(udstr) {
+        var udt = new Date(udstr);
+        var ustr = udt.toUTCString();
+        ustr = ustr.replace(/GMT$/, 'UTC');
+        var lstr = udt.toLocaleTimeString(undefined, {timeZoneName: 'short', hour12: false});
+        document.getElementById('update').textContent = ustr + ' (' + lstr + ')';
+      }
+      function yesterlink(udstr) {
+        var udt = new Date(udstr);
+        udt.setDate(udt.getDate() - 1);
+        var year = new Date(Date.UTC(udt.getUTCFullYear(), 0, 0));
+        var doy = Math.floor((udt - year) / 86400 / 1000);
+        var yl = udt.getUTCFullYear() + '/' + doy;
+        var a = document.createElement('a');
+        a.appendChild(document.createTextNode('Yesterday'));
+        a.href = yl;
+        document.getElementById('yesterlink').appendChild(a);
+      }
+      function updatestats(rx) {
+        var tbl = document.getElementById('rxrows');
+        rx.forEach(function(rx){
+          var tr = tbl.insertRow();
+          function addstr(val) {
+            var td = tr.insertCell();
+            td.appendChild(document.createTextNode(val));
+          }
+          addstr(rx.rxid);
+          addstr(Math.abs(rx.lng).toFixed(5) + '°' + (rx.lng > 0 ? 'W' : 'E'));
+          addstr(Math.abs(rx.lat).toFixed(5) + '°' + (rx.lng > 0 ? 'N' : 'S'));
+          addstr(rx.alt.toFixed(3) + 'm');
+          addstr(rx.stats[0] + '–' + rx.stats[1]);
+          for (var i = 2; i < 6; ++i) {
+            addstr(rx.stats[i]);
+          }
+        });
+      }
+      function batfill(perc) {
+        var ht = perc * 20;
+        return {
+          path: "M -6,10 v-" + ht + "h12 v" + ht + "z",
+          fillColor: "rgb(" + Math.floor((1 - perc)*255) + "," + Math.floor(perc*255) + ",0)",
+          fillOpacity: 0.6,
+          scale: 1.5,
+          strokeOpacity: 0
+        };
+      }
+      function sxline(az, el, dif) {
+        dif = Math.min(Math.abs(dif), 10);
+        var col = "hsl(" + (100 + 26 * dif) + ", 100%, " + (20 + 8 * dif) + "%)"
+        return {
+          path: "M 0,0 v-5",
+          strokeWeight: 2,
+          scale: Math.sqrt(el),
+          rotation: az,
+          strokeColor: col
+        };
+      }
+      function markmap() {
+        if (rxdata === undefined || map === undefined)
+          return;
+        rxdata.vents.forEach(function(v) {
+          new google.maps.Marker({
+            position: v,
+            map: map,
+            title: 'Volcano',
+            icon: ventpath
+          });
+        });
+        rxdata.rx.forEach(function(rx) {
+          var batperc = (rx.volt - 3.2)  / 1.2; // map 3.2 -- 4.4 to 0--1
+          var pos = {lat: rx.lat, lng: rx.lng};
+          rx.sx.forEach(function(s){
+            new google.maps.Marker({
+              position: pos,
+              map: map,
+              icon: sxline(s.az, s.el, s.diff)
+            });
+          });
+          new google.maps.Marker({
+            position: pos,
+            map: map,
+            label: rx.rxid,
+            title: 'Rx' + rx.rxid,
+            icon: batpath
+          });
+          new google.maps.Marker({
+            position: pos,
+            map: map,
+            icon: batfill(batperc)
+          });
+        });
+      }
+        
+      var batpath = {
+        path: "M -6,-8 v16 q 0,2 2,2 h8 q2,0 2,-2 v-16 q0,-2 -2,-2 h-8 q-2,0 -2,2 m4,-3 h4",
+        fillColor: "white",
+        fillOpacity: 0.6,
+        scale: 1.5,
+        strokeColor: 'black'
+      };
+      var ventpath = {
+        path: "M26.1,.5l-8,6c-.4,.3-.3,.7,.1,.8l9,3c.5,.1,.5,.4,0,.7l-11,5" +
+              "c-.5,.2-.5,.6-.1,1l7,5c.4,.3,.3,.7-.1,.8l-22,6c-.5,.1-.5,0-.1-.2" +
+              "l12-7c.4-.2,.4-.6-.1-.7l-12-3c-.5-.1-.5-.4 0-.6l13-5c.5-.2,.5-.6,0-.9" +
+              "l-6-4c-.4-.3-.4-.6,.1-.8l17.8-6c.3,-.1 .44,-.1 .3,0z",
+        fillColor: "red",
+        fillOpacity: 0.5,
+        strokeColor: "black"
+      };
+
+      getJSON("rxdata.json", function(data){
+        rxdata = data;
+        updatetime(data.updated);
+        yesterlink(data.updated);
+        updatestats(data.rx);
+        markmap();
+      });
+
+      function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: {lat: 40.00745, lng: -105.2618},
+          zoom: 20
+        });
+        markmap();
+        google.maps.event.addDomListener(window, 'resize', function() {
+          var center = map.getCenter();
+          google.maps.event.trigger(map, 'resize');
+          map.setCenter(center);
+        });
+      }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB2tuGMuj84YeYfQG2Hpn5pV2w2ARw-T34&callback=initMap"
+      async defer></script>
+  </body>
+</html>

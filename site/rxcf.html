@@ -1,1 +1,41 @@
-/home/xenon/student/nima9589/vapr-htdocs/VB001/rxcf.html
+<html>
+  <head>
+    <!-- set default values for SSI variables -->    
+    <!--#set var="r1" value="" -->
+    <!--#set var="r2" value="" -->
+
+    <!-- get r1, r2 values from URL --> 
+    <!--#if expr="$QUERY_STRING = /\\br1=([0-9]+)/" -->
+    <!--#set var="r1" value="$1" -->
+    <!--#endif -->
+    <!--#if expr="$QUERY_STRING = /\\br2=([0-9]+)/" -->
+    <!--#set var="r2" value="$1" -->
+    <!--#endif -->
+
+    <title>VB001: RX<!--#echo var="r1" --> vs RX<!--#echo var="r2" --></title>
+    <link rel="icon" type="image/png" href="../volc32.png">
+    <style type="text/css">
+      div {
+        overflow: hidden;
+      }
+      .cropbot img {
+        width: 1000px;
+        height: 270px;
+        margin: 0 0 -38px 0;
+      }
+      .croptop img {
+        width: 1000px;
+        height: 260px;
+        margin: -26px 0 0 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="croptop"><img src="TV-RX<!--#echo var="r1" -->.png"></div>
+    <div class="croptop"><img src="TV-RX<!--#echo var="r2" -->.png"></div>
+    <div><img src="NS-RX<!--#echo var="r1" -->.png"></div>
+    <div><img src="NS-RX<!--#echo var="r2" -->.png"></div>
+    <div class="cropbot"><img src="AVG-RX<!--#echo var="r1" -->.png"></div>
+    <div><img src="AVG-RX<!--#echo var="r2" -->.png"></div>
+  </body>
+</html>

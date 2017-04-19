@@ -1,1 +1,3 @@
-/home/xenon/student/nima9589/vapr-htdocs/VB001/.htaccess
+AddDefaultCharset UTF-8
+Options +Includes
+XBitHack on
