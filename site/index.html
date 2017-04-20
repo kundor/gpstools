@@ -1,0 +1,75 @@
+<html>
+  <head>
+    <title>VB001</title>
+    <link rel="icon" type="image/png" href="../volc32.png">
+    <style type="text/css">
+      table.snrstats {
+        display:inline-table;
+        vertical-align: middle;
+        text-align: center;
+      }
+      td {
+        padding: 0 10px 0 10px;
+      }
+      img {
+        vertical-align: middle;
+      }
+      div.rxlist {
+        max-width: 700px;
+        display: inline-block;
+      }
+      div.map {
+        float: right;
+      }
+      span.update {
+        display: inline-block;
+        vertical-align: top;
+      }
+      span.fail {
+        color: red;
+      }
+      iframe.gmap {
+        border: 0;
+        vertical-align: middle;
+      }
+      h3.rxhead {
+        clear: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="rxlist">
+      <h3>Receivers</h3>
+      <ul>
+          <!--#include virtual="rxlist.html" -->
+      </ul>
+     <p>
+     <a href="HK.txt">Housekeeping records</a>
+     </p>
+     <p>
+     <a href="<!--#include virtual="yesterlink.html" -->">Yesterday</a>
+     </p>
+     <h4>SNR stats:</h4>
+      <table class="snrstats">
+        <tr>
+          <th>Rx</th>
+          <th>Range</th>
+          <th>Mean</th>
+          <th>(incl. zeros)</th>
+          <th>Std. deviation</th>
+          <th>(incl. zeros)</th>
+        </tr>
+        <!--#include virtual="snrtab.html" -->
+    </table>
+    <p>
+    Last updated: <span class="update"><!--#include virtual="updatetime.txt" --></span>
+    </p>
+    </div>
+    <div class="map">
+      <iframe class="gmap" width="500" height="400" frameborder="0"
+              src="https://www.google.com/maps/embed/v1/place?key=AIzaSyAH97PQ2KdkgQzjdkYX6YLDOADncFygY8g&q=40.0074501,-105.2618961" allowfullscreen>
+      </iframe>
+    </div>
+    <!--#include virtual="plots.html"-->
+  </body>
+</html>
