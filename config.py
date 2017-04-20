@@ -1,13 +1,15 @@
 import sys
 import numpy as np
 
+SITE = 'VB001'
+
 LOGFILE = sys.stderr
 """Where informative messages are sent. (Set to a file for headless use.)"""
 
 DEBUG = False
 """Whether to output debugging messages (generally not of interest.)"""
 
-BINEX_FILES = "/data/VAPR/VB001/%Y/%j/data.bin"
+BINEX_FILES = '/data/VAPR/' + SITE + '/%Y/%j/data.bin'
 """Location of BINEX streams, in strftime format."""
 
 SNR_RANGE = (30, 56)
@@ -22,7 +24,7 @@ TEMP_RANGE = (-5, 35)
 MINELEV = 10
 """Minimum elevation to use for plotting SNR or no. tracked satellites."""
 
-PLOTDIR = '/usr/local/adm/config/apache/htdocs/i/vapr/VB001'
+PLOTDIR = '/usr/local/adm/config/apache/htdocs/i/vapr/' + SITE
 """Where to save plot images for the web site."""
 
 DAILYDIR = PLOTDIR + '/%Y/%j'
