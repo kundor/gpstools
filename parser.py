@@ -13,7 +13,7 @@ from binex import read_record
 from ascii_read import poslist
 from gpstime import gpstotsecgps, gpsweekgps
 from coords import llh2xyz, get_ellipsoid_ht
-from utility import info, debug, mode, replace
+from utility import info, debug, mode, replace, fmt_timesite
 
 SNR_REC = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('snr', 'u2')])
 HK_REC = np.dtype([('rxid', 'u1'), ('time', 'M8[us]'), ('mac', 'u8'), ('lon', 'i4'),
@@ -339,9 +339,7 @@ def hkreport(HK, file=sys.stdout):
                                             rec['err']))
 
 def current_binex(time=None):
-    if time is None:
-        time = np.datetime64('now')
-    return time.tolist().strftime(config.BINEX_FILES)
+    return fmt_timesite(config.BINEX_FILES, time)
 
 def translate(fid):
     """Translate BINEX data to ASCII formats.

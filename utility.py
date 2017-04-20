@@ -5,6 +5,7 @@ These are not very specific in usage, however, and could be useful anywhere.
 from contextlib import suppress, redirect_stdout, contextmanager
 import subprocess
 import os
+import sys
 import shutil
 from textwrap import TextWrapper
 from email.mime.text import MIMEText
@@ -27,6 +28,12 @@ def debug(*args, **kwargs):
     if config.DEBUG:
         info(*args, **kwargs)
 
+def isinteractive():
+    """Determine if stdin is interactive or not."""
+    return sys.stdin.isatty() or sys.flags.interactive or hasattr(sys, 'ps1')
+# In ipython qtconsole, sys.stdin.isatty() is false, but sys.ps1 is defined.
+# sys.flags.interactive allows forcing interactive behavior with python's -i option.
+
 def vapr_email(subj, msg):
     """Email the string *msg* with subject *subj* to config.ERR_EMAIL from config.FROM_EMAIL."""
     msg = MIMEText(msg)
@@ -42,6 +49,18 @@ def email_exc(also_print=True):
     vapr_email('VAPR Error', msg)
     if also_print:
         info(msg)
+
+def fmt_timesite(fmtstr, ndt=None, site=None):
+    """Format a strftime-type string with the given numpy datetime64 and site.
+
+    Use the current time if no numpy datetime64 is given. Also replace
+    {site} with config.SITE.
+    """
+    if site is None:
+        site = config.SITE
+    if ndt is None:
+        ndt = np.datetime64('now')
+    return ndt.tolist().strftime(fmtstr.format(site=site))
 
 def mode(arr):
     """Return the value occuring most often in numpy array arr.

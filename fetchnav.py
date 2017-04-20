@@ -2,8 +2,8 @@ from ftplib import FTP
 from urllib.request import urlretrieve
 import os
 from gpstime import getutctime, gpsweek, gpsdow, dhours
-from utility import decompress, info
-from config import SP3DIR
+from utility import decompress, info, isinteractive, email_exc
+import config
 
 sp3sites = [
     ('ftp.igs.org',        'pub/product'),
@@ -38,19 +38,23 @@ sp3sites = [
 
 while True:
     try:
-        os.makedirs(SP3DIR, exist_ok=True)
+        os.makedirs(config.SP3DIR, exist_ok=True)
     except OSError as e:
-        print("The directory to store sp3 files, " + SP3DIR + ", is inaccessible "
-              "(occupied by another file, or no permissions).")
-        print(e)
-        SP3DIR = input("Choose another path, or q to quit:")
-        if SP3DIR == 'q':
-            raise
-        continue
+        if isinteractive():
+            print("The directory to store sp3 files, " + config.SP3DIR + ", is inaccessible "
+                  "(occupied by another file, or no permissions).")
+            print(e)
+            sp3dir = input("Choose another path, or q to quit:")
+            if sp3dir == 'q':
+                raise
+            config.SP3DIR = sp3dir
+            continue
+        email_exc()
+        raise
     break
 
 def sp3path(filename):
-    return os.path.join(SP3DIR, filename)
+    return os.path.join(config.SP3DIR, filename)
 
 def ultra(dt):
     """IGS ultrarapid filename immediately preceding dt."""
@@ -141,7 +145,7 @@ def getsp3file(dt=None):
     # if we get here, we tried every ftp site without success
     if fsnum is None:
         raise RuntimeError('Could not fetch an sp3 file from any site, '
-                           'and no local file was found in ' + SP3DIR + '.')
+                           'and no local file was found in ' + config.SP3DIR + '.')
     return sp3path(flist[fsnum])
 
 

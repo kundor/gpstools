@@ -14,6 +14,7 @@ import json
 import re
 import scipy.integrate
 import numpy as np
+import config
 from utility import info
 
 class WGS84:
@@ -72,10 +73,12 @@ def google_ht(lat, lon, bestguess=0):
 
     Falls back to third parameter bestguess (default 0) if the HTTP request fails.
     """
-    gkey = 'AIzaSyAH97PQ2KdkgQzjdkYX6YLDOADncFygY8g'
     gurl = 'https://maps.googleapis.com/maps/api/elevation/json'
+    params = {'locations': '{},{}'.format(lat, lon)}
+    if config.GKEY:
+        params['key'] = config.GKEY
     try:
-        resp = jsonfetch(gurl, key=gkey, locations='{},{}'.format(lat, lon))
+        resp = jsonfetch(gurl, **params)
         return resp['results'][0]['elevation']
     except (HTTPError, KeyError, IndexError) as e:
         info(e)

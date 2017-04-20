@@ -15,7 +15,7 @@ import config
 import plot
 from snrstats import calcsnrstat
 from parser import reader, current_binex, readtimes, hkreport, cleanhk
-from utility import info, debug, pushdir, static_vars, email_exc
+from utility import info, debug, pushdir, static_vars, email_exc, fmt_timesite
 from findfirst import findfirstclosed
 
 def _move(srcs, suf):
@@ -87,8 +87,6 @@ def plotspage(HK, endtime):
     plotspage.rxlist = rxlist
 
 def makeplots(SNRs, HK, domove=True, plotdir=None, **plotargs):
-    if plotdir is None:
-        plotdir = config.PLOTDIR
     suf = '-new' * domove
     plotargs = {'hk_hours': config.PLOT_HK_HOURS,
                 'snr_hours': config.PLOT_SNR_HOURS,
@@ -104,6 +102,8 @@ def makeplots(SNRs, HK, domove=True, plotdir=None, **plotargs):
     if hkstart == -1:
         hkstart = 0 # If there are no good dates, put everything in the report
     files = [hkfile, tabfile]
+    if plotdir is None:
+        plotdir = fmt_timesite(config.PLOTDIR, day)
     with pushdir(plotdir):
         noteupdate()
         files += plot.tempvolts(cleanhk(HK, nofuture=False), pos='top', **plotargs)
@@ -133,7 +133,7 @@ def midnightplots(SNRs, HK, day=None, ddir=None):
     if day is None:
         day = np.datetime64('now') - np.timedelta64(6, 'h')
     day = day.astype('M8[D]')
-    ddir = day.tolist().strftime(ddir)
+    ddir = fmt_timesite(ddir, day)
     try:
         os.makedirs(ddir, exist_ok=True)
     except FileExistsError as e:
@@ -142,8 +142,11 @@ def midnightplots(SNRs, HK, day=None, ddir=None):
     etime = day + np.timedelta64(1, 'D')
     makeplots(SNRs, HK, domove=False, plotdir=ddir, snr_hours=24, hk_hours=24, endtime=etime,
               figlength=14, doazel=False, snrminel=15)
-    index = os.path.join(config.PLOTDIR, 'index.html')
-    shutil.copy(index, ddir)
+    index = os.path.join(fmt_timesite(config.PLOTDIR, day), 'index.html')
+    try:
+        shutil.copy(index, ddir)
+    except OSError:
+        info('Could not copy index.html from plot dir to daily dir.')
     ylink = os.path.join(ddir, 'yesterlink.html')
     yday = day - np.timedelta64(1, 'D')
     with open(ylink, 'wt') as fid:
@@ -162,7 +165,7 @@ def updatetime(append=''):
 def report_failure(rectic, dattic, pdir=None):
     """Record data failure in updatetime.txt"""
     if pdir is None:
-        pdir = config.PLOTDIR
+        pdir = fmt_timesite(config.PLOTDIR)
     stamp = str(dattic)[:21] # chop off after deciseconds
     failstr = '''<br>
         <span class="fail">No data received since {}, timestamped {}</span>
@@ -286,13 +289,15 @@ if __name__ == "__main__": # When this file is run as a script
         parser.set_defaults(snr_hours=24, hk_hours=24, minelev=15, plotdir=config.DAILYDIR,
                             endtime=np.datetime64('now', 'D'))
         args = parser.parse_args()
-        stime = args.endtime - max(args.hk_hours, args.snr_hours) * np.timedelta64(3600, 's')
-        args.plotdir = stime.tolist().strftime(args.plotdir)
         args.figlength = 14
         args.doazel = False
         args.snrminel = max(15, args.minelev)
         args.domove = False
     del args.daily
+
+    dhour = max(args.hk_hours, args.snr_hours)
+    start = args.endtime - dhour * np.timedelta64(3600, 's')
+    args.plotdir = fmt_timesite(args.plotdir, start)
 
     dhour = max(args.hk_hours, args.snr_hours + 24)
     start = args.endtime - dhour * np.timedelta64(3600, 's')

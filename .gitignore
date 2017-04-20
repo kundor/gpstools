@@ -95,5 +95,7 @@ tai-utc.dat
 *.0[0-9][ODd]
 *.pkl
 
+site_config.py
+
 test/*.txt
 test/*.snr88
