@@ -47,7 +47,7 @@ def rxline(rxid, HK):
     alt = np.median(HK[HK['rxid'] == rxid]['alt']) / 1000
     return """    <li>
         RX{0:02}: <a href="#RX{0:02}-HK">HK</a> <a href="#RX{0:02}-SNR">SNR</a>
-        {1:.5f}&deg;{}, {2:.5f}&deg;{}, {3:.3f}m.
+        {1:.5f}&deg;{2}, {3:.5f}&deg;{4}, {5:.3f}m.
         </li>
         """.format(rxid, abs(lon), 'EW'[lon < 0], abs(lat), 'NS'[lat < 0], alt)
 
