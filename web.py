@@ -47,9 +47,9 @@ def rxline(rxid, HK):
     alt = np.median(HK[HK['rxid'] == rxid]['alt']) / 1000
     return """    <li>
         RX{0:02}: <a href="#RX{0:02}-HK">HK</a> <a href="#RX{0:02}-SNR">SNR</a>
-        {1:.5f}&deg;W, {2:.5f}&deg;N, {3:.3f}m.
+        {1:.5f}&deg;{}, {2:.5f}&deg;{}, {3:.3f}m.
         </li>
-        """.format(rxid, lon, lat, alt)
+        """.format(rxid, abs(lon), 'EW'[lon < 0], abs(lat), 'NS'[lat < 0], alt)
 
 def rxhkplots(rxid):
     """HTML to include the housekeeping plots for RX *rxid*."""
@@ -71,7 +71,7 @@ def snrplots(rxid):
 @static_vars(rxlist=[])
 def plotspage(HK, endtime):
     """Write out the receiver list and image lists for the web page."""
-    since = endtime - max(config.PLOT_HK_HOURS, config.PLOT_SNR_HOURS) * np.timedelta64(3600, 's')
+    since = endtime - min(config.PLOT_HK_HOURS, config.PLOT_SNR_HOURS) * np.timedelta64(3600, 's')
     HK = cleanhk(HK, since=since)
     rxlist = sorted(np.unique(HK['rxid']))
     if rxlist == plotspage.rxlist and os.path.exists('rxlist.html') and os.path.exists('plots.html'):
