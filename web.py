@@ -8,6 +8,7 @@ Created on Wed Mar 15 11:54:05 2017
 import os
 import time
 import shutil
+import json
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from collections import defaultdict
 import numpy as np
@@ -17,6 +18,7 @@ from snrstats import calcsnrstat
 from parser import reader, current_binex, readtimes, hkreport, cleanhk
 from utility import info, debug, pushdir, static_vars, email_exc, fmt_timesite
 from findfirst import findfirstclosed
+from vents import VENTS
 
 def _move(srcs, suf):
     """Move each filename in *srcs* to the name obtained by removing *suf*."""
@@ -40,16 +42,21 @@ def format_stats(rxid, stat, statp):
           <td>({:.2f})</td>
         </tr>""".format(rxid, statp.min, stat.max, statp.mean, stat.mean, statp.std, stat.std)
 
+def rxloc(rxid, HK):
+    """Return longitude, latitude, altitude for the given receiver."""
+    RHK = HK[HK['rxid'] == rxid]
+    return (np.median(RHK['lon']) / 1e7,
+            np.median(RHK['lat']) / 1e7,
+            np.median(RHK['alt']) / 1000)
+
 def rxline(rxid, HK):
     """A list entry for the web page for the given receiver."""
-    lon = np.median(HK[HK['rxid'] == rxid]['lon']) / 1e7
-    lat = np.median(HK[HK['rxid'] == rxid]['lat']) / 1e7
-    alt = np.median(HK[HK['rxid'] == rxid]['alt']) / 1000
+    lng, lat, alt = rxloc(rxid, HK)
     return """    <li>
-        RX{0:02}: <a href="#RX{0:02}-HK">HK</a> <a href="#RX{0:02}-SNR">SNR</a>
-        {1:.5f}&deg;{2}, {3:.5f}&deg;{4}, {5:.3f}m.
+        RX{id:02}: <a href="#RX{id:02}-HK">HK</a> <a href="#RX{id:02}-SNR">SNR</a>
+        {lng:.5f}&deg;{ew}, {lat:.5f}&deg;{ns}, {alt:.3f}m.
         </li>
-        """.format(rxid, abs(lon), 'EW'[lon < 0], abs(lat), 'NS'[lat < 0], alt)
+        """.format(id=rxid, lng=abs(lng), ew='EW'[lng < 0], lat=abs(lat), ns='NS'[lat < 0], alt=alt)
 
 def rxhkplots(rxid):
     """HTML to include the housekeeping plots for RX *rxid*."""
@@ -68,13 +75,24 @@ def snrplots(rxid):
         <img src="ALLSNR-{0}.png">
         """.format(rxstr)
 
+def sitedatajson(HK, rxlist=None, site=None):
+    if site is None:
+        site = config.SITE
+    if rxlist is None:
+        rxlist = np.unique(HK['rxid'])
+    updated = str(np.datetime64('now', 'ms')) + 'Z'
+    with open('sitedata.json', 'wt') as fid:
+        json.dump({'rx': [dict(zip(('lng', 'lat', 'alt'), rxloc(rx, HK)), rxid=rx) for rx in rxlist],
+                   'vents': VENTS[site], 'updated': updated},
+                  fid, indent=1)
+
 @static_vars(rxlist=[])
 def plotspage(HK, endtime):
     """Write out the receiver list and image lists for the web page."""
     since = endtime - min(config.PLOT_HK_HOURS, config.PLOT_SNR_HOURS) * np.timedelta64(3600, 's')
     HK = cleanhk(HK, since=since)
     rxlist = sorted(np.unique(HK['rxid']))
-    if rxlist == plotspage.rxlist and os.path.exists('rxlist.html') and os.path.exists('plots.html'):
+    if rxlist == plotspage.rxlist and all(os.path.exists(f) for f in ('rxlist.html', 'plots.html', 'sitedata.json')):
         return
     with open('rxlist.html', 'wt', encoding='utf-8') as fid:
          for rxid in rxlist:
@@ -84,6 +102,7 @@ def plotspage(HK, endtime):
             fid.write(rxhkplots(rxid))
         for rxid in rxlist:
             fid.write(snrplots(rxid))
+    sitedatajson(HK, rxlist)
     plotspage.rxlist = rxlist
 
 def makeplots(SNRs, HK, domove=True, plotdir=None, **plotargs):
