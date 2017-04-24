@@ -319,14 +319,15 @@ def _twinax(ax, **kwargs):
     return ax2
 
 def plot_old_snr(fig, gs, ax, psnr, opsnr, diftime, prev, dax):
-    if not len(opsnr):
+    window = 31
+    if opsnr.size < window or psnr.size < window:
         return dax
     tims = opsnr['time'] + diftime
     today = pd.Series(psnr['snr'] / 10, psnr['time'])
     yestr = pd.Series(opsnr['snr'] / 10, tims)
     #mn_dif = today.resample('5s').mean() - yestr.resample('5s').mean()
-    sm_td = pd.Series(savgol_filter(today, 31, 4), psnr['time'])
-    sm_yd = pd.Series(savgol_filter(yestr, 31, 4), tims)
+    sm_td = pd.Series(savgol_filter(today, window, 4), psnr['time'])
+    sm_yd = pd.Series(savgol_filter(yestr, window, 4), tims)
     sm_dif = sm_td.resample('1s').first() - sm_yd.resample('1s').first()
     els = pd.Series(psnr['el'], psnr['time'])
     ax.plot(yestr, 'g.', ms=2, zorder=0, label=prev)
