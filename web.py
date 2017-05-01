@@ -104,7 +104,7 @@ def sitedatajson(HK, rxlist=None, site=None):
         rxlist = np.unique(HK['rxid'])
     updated = str(np.datetime64('now', 'ms')) + 'Z'
     with open('sitedata.json', 'wt') as fid:
-        json.dump({'rx': [dict(zip(('lng', 'lat', 'alt'), rxloc(rx, HK)), rxid=rx) for rx in rxlist],
+        json.dump({'rx': [dict(zip(('lng', 'lat', 'alt'), rxloc(rx, HK)), rxid=int(rx)) for rx in rxlist],
                    'vents': VENTS[site], 'updated': updated},
                   fid, indent=1)
 
