@@ -10,6 +10,7 @@ import numpy as np
 from parser import SatPositions
 from readsnr89 import Record, parseint89
 from gpstime import GPSepoch, gpstotsecgps
+from utility import debug
 
 RXLOC = {
         'vpr2' : (39.94939333, -105.194425, 1727.794) # lat, lon, alt
