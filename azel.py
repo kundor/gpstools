@@ -29,7 +29,7 @@ def poslist(day):
     min15 = np.timedelta64(15, 'm')
     pl, epoch = zip(readsp3(getsp3file(day - np.timedelta64(12, 'h'))),
                     readsp3(getsp3file(day + np.timedelta64(4, 'h'))),
-                    readsp3(getsp3file(day - np.timedelta64(28, 'h'))))
+                    readsp3(getsp3file(day + np.timedelta64(28, 'h'))))
     if epoch[1] != epoch[0] + len(pl[0])*min15 or epoch[2] != epoch[1] + len(pl[1])*min15:
         print("Difference between sp3 files is not 900 seconds.")
 # TODO: when dealing with ultrarapid files, we may have problems with this
