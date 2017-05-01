@@ -82,7 +82,7 @@ def addazel(fname, oname):
               + ', are not a recognized site name. Receiver location unknown.')
         return
     rxloc = llh2xyz(deg2rad(rxllh))
-    etrans = enutrans(deg2rad(rxllh[:2]))
+    etrans = enutrans(*deg2rad(rxllh[:2]))
     day = yeardoy2np(year, doy)
     pl, epoch = poslist(day)
     gts0 = gpstotsecgps(day)
