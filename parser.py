@@ -71,7 +71,7 @@ class SatPositions:
         # Better yet, go with a constant 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1
 
     def __init__(self):
-        self.endtime = np.datetime64('0')
+        self.endtime = np.datetime64(0, 'us')
         self.start = 0
         self.rxlocs = {}
         self.rxazel = {}
