@@ -72,6 +72,7 @@ class SatPositions:
 
     def __init__(self):
         self.endtime = np.datetime64(0, 'us')
+        self.endgts = 0 # endtime, as gps total seconds
         self.start = 0
         self.rxlocs = {}
         self.rxazel = {}
@@ -115,6 +116,7 @@ class SatPositions:
             * S[np.newaxis, :, np.newaxis, :,np.newaxis, :,np.newaxis, :])
         K.shape = (-1, *COFS.shape[1:])
         self.endtime = time + np.timedelta64(stop - int(tim0) - 1, 's')
+        self.endgts = stop - 1
         self.pos = np.sum(M.reshape((-1, 1, 11, 1)) * K, axis=2)
         for rxid in self.rxlocs:
             self.compazel(rxid)
