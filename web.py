@@ -20,6 +20,28 @@ from utility import info, debug, pushdir, static_vars, email_exc, fmt_timesite
 from findfirst import findfirstclosed
 from vents import VENTS
 
+def guard_and_time(msg, fn, tic, *args, **kwargs):
+    info('Starting', msg, 'at', tic)
+    try:
+        fn(*args, **kwargs)
+    except Exception:
+        email_exc()
+    info('Done at', np.datetime64('now'))
+
+
+class Task:
+    """An intermittent task, to be run every *ival* seconds in the message loop."""
+    def __init__(self, ival, descrip, func):
+        self.ival = np.timedelta64(ival, 's') # if ival is already timedelta64, this just changes its units
+        self.descrip = descrip
+        self.func = func
+        self.lastrun = np.datetime64(0, 'ms')
+
+    def __call__(self, tic, *args, **kwargs):
+        if (tic - self.lastrun) > self.ival:
+            guard_and_time(self.descrip, self.func, tic, *args, **kwargs)
+            self.lastrun = tic
+
 def _move(srcs, suf):
     """Move each filename in *srcs* to the name obtained by removing *suf*."""
     for src in srcs:
@@ -196,14 +218,6 @@ def after_midnight():
     """True if current time is within 15 minutes after UTC midnight."""
     now = np.datetime64('now')
     return np.timedelta64(0) < (now - now.astype('M8[D]')) < np.timedelta64(15, 'm')
-
-def guard_and_time(msg, fn, tic, *args, **kwargs):
-    info('Starting', msg, 'at', tic)
-    try:
-        fn(*args, **kwargs)
-    except Exception:
-        email_exc()
-    info('Done at', np.datetime64('now'))
 
 def plotupdate(fname=None, handover=None, oldstate=None):
     """Follow stream and update web plot periodically.
