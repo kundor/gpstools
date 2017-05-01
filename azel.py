@@ -8,7 +8,6 @@ Created on Mon May  1 09:10:01 2017
 
 import numpy as np
 from parser import SatPositions
-from readsnr89 import Record, parseint89
 from gpstime import GPSepoch, gpstotsecgps
 from utility import debug
 
@@ -22,12 +21,11 @@ def snr89iter(fname):
     """
     with open(fname) as fid:
         for line in fid:
-            try:
-                rec = parseint89(line)
-            except ValueError as e:
-                print(e)
+            words = line.split()
+            if len(words) != 7:
+                print(line + ' is not a valid snr89 record')
                 continue
-            yield rec[:1] + rec[3:]
+            yield int(words[0]), float(words[3]), float(words[6])
 
 def gpstotsecyeardoy(year, doy):
     ndt = np.datetime64(str(year), 'us')
@@ -35,7 +33,7 @@ def gpstotsecyeardoy(year, doy):
     return gpstotsecgps(ndt)
 
 def snrazel(snriter, year, doy, rxloc):
-    """A generator that yields named tuple SNR Records from an iterator that gives prn, sec of day, and SNR.
+    """A generator that yields tuples of prn, el, az, sod, snr from an iterator that gives prn, sec of day, and SNR.
 
     Requires lat, lon in degrees, alt in meters.
     """
@@ -53,7 +51,7 @@ def snrazel(snriter, year, doy, rxloc):
             az, el = satpos.rxazel[0][idx, satpos.prndict[prn], :]
         except KeyError:
             continue
-        yield Record(prn, el, az, sod, snr)
+        yield prn, el, az, sod, snr
 
 def addazel89(fname, oname):
     """Add azimuths and elevations to the snr89 file fname, writing to oname.
