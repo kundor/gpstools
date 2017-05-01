@@ -8,5 +8,6 @@ Created on Mon Apr 24 13:47:32 2017
 """
 # This is practially JSON
 VENTS = {
-        'VB001': [{ "lng": -105.26175, "lat": 40.0076 }]
+        'VB001': [{ "lng": -105.26175, "lat": 40.0076 }],
+        'VB003': []
         }
