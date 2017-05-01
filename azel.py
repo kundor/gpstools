@@ -22,7 +22,11 @@ def snr89iter(fname):
     """
     with open(fname) as fid:
         for line in fid:
-            rec = parseint89(line)
+            try:
+                rec = parseint89(line)
+            except ValueError as e:
+                print(e)
+                continue
             yield rec[:1] + rec[3:]
 
 def gpstotsecyeardoy(year, doy):
