@@ -54,7 +54,7 @@ approxnumrec = 115920000
 """The number of snr records to preallocate"""
 
 #%% Constants
-rec = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('snr', 'u2')])
+SNR_REC = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('snr', 'u2')])
 
 # I don't know if SNRs below 10 are reported with leading zeros or not
 goodline = re.compile(rb'([01][0-9]|2[0-3])' # hour
@@ -302,7 +302,7 @@ def concatenate_files(files, outfile=outfile):
 
 #%% To make a numpy array from an iterable
 def makearray(lineiter):
-    SNR = np.empty(approxnumrec, dtype=rec) # an estimate of the number of records...
+    SNR = np.empty(approxnumrec, dtype=SNR_REC) # an estimate of the number of records...
     line = next(lineiter)
     time0 = nptime(line)
     leaps = leapsecsnp(time0)

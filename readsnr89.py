@@ -14,7 +14,7 @@ vdir = '/bowie/data/vapr/Marshall'
 ndir = '/bowie/data/vapr-azel'
 log = '/home/xenon/student/nima9589/snr89log'
 
-Record = namedtuple('Record', ['prn', 'el', 'az', 'sod', 'snr'])
+Record = namedtuple('SNR_record', ['prn', 'el', 'az', 'sod', 'snr'])
 
 def rngcheck(word, name, mn, mx, length, line):
     val = int(word)
