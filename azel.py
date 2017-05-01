@@ -7,7 +7,7 @@ Created on Mon May  1 09:10:01 2017
 """
 
 import numpy as np
-from parser import SatPositions,
+from parser import SatPositions
 from readsnr89 import Record, parseint89
 from gpstime import GPSepoch, gpstotsecgps
 
