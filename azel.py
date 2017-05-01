@@ -6,6 +6,8 @@ Created on Mon May  1 09:10:01 2017
 @author: nima9589
 """
 
+import sys
+import os
 import numpy as np
 from parser import SatPositions
 from gpstime import GPSepoch, gpstotsecgps
@@ -75,3 +77,17 @@ def addazel89(fname, oname):
     with open(oname, 'wt') as fid:
         for snrec in snrazel(snr89iter(fname), year, doy, rxloc):
             fid.write('{:3} {:9.4f} {:9.4f} {:9.1f}      0.      0. {:6.2f}\n'.format(*snrec))
+
+if __name__ == "__main__": # When this file is run as a script
+    if len(sys.argv) != 3:
+        print("Usage:", sys.argv[0], "<file> <newfile>\n"
+              "<file> should be the filename of VAPR SNR89 data. "
+              "Azimuths and elevations will be added, and <newfile> will be "
+              "written out.")
+        sys.exit(1)
+    fname = sys.argv[1]
+    ndir = os.path.dirname(fname)
+    if ndir:
+        os.chdir(ndir)
+        fname = os.path.basename(fname)
+    addazel89(fname, sys.argv[2])
