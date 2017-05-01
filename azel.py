@@ -42,15 +42,19 @@ def snrazel(snriter, year, doy, rxloc):
     gts0 = int(gpstotsecyeardoy(year, doy))
     for prn, sod, snr in snriter:
         time = gts0 + int(sod)
-        if time > satpos.endgts:
+        if time >= satpos.endgts:
             ntime = GPSepoch + np.timedelta64(time, 's')
             debug('Updating satellite locations;', ntime, ' > ', satpos.endtime)
             satpos.update(ntime, 4)
         idx = time - satpos.start
         try:
-            az, el = satpos.rxazel[0][idx, satpos.prndict[prn], :]
+            az0, el0 = satpos.rxazel[0][idx, satpos.prndict[prn], :]
+            az1, el1 = satpos.rxazel[0][idx+1, satpos.prndict[prn], :]
         except KeyError:
             continue
+        frac = sod % 1
+        az = (1 - frac)*az0 + frac*az1
+        el = (1 - frac)*el0 + frac*el1
         yield prn, el, az, sod, snr
 
 def addazel89(fname, oname):
