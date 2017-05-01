@@ -83,7 +83,8 @@ if __name__ == "__main__": # When this file is run as a script
         print("Usage:", sys.argv[0], "<file> <newfile>\n"
               "<file> should be the filename of VAPR SNR89 data. "
               "Azimuths and elevations will be added, and <newfile> will be "
-              "written out.")
+              "written out (in the same directory as <file>, unless an absolute "
+              "path is given).")
         sys.exit(1)
     fname = sys.argv[1]
     ndir = os.path.dirname(fname)
