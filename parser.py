@@ -10,7 +10,7 @@ import sys
 import numpy as np
 import config
 from binex import read_record
-from ascii_read import poslist
+from fetchnav import getsp3file
 from gpstime import gpstotsecgps, gpsweekgps
 from coords import llh2xyz, get_ellipsoid_ht
 from utility import info, debug, mode, replace, fmt_timesite
@@ -62,6 +62,56 @@ def enutrans(lat, lon):
 class SatPositions:
     """Class which precomputes satellite positions once a second, and gives them out
     when called. When the desired time is outside the range, a new set is precomputed."""
+
+    @staticmethod
+    def sp3headtime(line):
+        fields = ((3, 7), (8, 10), (11, 13), (14, 16), (17, 19), (20, 29))
+        return np.datetime64('{}-{}-{}T{}:{}:{}'.format(*(line[b:e].strip().zfill(e - b) for b, e in fields)), 'us')
+
+    @classmethod
+    def readsp3(cls, sp3file):
+        with open(sp3file) as fid:
+            line = fid.readline()
+            time0 = cls.sp3headtime(line)
+            line = fid.readline().split()
+            assert line[3] == '900.00000000'
+            line = fid.readline()
+            numsat =  int(line.split()[1])
+            if numsat != 32:
+                end = min(len(line), 10 + 3*numsat)
+                prnlist = [int(line[i:i+2])-1 for i in range(10, end, 3)]
+                if numsat > 17:
+                    line = fid.readline()
+                    end = min(len(line), 10 + 3*(numsat - 17))
+                    prnlist += [int(line[i:i+2])-1 for i in range(10, end, 3)]
+        pl = np.loadtxt(sp3file, skiprows=22, usecols=(1, 2, 3), comments=['*', 'E', 'V'])
+        pl.shape = (-1, numsat, 3) # reshape to 96xNx3 (-1 means 'fit the data')
+        pl *= 1000
+        if numsat != 32:
+            B = np.zeros((len(pl), 32, 3))
+            B[:, prnlist, :] = pl
+            pl = B
+        return pl, time0
+
+    @classmethod
+    def poslist(cls, time):
+        """Return an array of sp3 satellite positions for the day(s) around the given time."""
+        min15 = np.timedelta64(15, 'm')
+        pl, epoch = cls.readsp3(getsp3file(time))
+        endtime = epoch + min15*len(pl)
+        if endtime - time < np.timedelta64(2, 'h'):
+            gtime = min(endtime + np.timedelta64(4, 'h'),
+                        np.datetime64('now', 'us') + np.timedelta64(8, 'h'))
+            pl, epoch = cls.readsp3(getsp3file(gtime))
+        if time - epoch < np.timedelta64(2, 'h'):
+            pl0, epoch0 = cls.readsp3(getsp3file(time - np.timedelta64(12, 'h')))
+            if epoch != epoch0 + len(pl0)*min15:
+                info("Difference between sp3 files is not 900 seconds.")
+    # TODO: when dealing with ultrarapid files, we may have problems with this
+            pl = np.concatenate((pl0, pl))
+            epoch = epoch0
+        return pl, epoch
+
     @staticmethod
     def mvecs(times):
         P = 2 * np.pi / 86164.090530833 * times
@@ -85,7 +135,7 @@ class SatPositions:
     def update(self, time, hours=None):
         """Compute an n*32*3 array of satellite positions for all PRNS, once per second,
         starting around *time* and lasting a maximum of the given *hours*."""
-        pl, epoch = poslist(time)
+        pl, epoch = self.poslist(time)
         self.badprns, = np.where(np.all(pl == 0, axis=(0, 2)))
         if len(self.badprns):
             info('PRNS', self.badprns + 1, 'not in sp3 file.')

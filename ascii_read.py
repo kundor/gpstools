@@ -28,13 +28,8 @@ Created on Mon Nov 21 10:14:06 2016
 """
 
 import numpy as np
-from numpy import sin, cos
 #import glob
 import re
-from coords import xyz2llh
-from gpstime import leapsecsnp, gpstotsecgps
-from gpsazel import satcoeffs, mvec
-from fetchnav import getsp3file
 from utility import info
 
 #%% Stuff to configure
@@ -42,19 +37,13 @@ udir = '/inge/scratch/UART/UART3'
 
 outfile = 'uart_cat.txt'
 
-LOC = (-1283649.0796, -4726431.0920, 4074789.6026)  # vpr3 site at Marshall
-
 thresh = np.timedelta64(1, 'h')
 """A gap larger than this means to go back to the first file."""
 
 gapthresh = np.timedelta64(5, 'm')
 """A gap larger than this is commented on."""
 
-approxnumrec = 115920000
-"""The number of snr records to preallocate"""
-
 #%% Constants
-SNR_REC = np.dtype([('prn', 'u1'), ('time', 'M8[us]'), ('el', 'f'), ('az', 'f'), ('snr', 'u2')])
 
 # I don't know if SNRs below 10 are reported with leading zeros or not
 goodline = re.compile(rb'([01][0-9]|2[0-3])' # hour
@@ -66,12 +55,6 @@ goodline = re.compile(rb'([01][0-9]|2[0-3])' # hour
                       rb'(0|[1-9][0-9]\.[0-9])){,4}[\r\n]+') # snr
 
 hkline = re.compile(rb'HK:: BATT:[0-9]\.[0-9]{2}V TTR:[-0-9][0-9]{4}s U2:/?UART2[_/][0-9]+\.TXT U3:/?UART?3?')
-
-#%% coordinate data for az/el computations
-lat, lon, ht = xyz2llh(LOC)
-trans = np.array([[-sin(lon), -sin(lat)*cos(lon), cos(lat)*cos(lon)],
-                  [ cos(lon), -sin(lat)*sin(lon), cos(lat)*sin(lon)],
-                  [ 0,         cos(lat),          sin(lat)]])
 
 #%% Time stuff
 def nptime(lin):
@@ -210,83 +193,6 @@ def vfilter(filename):
             elif checkline(line, filename):
                 yield line
 
-#%% Satellite positions
-def sp3headtime(line):
-    fields = ((3, 7), (8, 10), (11, 13), (14, 16), (17, 19), (20, 29))
-    return np.datetime64('{}-{}-{}T{}:{}:{}'.format(*(line[b:e].strip().zfill(e - b) for b, e in fields)), 'us')
-
-def readsp3(sp3file):
-    with open(sp3file) as fid:
-        line = fid.readline()
-        time0 = sp3headtime(line)
-        line = fid.readline().split()
-        assert line[3] == '900.00000000'
-        line = fid.readline()
-        numsat =  int(line.split()[1])
-        if numsat != 32:
-            end = min(len(line), 10 + 3*numsat)
-            prnlist = [int(line[i:i+2])-1 for i in range(10, end, 3)]
-            if numsat > 17:
-                line = fid.readline()
-                end = min(len(line), 10 + 3*(numsat - 17))
-                prnlist += [int(line[i:i+2])-1 for i in range(10, end, 3)]
-    pl = np.loadtxt(sp3file, skiprows=22, usecols=(1, 2, 3), comments=['*', 'E', 'V'])
-    pl.shape = (-1, numsat, 3) # reshape to 96xNx3 (-1 means 'fit the data')
-    pl *= 1000
-    if numsat != 32:
-        B = np.zeros((len(pl), 32, 3))
-        B[:, prnlist, :] = pl
-        pl = B
-    return pl, time0
-
-def poslist(time):
-    """Return an array of sp3 satellite positions for the day(s) around the given time."""
-    min15 = np.timedelta64(15, 'm')
-    pl, epoch = readsp3(getsp3file(time))
-    endtime = epoch + min15*len(pl)
-    if endtime - time < np.timedelta64(2, 'h'):
-        gtime = min(endtime + np.timedelta64(4, 'h'),
-                    np.datetime64('now', 'us') + np.timedelta64(8, 'h'))
-        pl, epoch = readsp3(getsp3file(gtime))
-    if time - epoch < np.timedelta64(2, 'h'):
-        pl0, epoch0 = readsp3(getsp3file(time - np.timedelta64(12, 'h')))
-        if epoch != epoch0 + len(pl0)*min15:
-            info("Difference between sp3 files is not 900 seconds.")
-# TODO: when dealing with ultrarapid files, we may have problems with this
-        pl = np.concatenate((pl0, pl))
-        epoch = epoch0
-    return pl, epoch
-
-
-#%%
-def azel(sxloc):
-    east, north, up = (sxloc - LOC) @ trans
-    az = np.arctan2(east, north) * 180 / np.pi
-    if az < 0:
-        az += 360
-    el = np.arctan2(up, np.sqrt(east*east + north*north)) * 180 / np.pi
-    return az, el
-
-def addrecords(SNR, line, curi, leaps, cofns):
-    """Add snr records from uart-format line to array SNR, starting at index curi."""
-    time = nptime(line) + leaps
-    totsec = gpstotsecgps(time)
-    words = line.strip().split(b',')
-    for prn, snr in zip(words[2::2], words[3::2]):
-        prn = int(prn)
-        snr = round(float(snr)*10)
-        sxloc = mvec(totsec) @ cofns[prn](totsec)
-        az, el = azel(sxloc)
-        try:
-            SNR[curi] = (prn, time, el, az, snr)
-        except IndexError:
-            newlen = int(len(SNR)*1.2)
-            info('Resizing SNR to', newlen)
-            SNR.resize((newlen,))
-            SNR[curi] = (prn, time, el, az, snr)
-        curi += 1
-    return curi
-
 #%%#-----------------------------------------------------------------------#%%#
 
 #files = glob.glob(os.path.join(udir, '*.TXT'))
@@ -299,27 +205,3 @@ def concatenate_files(files, outfile=outfile):
     with open(outfile, 'wb') as out:
         for line in concat(files):
             out.write(line)
-
-#%% To make a numpy array from an iterable
-def makearray(lineiter):
-    SNR = np.empty(approxnumrec, dtype=SNR_REC) # an estimate of the number of records...
-    line = next(lineiter)
-    time0 = nptime(line)
-    leaps = leapsecsnp(time0)
-    pl, epoch = poslist(time0 + leaps)
-    cofns = satcoeffs(pl)
-    curi = addrecords(SNR, line, 0, leaps, cofns)
-    for line in lineiter:
-        curi = addrecords(SNR, line, curi, leaps, cofns)
-    SNR.resize((curi,))
-    return SNR
-
-#%%
-def process_files(files):
-    """Make a numpy array of the records in a list of UART filenames."""
-    return makearray(concat(files))
-
-def process_catfile(filename=outfile):
-    """Make a numpy array of the records in a concatenated, cleaned file."""
-    with open(filename, 'rb') as fin:
-        return makearray(fin)
