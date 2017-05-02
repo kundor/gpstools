@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Read VAPR ascii format into a numpy array.
+Read VAPR ascii format.
 
 VAPR ascii files have the format:
 time,date,prn,snr,prn,snr,prn,snr,prn,snr
@@ -27,14 +27,16 @@ Created on Mon Nov 21 10:14:06 2016
 @author: nima9589
 """
 
+import os
 import numpy as np
 #import glob
 import re
-from utility import info
+try:
+    from utility import info
+except ImportError:
+    info = print
 
 #%% Stuff to configure
-udir = '/inge/scratch/UART/UART3'
-
 outfile = 'uart_cat.txt'
 
 thresh = np.timedelta64(1, 'h')
@@ -193,15 +195,26 @@ def vfilter(filename):
             elif checkline(line, filename):
                 yield line
 
-#%%#-----------------------------------------------------------------------#%%#
-
-#files = glob.glob(os.path.join(udir, '*.TXT'))
-"""
-os.chdir(udir)
-files = [str(n) + '.TXT' for n in range(1, 92)]
-"""
 #%% To just concatenate
 def concatenate_files(files, outfile=outfile):
     with open(outfile, 'wb') as out:
         for line in concat(files):
             out.write(line)
+
+def concatenate_dir(udir, outfile=outfile):
+    """Look for files in the given *udir* named UART3_0.TXT and UART3/#.TXT, where # is a number,
+    and concatenate them into *outfile*.
+    """
+    old = os.getcwd()
+    os.chdir(udir)
+    try:
+        if not os.path.isfile('UART3_0.TXT') or not os.path.isdir('UART3'):
+            info('Could not find UART3_0.TXT and directory UART3')
+            return
+        files = ['UART3_0.TXT'] + [os.path.join('UART3', str(n) + '.TXT') for n in range(1, 999)]
+        files = [f for f in files if os.path.isfile(f) and os.path.getsize(f)]
+        #or, files = glob.glob(os.path.join(udir, 'UART3', '*.TXT')); then sort on
+        # int(os.path.splitext(os.path.basename(file))[0])
+        concatenate_files(files, outfile)
+    finally:
+        os.chdir(old)
