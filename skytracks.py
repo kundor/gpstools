@@ -258,6 +258,9 @@ def satpositions():
 """
 cyl_inf = cylinfo(vent1_xyz, 4000, 1414)
 gloc, hgts, lats, lons = groundlocs(peak_llh, 6000)
+
+plot.draw_plume(gloc, cyl_inf)
+
 sxpos = satpositions()
 heat = heatmap(gloc, sxpos, cyl_inf)
 
