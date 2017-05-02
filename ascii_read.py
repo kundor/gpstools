@@ -28,9 +28,8 @@ Created on Mon Nov 21 10:14:06 2016
 """
 
 import os
-import numpy as np
-#import glob
 import re
+import numpy as np
 try:
     from utility import info
 except ImportError:
@@ -218,3 +217,17 @@ def concatenate_dir(udir, outfile=outfile):
         concatenate_files(files, outfile)
     finally:
         os.chdir(old)
+
+if __name__ == "__main__": # When this file is run as a script
+    from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+    parser = ArgumentParser(description="Combine VAPR ASCII files",
+                            formatter_class=ArgumentDefaultsHelpFormatter)
+    parser.add_argument("directory", default='.', nargs='?',
+                        help='should contain VAPR ASCII data, in files UART3_0.TXT '
+                             'and UART3/#.TXT where # is a number.')
+    parser.add_argument("outfile", default=outfile, nargs='?',
+                        help='Where to write out ordered, cleaned data '
+                             '(within <directory>, unless an absolute path is given).')
+    args = parser.parse_args()
+    concatenate_dir(args.directory, args.outfile)
+
