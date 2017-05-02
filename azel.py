@@ -78,6 +78,7 @@ def addazel89(fname, oname):
         for snrec in snrazel(snr89iter(fname), year, doy, rxloc):
             fid.write('{:3} {:9.4f} {:9.4f} {:9.1f}      0.      0. {:6.2f}\n'.format(*snrec))
 
+
 if __name__ == "__main__": # When this file is run as a script
     if len(sys.argv) != 3:
         print("Usage:", sys.argv[0], "<file> <newfile>\n"
