@@ -171,18 +171,19 @@ def concat(filenames):
     """A generator yielding all the good data lines, in chronological order, from the given files."""
     files = prepfiles(filenames)
     i = 0
-    curtime = None
+    oline = None
     while True:
         for line in files[i]:
             if line.isspace():
                 break
             if checkline(line, files[i].name):
-                curtime = nptime(line) # getnewtime(line, curtime, files[i].name)
+                oline = line
+                # curtime = getnewtime(line, curtime, files[i].name)
                 yield line
         readhk(files[i])
         if closewhenempty(files[i]) and i == 0:
             break
-        i = nextfilenum(i, files, curtime)
+        i = nextfilenum(i, files, nptime(oline))
     checkallclosed(files)
 
 def vfilter(filename):
