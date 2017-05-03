@@ -177,7 +177,7 @@ def concat(filenames):
             if line.isspace():
                 break
             if checkline(line, files[i].name):
-                curtime = getnewtime(line, curtime, files[i].name)
+                curtime = nptime(line) # getnewtime(line, curtime, files[i].name)
                 yield line
         readhk(files[i])
         if closewhenempty(files[i]) and i == 0:
