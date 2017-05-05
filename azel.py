@@ -25,9 +25,14 @@ def snr89iter(fname):
         for line in fid:
             words = line.split()
             if len(words) != 7:
-                print(line + ' is not a valid snr89 record')
+                print('"' + line.rstrip() + '" is not a valid snr89 record (' + fname + ')')
                 continue
-            yield int(words[0]), float(words[3]), float(words[6])
+            try:
+                yield int(words[0]), float(words[3]), float(words[6])
+            except ValueError:
+                print('"' + line.rstrip() + '" is not a valid snr89 record (' + fname + ')')
+                continue
+
 
 def gpstotsecyeardoy(year, doy):
     ndt = np.datetime64(str(year), 'us')
