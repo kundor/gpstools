@@ -300,6 +300,8 @@ def plotupdate(fname=None, handover=None, oldstate=None):
 if __name__ == "__main__": # When this file is run as a script
     parser = ArgumentParser(description='Create plots for the VAPR web site.',
                             formatter_class=ArgumentDefaultsHelpFormatter)
+    parser.add_argument('site', metavar='SITE',
+                        help='which site to plot for')
     parser.add_argument('-s', dest='snr_hours', default=config.PLOT_SNR_HOURS, type=float,
                         help='how many hours to plot SNR values')
     parser.add_argument('-k', dest='hk_hours', default=config.PLOT_HK_HOURS, type=float,
@@ -313,11 +315,12 @@ if __name__ == "__main__": # When this file is run as a script
                         help='the directory in which to put plotted images')
     parser.add_argument('-y', dest='daily', action='store_true',
                         help='Create daily overview plots: set defaults SNR_HOURS=HK_HOURS=24, '
-                             'PLOTDIR=' + config.DAILYDIR + ', '
+                             'PLOTDIR=' + config.DAILYDIR.replace('%','%%') + ', '
                              'ENDTIME=last UTC midnight. '
                              'Make SNR plots longer, with minimum elevation at least 15, '
                              'and remove az/el maps.')
     args = parser.parse_args()
+    config.SITE = args.site
     if args.daily:
         parser.set_defaults(snr_hours=24, hk_hours=24, minelev=15, plotdir=config.DAILYDIR,
                             endtime=np.datetime64('now', 'D'))
