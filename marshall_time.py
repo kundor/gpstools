@@ -9,7 +9,6 @@ Created on Tue May  9 10:50:06 2017
 """
 from urllib.request import urlopen
 import re
-import datetime
 import time
 
 def get_timetemp():
@@ -32,3 +31,6 @@ def scrapelog(file='marshall_temp.txt'):
             print(' '.join(vals))
             fid.write(' '.join(vals))
             time.sleep(600)
+
+if __name__ == "__main__": # When this file is run as a script
+    scrapelog()
