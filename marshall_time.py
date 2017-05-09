@@ -22,12 +22,17 @@ def get_timetemp():
     if not mch:
         raise RuntimeError('Could not find values')
 #    dtim = datetime.datetime.strptime(mch.group(1), '%Y-%m-%d %H:%M:%S')
-    return mch.groups
+    return mch.groups()
 
 def scrapelog(file='marshall_temp.txt'):
     with open(file, 'wt') as fid:
         while True:
-            vals = get_timetemp()
+            try:
+                vals = get_timetemp()
+            except Exception as e:
+                print(e)
+                time.sleep(10)
+                continue
             print(' '.join(vals))
             fid.write(' '.join(vals))
             time.sleep(600)
