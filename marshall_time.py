@@ -25,6 +25,7 @@ def get_timetemp():
     return mch.groups()
 
 def scrapelog(file='marshall_temp.txt'):
+    ovals = None
     with open(file, 'at') as fid:
         while True:
             try:
@@ -33,9 +34,12 @@ def scrapelog(file='marshall_temp.txt'):
                 print(e)
                 time.sleep(10)
                 continue
+            if vals == ovals:
+                time.sleep(60)
+                continue
             print(' '.join(vals))
             fid.write(' '.join(vals) + '\n')
-            time.sleep(600)
+            time.sleep(599)
 
 if __name__ == "__main__": # When this file is run as a script
     scrapelog()
