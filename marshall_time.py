@@ -34,7 +34,7 @@ def scrapelog(file='marshall_temp.txt'):
                 time.sleep(10)
                 continue
             print(' '.join(vals))
-            fid.write(' '.join(vals))
+            fid.write(' '.join(vals) + '\n')
             time.sleep(600)
 
 if __name__ == "__main__": # When this file is run as a script
