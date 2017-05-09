@@ -25,7 +25,7 @@ def get_timetemp():
     return mch.groups()
 
 def scrapelog(file='marshall_temp.txt'):
-    with open(file, 'wt') as fid:
+    with open(file, 'at') as fid:
         while True:
             try:
                 vals = get_timetemp()
