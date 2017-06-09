@@ -19,6 +19,9 @@ SITE = 'VB001'
 LOGFILE = sys.stderr
 """Where informative messages are sent. (Set to a file for headless use.)"""
 
+LOGFILELOC = '/tmp/VAPR-{site}-%y%j%H%M.log'
+"""Where to reset LOGFILE when headless use is requested, in strftime format; {site} is replaced by SITE."""
+
 DEBUG = False
 """Whether to output debugging messages (generally not of interest.)"""
 

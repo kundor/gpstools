@@ -6,6 +6,7 @@ Created on Wed Mar 15 11:54:05 2017
 @author: nima9589
 """
 import os
+import sys
 import time
 import shutil
 import json
@@ -318,9 +319,16 @@ if __name__ == "__main__": # When this file is run as a script
                              'PLOTDIR=' + config.DAILYDIR.replace('%','%%') + ', '
                              'ENDTIME=last UTC midnight. '
                              'Make SNR plots longer, with minimum elevation at least 15, '
-                             'and remove az/el maps.')
+                             'and remove az/el maps')
+    parser.add_argument('-u', dest='update', action='store_true',
+                        help='Run as a daemon, updating plots every'+str(config.PLOT_IVAL)
+                            +'. Any other arguments, except SITE, are ignored')
     args = parser.parse_args()
     config.SITE = args.site
+    if args.update:
+        config.LOGFILE = open(fmt_timesite(config.LOGFILELOC), 'w')
+        plotupdate()
+        sys.exit()
     if args.daily:
         parser.set_defaults(snr_hours=24, hk_hours=24, minelev=15, plotdir=config.DAILYDIR,
                             endtime=np.datetime64('now', 'D'))
