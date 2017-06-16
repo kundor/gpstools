@@ -16,7 +16,7 @@ import numpy as np
 import config
 import plot
 from snrstats import calcsnrstat
-from parser import reader, current_binex, readtimes, hkreport, cleanhk
+from parser import reader, current_binex, readtimes, hkreport, cleanhk, snr88str
 from utility import info, debug, pushdir, static_vars, email_exc, fmt_timesite
 from findfirst import findfirstclosed
 from vents import VENTS
@@ -245,6 +245,7 @@ def plotupdate(fname=None, handover=None, oldstate=None):
         fid = open(fname, 'rb')
     ofile = os.path.abspath(fid.name)
     olens = defaultdict(int)
+    rxfids = {}
     oldtic = rectic = dattic = np.datetime64('2000-01-01', 'ms')
     attempt = 0
     if oldstate is None:
@@ -272,6 +273,9 @@ def plotupdate(fname=None, handover=None, oldstate=None):
                             fid = open(current_binex(), 'rb')
                             ofile = os.path.abspath(current_binex())
                             recgen.send(fid)
+                            for rx in list(rxfids):
+                                rxfids[rx].close()
+                                del rxfids[rx]
                             attempt = 0
                             continue
                     info('No new records at', tic, '. Reporting.')
@@ -289,6 +293,17 @@ def plotupdate(fname=None, handover=None, oldstate=None):
             debug('{:2} new records {} at'.format(sum(nlens.values()) - sum(olens.values()),
                                                  [nlens[rx] - olens[rx] for rx in nlens]),
                   tic, 'timestamped', dattic)
+            for rx in SNRs:
+                if rx not in rxfids:
+                    rtimes = SNRs[rx]['time']
+                    rtimes = rtimes[rtimes < np.datetime64('now') + np.timedelta64(1, 'h')]
+                    rtimes = rtimes[rtimes > np.datetime64('2000-01-01')]
+                    epoch = rtimes[-1]
+                    rxfids[rx] = open(os.path.join(os.path.dirname(ofile), 
+                                      'rx{:02}'.format(rx) + epoch.tolist().strftime('%j0.%y.snr88')
+                for rec in SNRs[rx][olens[rx]:]:
+                    rxfids[rx].write(snr88str(rec))
+
             olens = nlens
             if tic - oldtic > config.PLOT_IVAL:
                 guard_and_time('plotting', makeplots, tic, SNRs, HK, endtime=tic)

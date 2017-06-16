@@ -349,12 +349,15 @@ def readtimes(start, stop):
         recgen.send(fid)
     return SNRs, HK
 
+def snr88str(rec):
+    return '{:3} {:9.4f} {:9.4f} {:9.1f}      0.      0. {:6.2f}     0.\n'.format(
+        rec['prn'], rec['el'], rec['az'], sod(rec['time']), rec['snr']/10)
+
 def out_snr88(SNR, filename):
     """Output the records in the numpy array SNR to filename in snr88 format."""
     with open(filename, 'wt') as fid:
         for rec in SNR:
-            fid.write('{:3} {:9.4f} {:9.4f} {:9.1f}      0.      0. {:6.2f}     0.\n'.format(
-                       rec['prn'], rec['el'], rec['az'], sod(rec['time']), rec['snr']/10))
+            fid.write(snr88str(rec))
 
 def write_all_snr88(SNRs, prefix='rx'):
     """Write out each receiver's snr records in a file in the current directory.
