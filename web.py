@@ -220,6 +220,20 @@ def after_midnight():
     now = np.datetime64('now')
     return np.timedelta64(0) < (now - now.astype('M8[D]')) < np.timedelta64(15, 'm')
 
+def write_snr88(SNRs, rxfids, olens, ofile):
+    """Write out new SNR records to snr88 files."""
+    for rx in SNRs:
+        if rx not in rxfids:
+            rtimes = SNRs[rx]['time']
+            rtimes = rtimes[rtimes < np.datetime64('now') + np.timedelta64(1, 'h')]
+            rtimes = rtimes[rtimes > np.datetime64('2000-01-01')]
+            epoch = rtimes[-1]
+            rxfids[rx] = open(os.path.join(os.path.dirname(ofile),
+                              'rx{:02}'.format(rx) + epoch.tolist().strftime('%j0.%y.snr88')), 'w')
+        for rec in SNRs[rx][olens[rx]:]:
+            if rec['snr'] and rec['el'] > 10:
+                rxfids[rx].write(snr88str(rec))
+
 def plotupdate(fname=None, handover=None, oldstate=None, write88=False):
     """Follow stream and update web plot periodically.
 
@@ -253,6 +267,11 @@ def plotupdate(fname=None, handover=None, oldstate=None, write88=False):
     try:
         for SNRs, HK in recgen:
             if yesterday:
+                if write88:
+                    write_snr88(SNRs, rxfids, olens, ofile)
+                    for rx in list(rxfids):
+                        rxfids[rx].close()
+                        del rxfids[rx]
                 info("Done prepopulating. Switching to today's file.")
                 fid.close()
                 fid = open(current_binex(), 'rb')
@@ -294,16 +313,7 @@ def plotupdate(fname=None, handover=None, oldstate=None, write88=False):
                                                  [nlens[rx] - olens[rx] for rx in nlens]),
                   tic, 'timestamped', dattic)
             if write88:
-                for rx in SNRs:
-                    if rx not in rxfids:
-                        rtimes = SNRs[rx]['time']
-                        rtimes = rtimes[rtimes < np.datetime64('now') + np.timedelta64(1, 'h')]
-                        rtimes = rtimes[rtimes > np.datetime64('2000-01-01')]
-                        epoch = rtimes[-1]
-                        rxfids[rx] = open(os.path.join(os.path.dirname(ofile),
-                                          'rx{:02}'.format(rx) + epoch.tolist().strftime('%j0.%y.snr88')), 'a')
-                    for rec in SNRs[rx][olens[rx]:]:
-                        rxfids[rx].write(snr88str(rec))
+                write_snr88(SNRs, rxfids, olens, ofile)
             olens = nlens
             if tic - oldtic > config.PLOT_IVAL:
                 guard_and_time('plotting', makeplots, tic, SNRs, HK, endtime=tic)
