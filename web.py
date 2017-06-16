@@ -272,6 +272,7 @@ def plotupdate(fname=None, handover=None, oldstate=None, write88=False):
                     for rx in list(rxfids):
                         rxfids[rx].close()
                         del rxfids[rx]
+                    olens = defaultdict(int, {rx: len(SNRs[rx]) for rx in SNRs}, hk=len(HK))
                 info("Done prepopulating. Switching to today's file.")
                 fid.close()
                 fid = open(current_binex(), 'rb')
