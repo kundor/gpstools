@@ -220,7 +220,7 @@ def after_midnight():
     now = np.datetime64('now')
     return np.timedelta64(0) < (now - now.astype('M8[D]')) < np.timedelta64(15, 'm')
 
-def plotupdate(fname=None, handover=None, oldstate=None):
+def plotupdate(fname=None, handover=None, oldstate=None, write88=False):
     """Follow stream and update web plot periodically.
 
     With no arguments, follow the current file and attempt handover at UTC midnight.
@@ -293,17 +293,17 @@ def plotupdate(fname=None, handover=None, oldstate=None):
             debug('{:2} new records {} at'.format(sum(nlens.values()) - sum(olens.values()),
                                                  [nlens[rx] - olens[rx] for rx in nlens]),
                   tic, 'timestamped', dattic)
-            for rx in SNRs:
-                if rx not in rxfids:
-                    rtimes = SNRs[rx]['time']
-                    rtimes = rtimes[rtimes < np.datetime64('now') + np.timedelta64(1, 'h')]
-                    rtimes = rtimes[rtimes > np.datetime64('2000-01-01')]
-                    epoch = rtimes[-1]
-                    rxfids[rx] = open(os.path.join(os.path.dirname(ofile), 
-                                      'rx{:02}'.format(rx) + epoch.tolist().strftime('%j0.%y.snr88')
-                for rec in SNRs[rx][olens[rx]:]:
-                    rxfids[rx].write(snr88str(rec))
-
+            if write88:
+                for rx in SNRs:
+                    if rx not in rxfids:
+                        rtimes = SNRs[rx]['time']
+                        rtimes = rtimes[rtimes < np.datetime64('now') + np.timedelta64(1, 'h')]
+                        rtimes = rtimes[rtimes > np.datetime64('2000-01-01')]
+                        epoch = rtimes[-1]
+                        rxfids[rx] = open(os.path.join(os.path.dirname(ofile),
+                                          'rx{:02}'.format(rx) + epoch.tolist().strftime('%j0.%y.snr88')), 'a')
+                    for rec in SNRs[rx][olens[rx]:]:
+                        rxfids[rx].write(snr88str(rec))
             olens = nlens
             if tic - oldtic > config.PLOT_IVAL:
                 guard_and_time('plotting', makeplots, tic, SNRs, HK, endtime=tic)
@@ -342,7 +342,7 @@ if __name__ == "__main__": # When this file is run as a script
     config.SITE = args.site
     if args.update:
         config.LOGFILE = open(fmt_timesite(config.LOGFILELOC), 'w')
-        plotupdate()
+        plotupdate(write88=True)
         sys.exit()
     if args.daily:
         parser.set_defaults(snr_hours=24, hk_hours=24, minelev=15, plotdir=config.DAILYDIR,
